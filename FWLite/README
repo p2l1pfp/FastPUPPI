@@ -1,0 +1,6 @@
+# A very simple analyzers to access stuff
+# samples to use: /eos/cms/store/mc/TTI2023Upg14D
+
+$ scram project CMSSW CMSSW_6_2_0_SLHC12_patch1
+$ cd CMSSW_6_2_0_SLHC12_patch1/src
+$ git clone git@github.com:nhanvtran/FastPUPPI.git
