@@ -32,7 +32,8 @@
 
 #include "DataFormats/L1TrackTrigger/interface/TTTrack.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTypes.h"     
-//
+#include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
+#include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 // class declaration
 //
 
@@ -46,9 +47,8 @@ class InputBuilder : public edm::EDAnalyzer {
 
       static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
       const edm::InputTag L1TrackTag_;
-
-      // edm::InputTag L1TrackTag_;
-      // edm::EDGetTokenT< vector<TTTrack<edm::Ref<edm::DetSetVector<PixelDigi>,PixelDigi,edm::refhelper::FindForDetSetVector<PixelDigi> > > >> > L1TrackTok_;
+      const edm::InputTag EcalTPTag_;
+      const edm::InputTag HcalTPTag_;
 
    private:
       virtual void beginJob() override;
@@ -75,7 +75,9 @@ class InputBuilder : public edm::EDAnalyzer {
 // constructors and destructor
 //
 InputBuilder::InputBuilder(const edm::ParameterSet& iConfig):
-  L1TrackTag_(iConfig.getParameter<edm::InputTag>("L1TrackTag"))
+  L1TrackTag_(iConfig.getParameter<edm::InputTag>("L1TrackTag")),
+  EcalTPTag_(iConfig.getParameter<edm::InputTag>("EcalTPTag")),
+  HcalTPTag_(iConfig.getParameter<edm::InputTag>("HcalTPTag"))
 {
    //now do what ever initialization is needed
 
@@ -104,34 +106,20 @@ InputBuilder::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
 
-   std::cout << "hello world!" << std::endl;
-
-   // edm::Handle< vector<TTTrack<edm::Ref<edm::DetSetVector<PixelDigi>,PixelDigi,edm::refhelper::FindForDetSetVector<PixelDigi> > > >>  > L1Tracks;
-   // iEvent.getByToken(L1TrackTok_,L1Tracks);
-   // std::cout << "L1Tracks size = " << L1Tracks->size() << std::endl;
-
-  // L1 tracks & stubs
-  // edm::Handle<L1TkTrack_PixelDigi_Collection> L1TrackHandle;
-  // edm::InputTag L1TrackTag; 
-  // iEvent.getByLabel("L1Tracks", "Level1TkTracks", L1TrackHandle);
-
-    // typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
-
-
   /// TTTrack
   edm::Handle< std::vector<TTTrack<Ref_PixelDigi_> > > pixelDigiTTTracks;
   iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
   std::cout << "pixelDigiTTracks size =  " << pixelDigiTTTracks->size() << std::endl;
 
-// #ifdef THIS_IS_AN_EVENT_EXAMPLE
-//    Handle<ExampleData> pIn;
-//    iEvent.getByLabel("example",pIn);
-// #endif
-   
-// #ifdef THIS_IS_AN_EVENTSETUP_EXAMPLE
-//    ESHandle<SetupData> pSetup;
-//    iSetup.get<SetupRecord>().get(pSetup);
-// #endif
+  /// Ecal TPs
+  edm::Handle< EcalTrigPrimDigiCollection > ecalTPs;
+  iEvent.getByLabel(EcalTPTag_, ecalTPs);
+  std::cout << "ecalTPs size =  " << ecalTPs->size() << std::endl;
+
+  /// Hcal TPs
+  edm::Handle< HcalTrigPrimDigiCollection > hcalTPs;
+  iEvent.getByLabel(HcalTPTag_, hcalTPs);
+  std::cout << "hcalTPs size =  " << hcalTPs->size() << std::endl;
 
 }
 

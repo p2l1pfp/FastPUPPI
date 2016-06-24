@@ -15,8 +15,8 @@ process.source = cms.Source("PoolSource",
 
 process.demo = cms.EDAnalyzer('InputBuilder',
 	L1TrackTag  = cms.InputTag('TTTracksFromPixelDigis','Level1TTTracks'),
-	# ECALTPTag  = cms.InputTag('slimmedJets')
-	# HCALTPTag  = cms.InputTag('slimmedJets')
+	EcalTPTag   = cms.InputTag('simEcalTriggerPrimitiveDigis'),
+	HcalTPTag   = cms.InputTag('simHcalTriggerPrimitiveDigis'),
 )
 
 
