@@ -81,9 +81,6 @@ InputBuilder::InputBuilder(const edm::ParameterSet& iConfig):
 {
    //now do what ever initialization is needed
 
-  // L1TrackTag_ = iConfig.getParameter<edm::InputTag>("JetTag");
-  // L1TrackTok_ = consumes< vector<TTTrack<edm::Ref<edm::DetSetVector<PixelDigi>,PixelDigi,edm::refhelper::FindForDetSetVector<PixelDigi> > > >> >(JetTag_);
-
 }
 
 
