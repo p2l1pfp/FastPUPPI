@@ -94,11 +94,14 @@ def main():
         for e in ecaldigis:
             print "e: ", e.id().ieta(),e.id().iphi(),e.compressedEt();
 
+
         ev.getByLabel(HCalPrimLabel,HCalPrimHandle);
         hcaldigis = HCalPrimHandle.product();
         print len(hcaldigis);
         for h in hcaldigis:
             print "h: ", h.id().ieta(),h.id().iphi(),h.SOI_compressedEt();
+            hscale = L1CaloHcalScale(0.5);
+            # et = L1CaloHcalScale
 
 #--- --- --- --- --- --- --- --- --- ---
 if __name__ == '__main__':
