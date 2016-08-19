@@ -135,19 +135,19 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
    edm::Handle< vec_track > pixelDigiTTTracks;
    iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
 
-   std::auto_ptr<TrkCollection> trkPtPerp ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPtEta ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPtPhi ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPOCAz( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkPtPerp  ( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkPtEta   ( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkPtPhi   ( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkPOCAz   ( new TrkCollection );
    std::auto_ptr<TrkCollection> trkEcalEta ( new TrkCollection );
    std::auto_ptr<TrkCollection> trkEcalPhi ( new TrkCollection );
    std::auto_ptr<TrkCollection> trkEcalR   ( new TrkCollection );
 
    const int trksize = pixelDigiTTTracks->size();      
    trkPtPerp->reserve( trksize );
-   trkPtEta->reserve( trksize );
-   trkPtPhi->reserve( trksize );
-   trkPOCAz->reserve( trksize );
+   trkPtEta ->reserve( trksize );
+   trkPtPhi ->reserve( trksize );
+   trkPOCAz ->reserve( trksize );
    trkEcalEta->reserve(trksize);
    trkEcalPhi->reserve(trksize);
    trkEcalR  ->reserve(trksize);
@@ -219,11 +219,14 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
        // if (ne > 20) break;
      }
    }
-   iEvent.put ( ecalET, "ecalET" );
+   iEvent.put ( ecalET,    "ecalET"    );
    iEvent.put ( trkPtPerp, "trkPtPerp" );
-   iEvent.put ( trkPtEta, "trkPtEta" );
-   iEvent.put ( trkPtPhi, "trkPtPhi" );
-   iEvent.put ( trkPOCAz, "trkPOCAz" );
+   iEvent.put ( trkPtEta,  "trkPtEta"  );
+   iEvent.put ( trkPtPhi,  "trkPtPhi"  );
+   iEvent.put ( trkPOCAz,  "trkPOCAz"  );
+   iEvent.put ( trkEcalEta,"trkEcalEta");
+   iEvent.put ( trkEcalPhi,"trkEcalPhi");
+   iEvent.put ( trkEcalR  ,"trkEcalR"  );
 }
 // -- propa gator 
 void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
