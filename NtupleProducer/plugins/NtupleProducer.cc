@@ -36,7 +36,11 @@
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "CondFormats/L1TObjects/interface/L1CaloEcalScale.h"
 #include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
-
+#include "FastSimulation/BaseParticlePropagator/interface/BaseParticlePropagator.h"
+#include "DataFormats/ParticleFlowReco/interface/PFCluster.h"
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "MagneticField/Engine/interface/MagneticField.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 //
 // class declaration
@@ -57,8 +61,8 @@ private:
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
-  
-  //virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
+  void propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField);
+  virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
@@ -67,6 +71,7 @@ private:
   typedef std::vector<double> HCalCollection;
   typedef std::vector<double> ECalCollection;
   typedef std::vector<double> TrkCollection;
+  double fBz;
 };
 
 //
@@ -96,6 +101,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<TrkCollection>( "trkPtEta" ).setBranchAlias( "trkPtEta" ); 
   produces<TrkCollection>( "trkPtPhi" ).setBranchAlias( "trkPtPhi" ); 
   produces<TrkCollection>( "trkPOCAz" ).setBranchAlias( "trkPOCAz" );  
+  produces<TrkCollection>( "trkEcalEta" ).setBranchAlias( "trkEcalEta" );  
+  produces<TrkCollection>( "trkEcalPhi" ).setBranchAlias( "trkEcalPhi" );  
+  produces<TrkCollection>( "trkEcalR"   ).setBranchAlias( "trkEcalR" );  
 }
 
 
@@ -119,6 +127,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    using namespace edm;
    typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
+
+
    /// ----------------TRACK INFO-------------------
    /// Stealing Jia Fu's code!
    /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
@@ -129,13 +139,19 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
    std::auto_ptr<TrkCollection> trkPtEta ( new TrkCollection );
    std::auto_ptr<TrkCollection> trkPtPhi ( new TrkCollection );
    std::auto_ptr<TrkCollection> trkPOCAz( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkEcalEta ( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkEcalPhi ( new TrkCollection );
+   std::auto_ptr<TrkCollection> trkEcalR   ( new TrkCollection );
 
    const int trksize = pixelDigiTTTracks->size();      
    trkPtPerp->reserve( trksize );
    trkPtEta->reserve( trksize );
    trkPtPhi->reserve( trksize );
    trkPOCAz->reserve( trksize );
-
+   trkEcalEta->reserve(trksize);
+   trkEcalPhi->reserve(trksize);
+   trkEcalR  ->reserve(trksize);
+   
    if (pixelDigiTTTracks.isValid()) {
 
      edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
@@ -146,13 +162,25 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
        const GlobalVector&          momentum = it->getMomentum(nPar);
        const GlobalPoint&           poca     = it->getPOCA(nPar);  // point of closest approach
+       bool iIsEle=false;
+       double mass  = iIsEle ? 0.0005 : 0.139; 
+       double energy=sqrt((mass*mass)+(momentum.mag()*momentum.mag()));
+       const XYZTLorentzVector      tMom (momentum.x(),momentum.y(),momentum.z(),energy);
+       const XYZTLorentzVector      tVtx (poca.x()     ,poca.y()     ,poca.z(),0.);
 
        trkPtPerp->push_back(momentum.perp());
        trkPtEta->push_back(momentum.eta());
        trkPtPhi->push_back(momentum.phi());
        trkPOCAz->push_back(poca.z());
-  
-     // Std::cout << "track info = " << momentum.perp() << "," << momentum.eta() << "," << momentum.phi() << "; poca z = " << poca.z() << std::endl;        
+       std::vector<double> lVars;
+       //Check below
+       double charge = it->getRInv()/fabs(it->getRInv());
+       propagate(1,lVars,tMom,tVtx,charge,fBz);
+       trkEcalEta->push_back(lVars[4]);
+       trkEcalPhi->push_back(lVars[5]);
+       trkEcalR  ->push_back(lVars[6]);
+       //std::cout << "=== Ecal surface eta : " << lVars[4] << " -- phi : " << lVars[5] << " -- R: " << lVars[6] << " -- eta/phi : " << momentum.eta() << " -- " << momentum.phi() << " -- pt : " << momentum.perp() << " -- " << sqrt(lVars[0]*lVars[0]+lVars[1]*lVars[1])   << std::endl;
+       // Std::cout << "track info = " << momentum.perp() << "," << momentum.eta() << "," << momentum.phi() << "; poca z = " << poca.z() << std::endl;        
        n++;
        if (n > 10) break; // just for testing so cut it off for now
      }  
@@ -197,7 +225,24 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
    iEvent.put ( trkPtPhi, "trkPtPhi" );
    iEvent.put ( trkPOCAz, "trkPOCAz" );
 }
-
+// -- propa gator 
+void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
+  BaseParticlePropagator particle = BaseParticlePropagator(RawParticle(iMom,iVtx),0.,0.,iBField);
+  particle.setCharge(iCharge);
+  double ecalShowerDepth=0;
+  if(iOption == 0 || iOption == 1) particle.propagateToEcalEntrance(false);
+  if(iOption == 2 || iOption == 3) particle.propagateToHcalEntrance(false);
+  if(iOption == 4) particle.propagateToHcalExit    (false);
+  if(iOption == 1) ecalShowerDepth = reco::PFCluster::getDepthCorrection(particle.momentum().E(),false,false);
+  math::XYZVector point = math::XYZVector(particle.vertex())+math::XYZTLorentzVector(particle.momentum()).Vect().Unit()*ecalShowerDepth;
+  iVars.push_back(particle.momentum().px());
+  iVars.push_back(particle.momentum().py());
+  iVars.push_back(particle.momentum().pz());
+  iVars.push_back(particle.momentum().energy());
+  iVars.push_back(point.eta());
+  iVars.push_back(point.phi());
+  iVars.push_back(point.rho());
+}
 // ------------ method called once each job just before starting event loop  ------------
 void 
 NtupleProducer::beginJob()
@@ -210,12 +255,15 @@ NtupleProducer::endJob() {
 }
 
 // ------------ method called when starting to processes a run  ------------
-/*
+
 void
-NtupleProducer::beginRun(edm::Run const&, edm::EventSetup const&)
+NtupleProducer::beginRun(edm::Run const&, edm::EventSetup const& iSetup)
 {
+  edm::ESHandle<MagneticField> magneticField;
+  iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
+  fBz = magneticField->inTesla(GlobalPoint(0,0,0)).z();
 }
-*/
+
  
 // ------------ method called when ending the processing of a run  ------------
 /*

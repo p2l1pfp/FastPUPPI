@@ -4,4 +4,8 @@
 <use name="CondFormats/L1TObjects"/>
 <use name="DataFormats/EcalDigi"/>
 <use name="DataFormats/HcalDigi"/>
+<use name="FastSimulation/BaseParticlePropagator"/>
+<use name="MagneticField/Engine"/>
+<use name="MagneticField/Records"/>
+<use name="DataFormats/ParticleFlowReco"/>
 <flags EDM_PLUGIN="1"/>
