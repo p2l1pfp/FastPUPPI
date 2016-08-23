@@ -51,10 +51,16 @@
 
 const double PI = 3.1415926535897;
 
-//
-// class declaration
-//
+// ROOT classes
+#include <TFile.h>
+#include <TH1D.h>
+#include <TTree.h>
+#include <TClonesArray.h>
+#include <TLorentzVector.h>
+#include <TMath.h>
+#include <TObject.h>
 
+//--------------------------------------------------------------------------------------------------
 class NtupleProducer : public edm::EDProducer {
 public:
   explicit NtupleProducer(const edm::ParameterSet&);
@@ -79,14 +85,20 @@ private:
   float towerEtaSize(int ieta);
   float towerPhiSize(int ieta);
 
+  // declare variables for output file
+  std::string           fOutputName;
+  TFile                 *fOutputFile;
+  TH1D                  *fTotalEvents;
+  TTree                 *fEventTree;
+
+  float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkd0;    
+  float trkEcalEta, trkEcalPhi, trkEcalR;
+  
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   
   // ----------member data ---------------------------
-  typedef std::vector<double> HCalCollection;
-  typedef std::vector<double> ECalCollection;
-  typedef std::vector<double> TrkCollection;
   double fBz;
 
   edm::ESHandle<CaloGeometry> calo;
@@ -107,33 +119,25 @@ private:
 // constructors and destructor
 //
 NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
-  L1TrackTag_(iConfig.getParameter<edm::InputTag>("L1TrackTag")),
-  EcalTPTag_(iConfig.getParameter<edm::InputTag>("EcalTPTag")),
-  HcalTPTag_(iConfig.getParameter<edm::InputTag>("HcalTPTag"))
+  L1TrackTag_           (iConfig.getParameter<edm::InputTag>("L1TrackTag")),
+  EcalTPTag_            (iConfig.getParameter<edm::InputTag>("EcalTPTag")),
+  HcalTPTag_            (iConfig.getParameter<edm::InputTag>("HcalTPTag")),
+  fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
+  fOutputFile           (0),
+  fTotalEvents          (0),
+  fEventTree            (0)
 {
   //now do what ever other initialization is needed
   // ECAL and HCAL LSB = 0.5
   ecalScale_ = new L1CaloEcalScale(0.5);
   hcalScale_ = new L1CaloHcalScale(0.5);
-  produces<HCalCollection>( "hcalET" ).setBranchAlias( "hcalET" );
-  produces<ECalCollection>( "ecalET" ).setBranchAlias( "ecalET" ); 
-  produces<TrkCollection>( "trkPtPerp" ).setBranchAlias( "trkPtPerp" ); 
-  produces<TrkCollection>( "trkPtEta" ).setBranchAlias( "trkPtEta" ); 
-  produces<TrkCollection>( "trkPtPhi" ).setBranchAlias( "trkPtPhi" ); 
-  produces<TrkCollection>( "trkPOCAz" ).setBranchAlias( "trkPOCAz" );  
-  produces<TrkCollection>( "trkEcalEta" ).setBranchAlias( "trkEcalEta" );  
-  produces<TrkCollection>( "trkEcalPhi" ).setBranchAlias( "trkEcalPhi" );  
-  produces<TrkCollection>( "trkEcalR"   ).setBranchAlias( "trkEcalR" );  
 }
 
 
 NtupleProducer::~NtupleProducer()
 {
- 
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
-
-
 }
 
 
@@ -146,171 +150,155 @@ void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
 
-   using namespace edm;
-   typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
+  
+  using namespace edm;
+  typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
+  
+  iSetup.get<CaloGeometryRecord>().get(calo);
+  const CaloGeometry* geo = calo.product(); 
+  
+  iSetup.get<CaloGeometryRecord>().get(theTrigTowerGeometry);
+  const HcalTrigTowerGeometry* geoTrig = theTrigTowerGeometry.product();
+  
+  /// ----------------TRACK INFO-------------------
+  /// Stealing Jia Fu's code!
+  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
+  edm::Handle< vec_track > pixelDigiTTTracks;
+  iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
+  
+  if (pixelDigiTTTracks.isValid()) {
+    
+    edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
+    
+    unsigned nPar = 4;
+    unsigned n = 0;
+    for (vec_track::const_iterator it = pixelDigiTTTracks->begin(); it != pixelDigiTTTracks->end(); ++it) {
+      fTotalEvents->Fill(1);
 
-   iSetup.get<CaloGeometryRecord>().get(calo);
-   const CaloGeometry* geo = calo.product(); 
-
-   iSetup.get<CaloGeometryRecord>().get(theTrigTowerGeometry);
-   const HcalTrigTowerGeometry* geoTrig = theTrigTowerGeometry.product();
-
-
-   /// ----------------TRACK INFO-------------------
-   /// Stealing Jia Fu's code!
-   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
-   edm::Handle< vec_track > pixelDigiTTTracks;
-   iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
-
-   std::auto_ptr<TrkCollection> trkPtPerp ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPtEta ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPtPhi ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkPOCAz( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkEcalEta ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkEcalPhi ( new TrkCollection );
-   std::auto_ptr<TrkCollection> trkEcalR   ( new TrkCollection );
-
-   const int trksize = pixelDigiTTTracks->size();      
-   trkPtPerp->reserve( trksize );
-   trkPtEta->reserve( trksize );
-   trkPtPhi->reserve( trksize );
-   trkPOCAz->reserve( trksize );
-   trkEcalEta->reserve(trksize);
-   trkEcalPhi->reserve(trksize);
-   trkEcalR  ->reserve(trksize);
-   
-   if (pixelDigiTTTracks.isValid()) {
-
-     edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
-
-     unsigned nPar = 4;
-     unsigned n = 0;
-     for (vec_track::const_iterator it = pixelDigiTTTracks->begin(); it != pixelDigiTTTracks->end(); ++it) {
-
-       const GlobalVector&          momentum = it->getMomentum(nPar);
-       const GlobalPoint&           poca     = it->getPOCA(nPar);  // point of closest approach
-       bool iIsEle=false;
-       double mass  = iIsEle ? 0.0005 : 0.139; 
-       double energy=sqrt((mass*mass)+(momentum.mag()*momentum.mag()));
-       const XYZTLorentzVector      tMom (momentum.x(),momentum.y(),momentum.z(),energy);
-       const XYZTLorentzVector      tVtx (poca.x()     ,poca.y()     ,poca.z(),0.);
-
-       trkPtPerp->push_back(momentum.perp());
-       trkPtEta->push_back(momentum.eta());
-       trkPtPhi->push_back(momentum.phi());
-       trkPOCAz->push_back(poca.z());
-       std::vector<double> lVars;
-       //Check below
-       double charge = it->getRInv()/fabs(it->getRInv());
-       propagate(1,lVars,tMom,tVtx,charge,fBz);
-       trkEcalEta->push_back(lVars[4]);
-       trkEcalPhi->push_back(lVars[5]);
-       trkEcalR  ->push_back(lVars[6]);
-       //std::cout << "=== Ecal surface eta : " << lVars[4] << " -- phi : " << lVars[5] << " -- R: " << lVars[6] << " -- eta/phi : " << momentum.eta() << " -- " << momentum.phi() << " -- pt : " << momentum.perp() << " -- " << sqrt(lVars[0]*lVars[0]+lVars[1]*lVars[1])   << std::endl;
-       // Std::cout << "track info = " << momentum.perp() << "," << momentum.eta() << "," << momentum.phi() << "; poca z = " << poca.z() << std::endl;        
-       n++;
-       if (n > 10) break; // just for testing so cut it off for now
-     }  
-   }
-   
-   /// ----------------ECAL INFO-------------------
-   /// Stealing Jia Fu's code!
-   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
-   /// 72 in phi and 56 in eta
-   /// Ecal TPs
-   edm::Handle< EcalTrigPrimDigiCollection > ecalTPs;
-   iEvent.getByLabel(EcalTPTag_, ecalTPs);
-   
-   std::auto_ptr<ECalCollection> ecalET ( new ECalCollection );
-   const int size = ecalTPs->size();
-   ecalET->reserve( size );
-   std::cout << "ecalTPs size =  " << ecalTPs->size() << std::endl;
-
-   if (ecalTPs.isValid()){
-     unsigned ne = 0;
-     for (EcalTrigPrimDigiCollection::const_iterator it = ecalTPs->begin(); it != ecalTPs->end(); ++it) {
-
-       short ieta = (short) it->id().ieta(); 
-       unsigned short absIeta = (unsigned short) abs(ieta);
-       short sign = ieta/absIeta;
-
-       unsigned short compEt = it->compressedEt();
-       double et = 0.;
-       if (ecalScale_!=0) et = ecalScale_->et( compEt, absIeta, sign );
-
-       float curTowerEta = towerEta(it->id().ieta());
-       float curTowerPhi = towerPhi(it->id().ieta(),it->id().iphi());
-
-       std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
-
-       ecalET->push_back( et );
-       // if (et > 0) std::cout << "ecal info: " << it->id().ieta() << "," << it->id().iphi() << "," << et << std::endl;
-       ne++;
-       // if (ne > 20) break;
-     }
-   }
-
-
-    // / ----------------HCAL INFO-------------------
-    // / Stealing some other code!
-    // / https://github.com/cms-sw/cmssw/blob/0397259dd747cee94b68928f17976224c037057a/L1Trigger/L1TNtuples/src/L1AnalysisCaloTP.cc#L40
-    // / 72 in phi and 56 in eta = 4032
-    // / 144 TP is HF: 4 (in eta) * 18 (in phi) * 2 (sides)
-    // / Hcal TPs
-    edm::Handle< HcalTrigPrimDigiCollection > hcalTPs;
-    iEvent.getByLabel(HcalTPTag_, hcalTPs);
-    std::cout << "hcalTPs size =  " << hcalTPs->size() << std::endl;
-
-    if (hcalTPs.isValid()){
+      const GlobalVector&          momentum = it->getMomentum(nPar);
+      const GlobalPoint&           poca     = it->getPOCA(nPar);  // point of closest approach
+      bool iIsEle=false;
+      double mass  = iIsEle ? 0.0005 : 0.139; 
+      double energy=sqrt((mass*mass)+(momentum.mag()*momentum.mag()));
+      const XYZTLorentzVector      tMom (momentum.x(),momentum.y(),momentum.z(),energy);
+      const XYZTLorentzVector      tVtx (poca.x()     ,poca.y()     ,poca.z(),0.);
       
-      unsigned nh = 0;
-
-      for (HcalTrigPrimDigiCollection::const_iterator it = hcalTPs->begin(); it != hcalTPs->end(); ++it) {
-
-        std::vector<HcalDetId> detids = geoTrig->detIds(it->id());
-        unsigned int ndetsPerTower = detids.size();
-        float towerEta = 0.;
-        float towerPhi = 0.;
-        float towerR   = 0.;
-        float curphimax = -9999.;
-        float curphimin = 9999.;
-        for (unsigned int i = 0; i < ndetsPerTower; i++){
-          const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
-          // std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
-          towerEta += cell->etaPos();
-          towerR   += cell->getPosition().mag();
-
-          if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
-          if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
-        }
-        // std::cout << "curphimax = " << curphimax << ", curphimin = " << curphimin << std::endl;
-        if (curphimax - curphimin < PI){ towerPhi = (curphimax + curphimin)/2.; }
-        else{ towerPhi = -3.14159;} // special case
-        // else{ towerPhi = (curphimax - curphimin + 2*PI)/2.; }
-        // std::cout << "towerPhi = " << towerPhi << std::endl;
-        // if (fabs(towerPhi) > PI && towerPhi > 0) towerPhi -= PI;
-        // if (fabs(towerPhi) > PI && towerPhi < 0) towerPhi += PI;
-        towerEta /= float(ndetsPerTower);
-        towerR   /= float(ndetsPerTower);
-
-        unsigned short compEt = it->SOI_compressedEt();
-        double et = 0.;
-        if (hcalScale_!=0) et = hcalScale_->et( compEt, it->id().ietaAbs(), it->id().zside() );
-
-        std::cout << "hcal info: " << it->id().subdet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << towerPhi << "," << towerEta << "," << towerR << std::endl;  
-
-        nh++;
-        if (nh > 99999) break;
-
-      }
+      std::vector<double> lVars;
+      //Check below
+      double charge = it->getRInv()/fabs(it->getRInv());
+      propagate(1,lVars,tMom,tVtx,charge,fBz);
+      
+      trkEcalEta = lVars[4];
+      trkEcalPhi = lVars[5];
+      trkEcalR   = lVars[6];
+      
+      trkPx  = momentum.x();
+      trkPz  = momentum.y();
+      trkPy  = momentum.z();
+      trkPt  = momentum.perp();
+      trkEta = momentum.eta();
+      trkPhi = momentum.phi();
+      trkz0  = poca.z();
+      trkd0  = poca.perp();
+      
+      fEventTree->Fill();   
+      //std::cout << "=== Ecal surface eta : " << lVars[4] << " -- phi : " << lVars[5] << " -- R: " << lVars[6] << " -- eta/phi : " << momentum.eta() << " -- " << momentum.phi() << " -- pt : " << momentum.perp() << " -- " << sqrt(lVars[0]*lVars[0]+lVars[1]*lVars[1])   << std::endl;
+      // Std::cout << "track info = " << momentum.perp() << "," << momentum.eta() << "," << momentum.phi() << "; poca z = " << poca.z() << std::endl;        
+      n++;
+      if (n > 10) break; // just for testing so cut it off for now
+    }  
+  }
+   
+  
+  /// ----------------ECAL INFO-------------------
+  /// Stealing Jia Fu's code!
+  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
+  /// 72 in phi and 56 in eta
+  /// Ecal TPs
+  edm::Handle< EcalTrigPrimDigiCollection > ecalTPs;
+  iEvent.getByLabel(EcalTPTag_, ecalTPs);
+  
+  std::cout << "ecalTPs size =  " << ecalTPs->size() << std::endl;
+  
+  if (ecalTPs.isValid()){
+    unsigned ne = 0;
+    for (EcalTrigPrimDigiCollection::const_iterator it = ecalTPs->begin(); it != ecalTPs->end(); ++it) {
+      
+      short ieta = (short) it->id().ieta(); 
+      unsigned short absIeta = (unsigned short) abs(ieta);
+      short sign = ieta/absIeta;
+      
+      unsigned short compEt = it->compressedEt();
+      double et = 0.;
+      if (ecalScale_!=0) et = ecalScale_->et( compEt, absIeta, sign );
+      
+      float curTowerEta = towerEta(it->id().ieta());
+      float curTowerPhi = towerPhi(it->id().ieta(),it->id().iphi());
+      
+      std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
+      
+      ne++;
+      // if (ne > 20) break;
     }
-
-   iEvent.put ( ecalET, "ecalET" );
-   iEvent.put ( trkPtPerp, "trkPtPerp" );
-   iEvent.put ( trkPtEta, "trkPtEta" );
-   iEvent.put ( trkPtPhi, "trkPtPhi" );
-   iEvent.put ( trkPOCAz, "trkPOCAz" );
+  }
+  
+  
+  // / ----------------HCAL INFO-------------------
+  // / Stealing some other code!
+  // / https://github.com/cms-sw/cmssw/blob/0397259dd747cee94b68928f17976224c037057a/L1Trigger/L1TNtuples/src/L1AnalysisCaloTP.cc#L40
+  // / 72 in phi and 56 in eta = 4032
+  // / 144 TP is HF: 4 (in eta) * 18 (in phi) * 2 (sides)
+  // / Hcal TPs
+  edm::Handle< HcalTrigPrimDigiCollection > hcalTPs;
+  iEvent.getByLabel(HcalTPTag_, hcalTPs);
+  std::cout << "hcalTPs size =  " << hcalTPs->size() << std::endl;
+  
+  if (hcalTPs.isValid()){
+    
+    unsigned nh = 0;
+    
+    for (HcalTrigPrimDigiCollection::const_iterator it = hcalTPs->begin(); it != hcalTPs->end(); ++it) {
+      
+      std::vector<HcalDetId> detids = geoTrig->detIds(it->id());
+      unsigned int ndetsPerTower = detids.size();
+      float towerEta = 0.;
+      float towerPhi = 0.;
+      float towerR   = 0.;
+      float curphimax = -9999.;
+      float curphimin = 9999.;
+      for (unsigned int i = 0; i < ndetsPerTower; i++){
+	const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
+	// std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
+	towerEta += cell->etaPos();
+	towerR   += cell->getPosition().mag();
+	
+	if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
+	if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
+      }
+      // std::cout << "curphimax = " << curphimax << ", curphimin = " << curphimin << std::endl;
+      if (curphimax - curphimin < PI){ towerPhi = (curphimax + curphimin)/2.; }
+      else{ towerPhi = -3.14159;} // special case
+      // else{ towerPhi = (curphimax - curphimin + 2*PI)/2.; }
+      // std::cout << "towerPhi = " << towerPhi << std::endl;
+      // if (fabs(towerPhi) > PI && towerPhi > 0) towerPhi -= PI;
+      // if (fabs(towerPhi) > PI && towerPhi < 0) towerPhi += PI;
+      towerEta /= float(ndetsPerTower);
+      towerR   /= float(ndetsPerTower);
+      
+      unsigned short compEt = it->SOI_compressedEt();
+      double et = 0.;
+      if (hcalScale_!=0) et = hcalScale_->et( compEt, it->id().ietaAbs(), it->id().zside() );
+      
+      std::cout << "hcal info: " << it->id().subdet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << towerPhi << "," << towerEta << "," << towerR << std::endl;  
+      
+      nh++;
+      if (nh > 99999) break;
+      
+    }
+  }
 }
+
+
 // -- propagator 
 void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
   BaseParticlePropagator particle = BaseParticlePropagator(RawParticle(iMom,iVtx),0.,0.,iBField);
@@ -374,11 +362,37 @@ float NtupleProducer::towerPhiSize(int ieta)
 void 
 NtupleProducer::beginJob()
 {
+  //
+  // Create output file, trees, and histograms
+  //
+  fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
+  fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
+  fEventTree   = new TTree("Events","Events");
+  
+  fEventTree->Branch("trkPx",  &trkPx, "trkPx/F");
+  fEventTree->Branch("trkPy",  &trkPy, "trkPy/F");
+  fEventTree->Branch("trkPz",  &trkPz, "trkPz/F");
+  fEventTree->Branch("trkPt",  &trkPt, "trkPt/F");
+  fEventTree->Branch("trkEta",  &trkEta, "trkEta/F");
+  fEventTree->Branch("trkPhi",  &trkPhi, "trkPhi/F");
+  fEventTree->Branch("trkz0",  &trkz0, "trkz0/F");
+  fEventTree->Branch("trkd0",  &trkd0, "trkd0/F");
+  fEventTree->Branch("trkEcalPhi",  &trkEcalPhi, "trkEcalPhi/F");
+  fEventTree->Branch("trkEcalEta",  &trkEcalEta, "trkEcalEta/F");
+  fEventTree->Branch("trkEcalR",  &trkEcalR, "trkEcalR/F");
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
 void 
 NtupleProducer::endJob() {
+  //
+  // Save to ROOT file
+  //
+  fOutputFile->cd();
+  fTotalEvents->Write();
+  fOutputFile->Write();
+  fOutputFile->Close();
+  
 }
 
 // ------------ method called when starting to processes a run  ------------
