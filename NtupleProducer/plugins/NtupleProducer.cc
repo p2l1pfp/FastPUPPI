@@ -42,6 +42,15 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
+#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+#include "Geometry/Records/interface/CaloGeometryRecord.h"
+#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+#include "DataFormats/DetId/interface/DetId.h"
+#include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
+#include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
+
+const double PI = 3.1415926535897;
+
 //
 // class declaration
 //
@@ -63,6 +72,13 @@ private:
   virtual void endJob() override;
   void propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
+
+  std::pair<float,float> towerEtaBounds(int ieta);
+  float towerEta(int ieta);
+  float towerPhi(int ieta, int iphi);
+  float towerEtaSize(int ieta);
+  float towerPhiSize(int ieta);
+
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
@@ -72,6 +88,10 @@ private:
   typedef std::vector<double> ECalCollection;
   typedef std::vector<double> TrkCollection;
   double fBz;
+
+  edm::ESHandle<CaloGeometry> calo;
+  edm::ESHandle<HcalTrigTowerGeometry> theTrigTowerGeometry;
+
 };
 
 //
@@ -125,8 +145,15 @@ NtupleProducer::~NtupleProducer()
 void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+
    using namespace edm;
    typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
+
+   iSetup.get<CaloGeometryRecord>().get(calo);
+   const CaloGeometry* geo = calo.product(); 
+
+   iSetup.get<CaloGeometryRecord>().get(theTrigTowerGeometry);
+   const HcalTrigTowerGeometry* geoTrig = theTrigTowerGeometry.product();
 
 
    /// ----------------TRACK INFO-------------------
@@ -186,10 +213,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
      }  
    }
    
-
    /// ----------------ECAL INFO-------------------
    /// Stealing Jia Fu's code!
    /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
+   /// 72 in phi and 56 in eta
    /// Ecal TPs
    edm::Handle< EcalTrigPrimDigiCollection > ecalTPs;
    iEvent.getByLabel(EcalTPTag_, ecalTPs);
@@ -197,6 +224,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
    std::auto_ptr<ECalCollection> ecalET ( new ECalCollection );
    const int size = ecalTPs->size();
    ecalET->reserve( size );
+   std::cout << "ecalTPs size =  " << ecalTPs->size() << std::endl;
 
    if (ecalTPs.isValid()){
      unsigned ne = 0;
@@ -205,13 +233,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
        short ieta = (short) it->id().ieta(); 
        unsigned short absIeta = (unsigned short) abs(ieta);
        short sign = ieta/absIeta;
-      
-       // unsigned short cal_iphi = (unsigned short) it->id().iphi(); 
-       // unsigned short iphi = (72 + 18 - cal_iphi) % 72; // transform TOWERS (not regions) into local rct (intuitive) phi bins
-      
+
        unsigned short compEt = it->compressedEt();
        double et = 0.;
        if (ecalScale_!=0) et = ecalScale_->et( compEt, absIeta, sign );
+
+       float curTowerEta = towerEta(it->id().ieta());
+       float curTowerPhi = towerPhi(it->id().ieta(),it->id().iphi());
+
+       std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
 
        ecalET->push_back( et );
        // if (et > 0) std::cout << "ecal info: " << it->id().ieta() << "," << it->id().iphi() << "," << et << std::endl;
@@ -219,13 +249,69 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
        // if (ne > 20) break;
      }
    }
+
+
+    // / ----------------HCAL INFO-------------------
+    // / Stealing some other code!
+    // / https://github.com/cms-sw/cmssw/blob/0397259dd747cee94b68928f17976224c037057a/L1Trigger/L1TNtuples/src/L1AnalysisCaloTP.cc#L40
+    // / 72 in phi and 56 in eta = 4032
+    // / 144 TP is HF: 4 (in eta) * 18 (in phi) * 2 (sides)
+    // / Hcal TPs
+    edm::Handle< HcalTrigPrimDigiCollection > hcalTPs;
+    iEvent.getByLabel(HcalTPTag_, hcalTPs);
+    std::cout << "hcalTPs size =  " << hcalTPs->size() << std::endl;
+
+    if (hcalTPs.isValid()){
+      
+      unsigned nh = 0;
+
+      for (HcalTrigPrimDigiCollection::const_iterator it = hcalTPs->begin(); it != hcalTPs->end(); ++it) {
+
+        std::vector<HcalDetId> detids = geoTrig->detIds(it->id());
+        unsigned int ndetsPerTower = detids.size();
+        float towerEta = 0.;
+        float towerPhi = 0.;
+        float towerR   = 0.;
+        float curphimax = -9999.;
+        float curphimin = 9999.;
+        for (unsigned int i = 0; i < ndetsPerTower; i++){
+          const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
+          // std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
+          towerEta += cell->etaPos();
+          towerR   += cell->getPosition().mag();
+
+          if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
+          if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
+        }
+        // std::cout << "curphimax = " << curphimax << ", curphimin = " << curphimin << std::endl;
+        if (curphimax - curphimin < PI){ towerPhi = (curphimax + curphimin)/2.; }
+        else{ towerPhi = -3.14159;} // special case
+        // else{ towerPhi = (curphimax - curphimin + 2*PI)/2.; }
+        // std::cout << "towerPhi = " << towerPhi << std::endl;
+        // if (fabs(towerPhi) > PI && towerPhi > 0) towerPhi -= PI;
+        // if (fabs(towerPhi) > PI && towerPhi < 0) towerPhi += PI;
+        towerEta /= float(ndetsPerTower);
+        towerR   /= float(ndetsPerTower);
+
+        unsigned short compEt = it->SOI_compressedEt();
+        double et = 0.;
+        if (hcalScale_!=0) et = hcalScale_->et( compEt, it->id().ietaAbs(), it->id().zside() );
+
+        std::cout << "hcal info: " << it->id().subdet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << towerPhi << "," << towerEta << "," << towerR << std::endl;  
+
+        nh++;
+        if (nh > 99999) break;
+
+      }
+    }
+
    iEvent.put ( ecalET, "ecalET" );
    iEvent.put ( trkPtPerp, "trkPtPerp" );
    iEvent.put ( trkPtEta, "trkPtEta" );
    iEvent.put ( trkPtPhi, "trkPtPhi" );
    iEvent.put ( trkPOCAz, "trkPOCAz" );
 }
-// -- propa gator 
+// -- propagator 
 void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
   BaseParticlePropagator particle = BaseParticlePropagator(RawParticle(iMom,iVtx),0.,0.,iBField);
   particle.setCharge(iCharge);
@@ -243,6 +329,47 @@ void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZT
   iVars.push_back(point.phi());
   iVars.push_back(point.rho());
 }
+
+// -- helpers for ECAL
+
+std::pair<float,float> NtupleProducer::towerEtaBounds(int ieta)
+{
+  // if(ieta==0) ieta = 1;
+  // if(ieta>kHFEnd) ieta = kHFEnd;
+  // if(ieta<(-1*kHFEnd)) ieta = -1*kHFEnd;
+  const float towerEtas[33] = {0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479,1.566,1.653,1.740,1.830,1.930,2.043,2.172,2.322,2.5,2.650,3.000,3.5,4.0,4.5,5.0}; 
+  // const float towerEtas[42] = {0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479,1.566,1.653,1.740,1.830,1.930,2.043,2.172,2.322,2.5,2.650,2.853,3.139,3.314,3.489,3.664,3.839,4.013,4.191,4.363,4.538,4.716,4.889,5.191,5.191};
+  return std::make_pair( towerEtas[abs(ieta)-1],towerEtas[abs(ieta)] );
+}
+
+float NtupleProducer::towerEta(int ieta)
+{
+  std::pair<float,float> bounds = towerEtaBounds(ieta);
+  float eta = (bounds.second+bounds.first)/2.;
+  float sign = ieta>0 ? 1. : -1.;
+  return sign*eta; 
+}
+
+float NtupleProducer::towerPhi(int ieta, int iphi)
+{
+  float phi = (float(iphi)-0.5)*towerPhiSize(ieta);
+  if (phi > M_PI) phi = phi - (2*M_PI);
+  return phi;
+}
+
+float NtupleProducer::towerEtaSize(int ieta)
+{
+  std::pair<float,float> bounds = towerEtaBounds(ieta);
+  float size = (bounds.second-bounds.first);
+  return size;
+}
+
+float NtupleProducer::towerPhiSize(int ieta)
+{
+  const int kNphi = 72;
+  return 2.*M_PI/kNphi;
+}
+
 // ------------ method called once each job just before starting event loop  ------------
 void 
 NtupleProducer::beginJob()

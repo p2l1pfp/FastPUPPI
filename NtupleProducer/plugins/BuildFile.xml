@@ -8,4 +8,12 @@
 <use name="MagneticField/Engine"/>
 <use name="MagneticField/Records"/>
 <use name="DataFormats/ParticleFlowReco"/>
+<use name="Geometry/CaloTopology"/>
+<use name="Geometry/HCalTowerAlgo"/>
+<use name="CondFormats/DataRecord"/>
+<use name="CondFormats/HcalObjects"/>
+<use name="CalibCalorimetry/HcalAlgos"/>
+<use name="CalibCalorimetry/HcalTPGAlgos"/>
+<use name="CalibFormats/HcalObjects"/>
+<use name="CalibFormats/CaloTPG"/>
 <flags EDM_PLUGIN="1"/>
