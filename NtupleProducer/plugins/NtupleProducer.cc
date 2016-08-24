@@ -90,10 +90,13 @@ private:
   TFile                 *fOutputFile;
   TH1D                  *fTotalEvents;
   TTree                 *fEventTree;
-
+  TTree                 *fTrkInfoTree;
+  
+  float runNum, lumiSec, evtNum;
+  float trkNum;
   float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkd0;    
   float trkEcalEta, trkEcalPhi, trkEcalR;
-  
+
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
@@ -125,7 +128,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
-  fEventTree            (0)
+  fTrkInfoTree          (0)
 {
   //now do what ever other initialization is needed
   // ECAL and HCAL LSB = 0.5
@@ -150,7 +153,7 @@ void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
 
-  
+  fTotalEvents->Fill(1);  
   using namespace edm;
   typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
   
@@ -173,7 +176,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
     unsigned nPar = 4;
     unsigned n = 0;
     for (vec_track::const_iterator it = pixelDigiTTTracks->begin(); it != pixelDigiTTTracks->end(); ++it) {
-      fTotalEvents->Fill(1);
+
 
       const GlobalVector&          momentum = it->getMomentum(nPar);
       const GlobalPoint&           poca     = it->getPOCA(nPar);  // point of closest approach
@@ -187,6 +190,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       //Check below
       double charge = it->getRInv()/fabs(it->getRInv());
       propagate(1,lVars,tMom,tVtx,charge,fBz);
+  
+      runNum  = iEvent.id().run();
+      lumiSec = iEvent.luminosityBlock();
+      evtNum  = iEvent.id().event();
+      trkNum  = n;
       
       trkEcalEta = lVars[4];
       trkEcalPhi = lVars[5];
@@ -201,11 +209,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       trkz0  = poca.z();
       trkd0  = poca.perp();
       
-      fEventTree->Fill();   
+      fTrkInfoTree->Fill();   
       //std::cout << "=== Ecal surface eta : " << lVars[4] << " -- phi : " << lVars[5] << " -- R: " << lVars[6] << " -- eta/phi : " << momentum.eta() << " -- " << momentum.phi() << " -- pt : " << momentum.perp() << " -- " << sqrt(lVars[0]*lVars[0]+lVars[1]*lVars[1])   << std::endl;
       // Std::cout << "track info = " << momentum.perp() << "," << momentum.eta() << "," << momentum.phi() << "; poca z = " << poca.z() << std::endl;        
       n++;
-      if (n > 10) break; // just for testing so cut it off for now
+      // if (n > 10) break; // just for testing so cut it off for now
     }  
   }
    
@@ -236,7 +244,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       float curTowerPhi = towerPhi(it->id().ieta(),it->id().iphi());
       
       std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
-      
       ne++;
       // if (ne > 20) break;
     }
@@ -296,6 +303,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       
     }
   }
+
 }
 
 
@@ -367,19 +375,24 @@ NtupleProducer::beginJob()
   //
   fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
   fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
-  fEventTree   = new TTree("Events","Events");
-  
-  fEventTree->Branch("trkPx",  &trkPx, "trkPx/F");
-  fEventTree->Branch("trkPy",  &trkPy, "trkPy/F");
-  fEventTree->Branch("trkPz",  &trkPz, "trkPz/F");
-  fEventTree->Branch("trkPt",  &trkPt, "trkPt/F");
-  fEventTree->Branch("trkEta",  &trkEta, "trkEta/F");
-  fEventTree->Branch("trkPhi",  &trkPhi, "trkPhi/F");
-  fEventTree->Branch("trkz0",  &trkz0, "trkz0/F");
-  fEventTree->Branch("trkd0",  &trkd0, "trkd0/F");
-  fEventTree->Branch("trkEcalPhi",  &trkEcalPhi, "trkEcalPhi/F");
-  fEventTree->Branch("trkEcalEta",  &trkEcalEta, "trkEcalEta/F");
-  fEventTree->Branch("trkEcalR",  &trkEcalR, "trkEcalR/F");
+  fTrkInfoTree     = new TTree("TrkInfo",   "TrkInfo");
+
+  fTrkInfoTree->Branch("runNum",  &runNum,  "runNum/F");
+  fTrkInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
+  fTrkInfoTree->Branch("evtNum",  &evtNum,  "evtNum/F");
+  fTrkInfoTree->Branch("trkNum",  &trkNum,  "trkNum/F");
+  fTrkInfoTree->Branch("trkPx",   &trkPx,   "trkPx/F");
+  fTrkInfoTree->Branch("trkPy",   &trkPy,   "trkPy/F");
+  fTrkInfoTree->Branch("trkPz",   &trkPz,   "trkPz/F");
+  fTrkInfoTree->Branch("trkPt",   &trkPt,   "trkPt/F");
+  fTrkInfoTree->Branch("trkEta",  &trkEta,  "trkEta/F");
+  fTrkInfoTree->Branch("trkPhi",  &trkPhi,  "trkPhi/F");
+  fTrkInfoTree->Branch("trkz0",   &trkz0,   "trkz0/F");
+  fTrkInfoTree->Branch("trkd0",   &trkd0,   "trkd0/F");
+  fTrkInfoTree->Branch("trkEcalPhi",  &trkEcalPhi, "trkEcalPhi/F");
+  fTrkInfoTree->Branch("trkEcalEta",  &trkEcalEta, "trkEcalEta/F");
+  fTrkInfoTree->Branch("trkEcalR",    &trkEcalR,   "trkEcalR/F");
+
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
