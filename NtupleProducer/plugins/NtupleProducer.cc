@@ -89,14 +89,17 @@ private:
   std::string           fOutputName;
   TFile                 *fOutputFile;
   TH1D                  *fTotalEvents;
-  TTree                 *fEventTree;
+
   TTree                 *fTrkInfoTree;
-  
+  TTree                 *fEcalInfoTree;
+  TTree                 *fHcalInfoTree;
   float runNum, lumiSec, evtNum;
   float trkNum;
   float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkd0;    
   float trkEcalEta, trkEcalPhi, trkEcalR;
 
+  float ecal_subdet, ecal_ieta, ecal_iphi, ecal_curTwrEta, ecal_curTwrPhi, ecal_et, ecal_num;
+  float hcal_subdet, hcal_ieta, hcal_iphi, hcal_TwrR, hcal_et, hcal_num;
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
   //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
   //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
@@ -128,7 +131,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
-  fTrkInfoTree          (0)
+  fTrkInfoTree          (0),
+  fEcalInfoTree         (0),
+  fHcalInfoTree         (0)
 {
   //now do what ever other initialization is needed
   // ECAL and HCAL LSB = 0.5
@@ -243,6 +248,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       float curTowerEta = towerEta(it->id().ieta());
       float curTowerPhi = towerPhi(it->id().ieta(),it->id().iphi());
       
+      ecal_subdet = it->id().subDet();
+      ecal_ieta = it->id().ieta();
+      ecal_iphi = it->id().iphi();
+      ecal_et = et;
+      ecal_curTwrEta = curTowerEta;
+      ecal_curTwrPhi = curTowerPhi;
+      ecal_num = ne;
+      
+      fEcalInfoTree->Fill();
       std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
       ne++;
       // if (ne > 20) break;
@@ -296,8 +310,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       double et = 0.;
       if (hcalScale_!=0) et = hcalScale_->et( compEt, it->id().ietaAbs(), it->id().zside() );
       
+      hcal_subdet = it->id().subdet();
+      hcal_ieta   = it->id().ieta();
+      hcal_iphi   = it->id().iphi();
+      hcal_et     = et;
+      hcal_TwrR   = towerR;
+      hcal_num    = nh;
       std::cout << "hcal info: " << it->id().subdet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << towerPhi << "," << towerEta << "," << towerR << std::endl;  
       
+      fHcalInfoTree->Fill();
       nh++;
       if (nh > 99999) break;
       
@@ -376,6 +397,8 @@ NtupleProducer::beginJob()
   fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
   fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
   fTrkInfoTree     = new TTree("TrkInfo",   "TrkInfo");
+  fEcalInfoTree     = new TTree("EcalInfo",   "EcalInfo");
+  fHcalInfoTree     = new TTree("HcalInfo",   "HcalInfo");
 
   fTrkInfoTree->Branch("runNum",  &runNum,  "runNum/F");
   fTrkInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
@@ -392,6 +415,21 @@ NtupleProducer::beginJob()
   fTrkInfoTree->Branch("trkEcalPhi",  &trkEcalPhi, "trkEcalPhi/F");
   fTrkInfoTree->Branch("trkEcalEta",  &trkEcalEta, "trkEcalEta/F");
   fTrkInfoTree->Branch("trkEcalR",    &trkEcalR,   "trkEcalR/F");
+  
+  fEcalInfoTree->Branch("ecal_subdet", &ecal_subdet, "ecal_subdet/F");
+  fEcalInfoTree->Branch("ecal_ieta", &ecal_ieta, "ecal_ieta/F");
+  fEcalInfoTree->Branch("ecal_iphi", &ecal_iphi, "ecal_iphi/F");
+  fEcalInfoTree->Branch("ecal_curTwrEta", &ecal_curTwrEta, "ecal_curTwrEta/F");
+  fEcalInfoTree->Branch("ecal_curTwrPhi", &ecal_curTwrPhi, "ecal_curTwrPhi/F");
+  fEcalInfoTree->Branch("ecal_et", &ecal_et, "ecal_et/F");
+  fEcalInfoTree->Branch("ecal_num", &ecal_num, "ecal_num/F");
+
+  fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
+  fHcalInfoTree->Branch("hcal_ieta", &hcal_ieta, "hcal_ieta/F");
+  fHcalInfoTree->Branch("hcal_iphi", &hcal_iphi, "hcal_iphi/F");
+  fHcalInfoTree->Branch("hcal_TwrR", &hcal_TwrR, "hcal_TwrR/F");
+  fHcalInfoTree->Branch("hcal_num", &hcal_num, "hcal_num/F");
+  fHcalInfoTree->Branch("hcal_et", &hcal_et, "hcal_et/F");
 
 }
 
