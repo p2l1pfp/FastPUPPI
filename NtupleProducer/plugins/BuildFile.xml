@@ -8,6 +8,7 @@
 <use name="MagneticField/Engine"/>
 <use name="MagneticField/Records"/>
 <use name="DataFormats/ParticleFlowReco"/>
+<use name="DataFormats/HepMCCandidate"/>
 <use name="Geometry/CaloTopology"/>
 <use name="Geometry/HCalTowerAlgo"/>
 <use name="CondFormats/DataRecord"/>
