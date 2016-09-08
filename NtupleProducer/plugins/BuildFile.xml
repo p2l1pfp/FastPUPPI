@@ -17,4 +17,7 @@
 <use name="CalibCalorimetry/HcalTPGAlgos"/>
 <use name="CalibFormats/HcalObjects"/>
 <use name="CalibFormats/CaloTPG"/>
+<use name="DataFormats/ParticleFlowCandidate"/>
+<use name="DataFormats/Math"/>
+<use name="FastPUPPI/NtupleProducer"/>
 <flags EDM_PLUGIN="1"/>

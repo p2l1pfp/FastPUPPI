@@ -1,0 +1,5 @@
+<flags CXXFLAGS="-g -Wall"/>
+<use name="root"/>
+<export>
+  <lib name="1"/>
+</export>
