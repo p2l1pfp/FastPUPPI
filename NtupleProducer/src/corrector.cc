@@ -17,7 +17,8 @@ corrector::corrector(const std::string iFile,int iNFrac) {
   }
 }
 double corrector::correct(double iHcal,double iEcal,int iEta) { 
-  if(iHcal+iEcal < 5.) return 0; 
+  if(fNFrac == 1  && iEcal       < 1. ) return 0;
+  if(fNFrac == 11 && iHcal+iEcal < 10.) return 0; 
   fEcal = 0; if(iEcal > 0) fEcal = iEcal; 
   fHcal = 0; if(iHcal > 0) fHcal = iHcal; 
   double lFrac = fEcal/(fHcal+fEcal); 
