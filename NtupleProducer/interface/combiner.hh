@@ -29,7 +29,8 @@ public:
   void link();
   void merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection);
   inline void    clear() {fTkParticles.clear(); fParticles.clear();}
-  inline std::vector<Particle> candidates() { return fParticles;}
+  inline std::vector<Particle> candidates()   { return fParticles;}
+  inline std::vector<Particle> tkcandidates() { return fTkParticles;}
 private:
   void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
   inline double  getTrkRes (double iPt,double iEta,double iPhi) { return fTrackRes   [translateIEta(iEta)]->Eval(iPt);}

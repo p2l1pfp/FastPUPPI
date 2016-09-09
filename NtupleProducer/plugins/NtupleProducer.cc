@@ -87,6 +87,7 @@ public:
   const L1CaloEcalScale* ecalScale_;
   const L1CaloHcalScale* hcalScale_;
   std::auto_ptr<PFOutputCollection > corrCandidates_;
+ 
 private:
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
@@ -96,7 +97,7 @@ private:
   TLorentzVector getVector(double iPt[][72],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=1);
   void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][72],double iNSigma=2,double iENoise=1);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
-  
+  void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
   std::pair<float,float> towerEtaBounds(int ieta);
   float towerEta(int ieta);
   float towerPhi(int ieta, int iphi);
@@ -108,6 +109,7 @@ private:
   corrector* corrector_;
   corrector* ecorrector_;
   combiner * connector_;
+  combiner * rawconnector_;
   // declare variables for output file
   std::string           fOutputName;
   TFile                 *fOutputFile;
@@ -177,7 +179,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   corrector_  = new corrector(CorrectorTag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
   connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
-  produces<PFOutputCollection>();
+  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
+  produces<PFOutputCollection>("TK");
+  produces<PFOutputCollection>("RawCalo");
+  produces<PFOutputCollection>("Calo");
+  produces<PFOutputCollection>("PF");
 }
 
 
@@ -215,6 +221,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle< vec_track > pixelDigiTTTracks;
   iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
   connector_->clear();
+  rawconnector_->clear();
   if (pixelDigiTTTracks.isValid()) {
     
     edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
@@ -255,6 +262,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       trkz0  = poca.z();
       trkd0  = poca.perp();
       connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi);      
+      rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi);      
 
       std::vector<double> lGenVars;
       genMatch(lGenVars,0,double(trkEta),double(trkPhi),double(trkPt),genParticles);
@@ -435,6 +443,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(hcal_ecal_et > -1 || hcal_clust_et > 0) hcal_corr_et   = corrector_->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta);
       if(hcal_corr_et) hcal_corr_emf  = corrector_->ecalFrac();
       connector_->addCalo(double(hcal_corr_et),double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
+      rawconnector_->addCalo(double(hcal_clust_et),double(hcal_ecal_et),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
       //if(hcal_genPt > 5.) std::cout << "===> Ecal Clust " << hcal_ecal_et << " -- " << hcal_clust_et << " -- Et " << hcal_et << " ---> " << hcal_genPt << std::endl;
       if(hcal_genPt > 1. && zeroSuppress_) fHcalInfoTree->Fill();      
       if(!zeroSuppress_) fHcalInfoTree->Fill();
@@ -442,24 +451,33 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       if (nh > 99999) break;
     }
   }
+  std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
+  std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
   connector_->link();
-  std::vector<combiner::Particle> lCandidates = connector_->candidates();
+  std::vector<combiner::Particle> lCands        = connector_->candidates();
+  std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
+  addPF(lRawCalo ,"RawCalo" ,iEvent);
+  addPF(lCorrCalo,"Calo"    ,iEvent);
+  addPF(lTKCands ,"TK"      ,iEvent);
+  addPF(lCands   ,"PF"      ,iEvent);
+}
+void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
-  for(unsigned int i0 = 0; i0 < lCandidates.size(); i0++) { 
+  for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
-    if(lCandidates[i0].id == 0) id = reco::PFCandidate::ParticleType::h;
-    if(lCandidates[i0].id == 1) id = reco::PFCandidate::ParticleType::e;
-    if(lCandidates[i0].id == 2) id = reco::PFCandidate::ParticleType::h0;
-    if(lCandidates[i0].id == 3) id = reco::PFCandidate::ParticleType::gamma;
-    if(lCandidates[i0].id < 2)  pCharge = 1;
-    TLorentzVector pVec;  pVec. SetPtEtaPhiM(lCandidates[i0].Et,lCandidates[i0].Eta,lCandidates[i0].Phi,lCandidates[i0].M);
+    if(iCandidates[i0].id == 0) id = reco::PFCandidate::ParticleType::h;
+    if(iCandidates[i0].id == 1) id = reco::PFCandidate::ParticleType::e;
+    if(iCandidates[i0].id == 2) id = reco::PFCandidate::ParticleType::h0;
+    if(iCandidates[i0].id == 3) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].id < 2)  pCharge = 1;
+    TLorentzVector pVec;  pVec. SetPtEtaPhiM(iCandidates[i0].Et,iCandidates[i0].Eta,iCandidates[i0].Phi,iCandidates[i0].M);
     LorentzVector  pLVec; pLVec.SetPxPyPzE(pVec.Px(),pVec.Py(),pVec.Pz(),pVec.E());
     reco::PFCandidate pCand(pCharge,pLVec,id);
     corrCandidates_->push_back(pCand);
   }
   //Fill!
-  iEvent.put(corrCandidates_);
+  iEvent.put(corrCandidates_,iLabel);
 }
 // -- propagator 
 void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
