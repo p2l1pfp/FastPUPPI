@@ -33,7 +33,8 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   if(iCalo < 1.1*iEcal) lPhi = iEcalPhi;
   double lSigma = lEt;
   iCalo < 1.1*iEcal? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
-  Particle lParticle(lEt,lEta,lPhi,0.,iCalo < 1.1*iEcal+2,lSigma,0.,lEta,lPhi);
+  int lId = 2; if(iCalo < 1.1*iEcal) lId = 3;
+  Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
   insert(lParticle,fParticles);
 }
 //Add Tracks
@@ -48,7 +49,7 @@ void combiner::link() {
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
-      if(fParticles[i1].id == 0) continue;
+      if(fParticles[i1].id == 0 || fParticles[i1].id == 1) continue;
       merge(fTkParticles[i0],fParticles[i1],fParticles);
     }
   }
@@ -97,7 +98,7 @@ void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) {
 //Delta R
 double  combiner::deltaR(Particle &iParticle1,Particle &iParticle2) {
   double pDPhi=fabs(iParticle1.caloPhi-iParticle2.caloPhi); 
-  if(pDPhi < 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
+  if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
   double pDEta=iParticle1.caloEta-iParticle2.caloEta;
   return sqrt(pDPhi*pDPhi+pDEta*pDEta);
 }

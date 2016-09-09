@@ -176,7 +176,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   hcalScale_  = new L1CaloHcalScale(0.5);
   corrector_  = new corrector(CorrectorTag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
-  connector_  = new combiner (TrackResTag_.label(),EleResTag_.label(),PionResTag_.label());
+  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
   produces<PFOutputCollection>();
 }
 
