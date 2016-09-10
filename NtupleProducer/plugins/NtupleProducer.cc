@@ -52,6 +52,7 @@
 #include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
+#include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 
 const double PI = 3.1415926535897;
 
@@ -110,6 +111,7 @@ private:
   corrector* ecorrector_;
   combiner * connector_;
   combiner * rawconnector_;
+  metanalyzer* metanalyzer_;
   // declare variables for output file
   std::string           fOutputName;
   TFile                 *fOutputFile;
@@ -180,6 +182,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
   connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
   rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
+  metanalyzer_   = new metanalyzer("MetFile.root");
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
@@ -460,6 +463,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
+  metanalyzer_->clear();
+  metanalyzer_->setZ(lTKCands);
+  metanalyzer_->setMETRecoil(2,lTKCands ,false);
+  metanalyzer_->setMETRecoil(0,lCands   ,false);
+  metanalyzer_->setMETRecoil(3,lRawCalo ,true);
+  metanalyzer_->setMETRecoil(1,lCorrCalo,true);
+  metanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
@@ -707,6 +717,7 @@ NtupleProducer::endJob() {
   //
   // Save to ROOT file
   //
+  metanalyzer_->write();
   fOutputFile->cd();
   fTotalEvents->Write();
   fOutputFile->Write();
