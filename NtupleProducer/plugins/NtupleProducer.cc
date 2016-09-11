@@ -320,10 +320,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       genMatch(lGenVars,0,double(trkEta),double(trkPhi),double(trkPt),genParticles);
       genPt=0; genEta=0; genPhi=0; genId=0;
       if(lGenVars.size() > 3) { 
-	genPt   = float(lGenVars[0]);
-	genEta  = float(lGenVars[1]);
-	genPhi  = float(lGenVars[2]);
-	genId   = float(lGenVars[3]);
+      	genPt   = float(lGenVars[0]);
+      	genEta  = float(lGenVars[1]);
+      	genPhi  = float(lGenVars[2]);
+      	genId   = float(lGenVars[3]);
       }
       fTrkInfoTree->Fill();   
       //std::cout << "=== Ecal surface eta : " << lVars[4] << " -- phi : " << lVars[5] << " -- R: " << lVars[6] << " -- eta/phi : " << momentum.eta() << " -- " << momentum.phi() << " -- pt : " << momentum.perp() << " -- " << sqrt(lVars[0]*lVars[0]+lVars[1]*lVars[1])   << std::endl;
@@ -397,10 +397,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       genMatch(lGenVars,1,double(curTowerEta),double(curTowerPhi),double(et),genParticles);
       ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0;
       if(lGenVars.size() > 3) { 
-	ecal_genPt   = float(lGenVars[0]);
-	ecal_genEta  = float(lGenVars[1]);
-	ecal_genPhi  = float(lGenVars[2]);
-	ecal_genId   = float(lGenVars[3]);
+      	ecal_genPt   = float(lGenVars[0]);
+      	ecal_genEta  = float(lGenVars[1]);
+      	ecal_genPhi  = float(lGenVars[2]);
+      	ecal_genId   = float(lGenVars[3]);
       }
       if(ecal_genPt > 1. && zeroSuppress_) fEcalInfoTree->Fill();      
       if(!zeroSuppress_) fEcalInfoTree->Fill();
@@ -437,13 +437,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       float curphimax = -9999.;
       float curphimin = 9999.;
       for (unsigned int i = 0; i < ndetsPerTower; i++){
-	const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
-	// std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
-	towerEta += cell->etaPos();
-	towerR   += cell->getPosition().mag();
-	
-	if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
-	if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
+      	const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
+      	// std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
+      	towerEta += cell->etaPos();
+      	towerR   += cell->getPosition().mag();
+      	
+      	if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
+      	if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
       }
       // std::cout << "curphimax = " << curphimax << ", curphimin = " << curphimin << std::endl;
       if (curphimax - curphimin < PI){ towerPhi = (curphimax + curphimin)/2.; }
@@ -476,20 +476,20 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       genMatch(lGenVars,1,double(hcal_clust_eta),double(hcal_clust_phi),double(et),genParticles);
       hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0;
       if(lGenVars.size() > 3) { 
-	hcal_genPt   = float(lGenVars[0]);
-	hcal_genEta  = float(lGenVars[1]);
-	hcal_genPhi  = float(lGenVars[2]);
-	hcal_genId   = float(lGenVars[3]);
+      	hcal_genPt   = float(lGenVars[0]);
+      	hcal_genEta  = float(lGenVars[1]);
+      	hcal_genPhi  = float(lGenVars[2]);
+      	hcal_genId   = float(lGenVars[3]);
       }
       hcal_ecal_et   = -1;
       for(int i1 = 0; i1 < 4032; i1++) { 
-	if(it->id().ieta() != lEta[i1]) continue;
-	if(it->id().iphi() != lPhi[i1]) continue;
-	hcal_ecal_et     = lEt[i1][0];
-	hcal_ecal_etcorr = lEt[i1][1];
-	hcal_ecal_eta    = lEt[i1][2];
-	hcal_ecal_phi    = lEt[i1][3];
-	break;
+      	if(it->id().ieta() != lEta[i1]) continue;
+      	if(it->id().iphi() != lPhi[i1]) continue;
+      	hcal_ecal_et     = lEt[i1][0];
+      	hcal_ecal_etcorr = lEt[i1][1];
+      	hcal_ecal_eta    = lEt[i1][2];
+      	hcal_ecal_phi    = lEt[i1][3];
+      	break;
       }
       hcal_corr_et = 0;
       if(hcal_ecal_et > -1 || hcal_clust_et > 0) hcal_corr_et   = corrector_->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta);
@@ -520,6 +520,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
   metanalyzer_->fill();
 }
+
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
