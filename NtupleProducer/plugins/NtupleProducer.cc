@@ -54,6 +54,11 @@
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 
+#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
+#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
+#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
+
+
 const double PI = 3.1415926535897;
 
 // ROOT classes
@@ -79,6 +84,7 @@ public:
   const edm::InputTag L1TrackTag_;
   const edm::InputTag EcalTPTag_;
   const edm::InputTag HcalTPTag_;
+  const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
   const edm::InputTag CorrectorTag_;
   const edm::InputTag ECorrectorTag_;
@@ -161,6 +167,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   L1TrackTag_           (iConfig.getParameter<edm::InputTag>("L1TrackTag")),
   EcalTPTag_            (iConfig.getParameter<edm::InputTag>("EcalTPTag")),
   HcalTPTag_            (iConfig.getParameter<edm::InputTag>("HcalTPTag")),
+  MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (iConfig.getParameter<edm::InputTag>("corrector")),
   ECorrectorTag_        (iConfig.getParameter<edm::InputTag>("ecorrector")),
@@ -218,6 +225,48 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<reco::GenParticleCollection> hGenParProduct;
   iEvent.getByLabel(GenParTag_,hGenParProduct);
   const reco::GenParticleCollection genParticles = *(hGenParProduct.product());  
+
+  /// ----------------Muon INFO-------------------
+  /// Stealing Jia Fu's code!
+  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
+  edm::Handle< L1MuGMTReadoutCollection > gmtrc;
+  iEvent.getByLabel(MuonTPTag_, gmtrc);
+
+  std::vector<L1MuGMTReadoutRecord> gmt_records = gmtrc->getRecords();
+  std::vector<L1MuGMTReadoutRecord>::const_iterator igmtrr;
+  for(igmtrr=gmt_records.begin(); igmtrr!=gmt_records.end(); igmtrr++) {
+ 
+    std::vector<L1MuGMTExtendedCand>::const_iterator gmt_iter;
+    std::vector<L1MuGMTExtendedCand> exc = igmtrr->getGMTCands();
+    std::cout << "exc->size() = " << exc.size() << std::endl;
+
+    for(gmt_iter=exc.begin(); gmt_iter!=exc.end(); gmt_iter++) {
+
+      // float mu_Bx = (*gmt_iter).bx();
+      float mu_Eta = (*gmt_iter).etaValue();
+      float mu_Phi = (*gmt_iter).phiValue();
+      float mu_Pt  = (*gmt_iter).ptValue();
+      float mu_Cha = (*gmt_iter).charge();
+      float mu_Qua = (*gmt_iter).quality();
+      std::cout << mu_Pt << "," << mu_Phi << "," << mu_Eta << "," << mu_Cha << "," << mu_Qua << std::endl;
+
+      /// Quality codes:
+      ///
+      /// 0 .. no muon 
+      /// 1 .. beam halo muon (CSC)
+      /// 2 .. very low quality level 1 (e.g. ignore in single and di-muon trigger)
+      /// 3 .. very low quality level 2 (e.g. ignore in single muon trigger use in di-muon trigger)
+      /// 4 .. very low quality level 3 (e.g. ignore in di-muon trigger, use in single-muon trigger)
+      /// 5 .. unmatched RPC 
+      /// 6 .. unmatched DT or CSC
+      /// 7 .. matched DT-RPC or CSC-RPC
+      ///
+      /// attention: try not to rely on quality codes in analysis: they may change again
+
+
+    }
+  }
+
   /// ----------------TRACK INFO-------------------
   /// Stealing Jia Fu's code!
   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc

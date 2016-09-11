@@ -6,7 +6,7 @@ process = cms.Process("OUT")
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
@@ -61,6 +61,7 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  L1TrackTag  = cms.InputTag('TTTracksFromPixelDigis','Level1TTTracks'),
                                  EcalTPTag   = cms.InputTag('simEcalTriggerPrimitiveDigis'),
                                  HcalTPTag   = cms.InputTag('simHcalTriggerPrimitiveDigis'), 
+                                 MuonTPTag   = cms.InputTag('simGmtDigis'), 
                                  genParTag   = cms.InputTag('genParticles'),
                                  corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12_patch1/src/FastPUPPI/NtupleProducer/data/corr.root"),
                                  ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12_patch1/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
