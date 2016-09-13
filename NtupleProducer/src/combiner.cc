@@ -13,6 +13,7 @@ combiner::combiner(const std::string iPionFile,const std::string iElectronFile,c
   loadFile(fElectronRes,iElectronFile);
   loadFile(fTrackRes   ,iTrackFile);
 }
+
 void combiner::loadFile(TGraph** &iF1, std::string iFile) { 
   TFile *lFile = new TFile(iFile.c_str());
   iF1 = new TGraph*[fNEta];
@@ -22,6 +23,7 @@ void combiner::loadFile(TGraph** &iF1, std::string iFile) {
   }
   lFile->Close();
 }
+
 //Add Calo deposit
 void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) { 
   if(iCalo < 1 && iEcal < 1) return;
@@ -32,30 +34,75 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   if(iCalo < 1.1*iEcal) lEta = iEcalEta;
   if(iCalo < 1.1*iEcal) lPhi = iEcalPhi;
   double lSigma = lEt;
-  iCalo < 1.1*iEcal? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
+  iCalo < 1.1*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
   int lId = 2; if(iCalo < 1.1*iEcal) lId = 3;
   Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
   insert(lParticle,fParticles);
 }
+
 //Add Tracks
-void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi) { 
+void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge) { 
   if(iPt < 1) return;
   double lSigma = getTrkRes(iPt,iEta,iPhi);
-  Particle lParticle(iPt,iEta,iPhi,0.137,0.,lSigma,idZ,iCaloEta,iCaloPhi);
+  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,iCaloEta,iCaloPhi,iCharge);
   insert(lParticle,fTkParticles);
 }
+
+//Add muons
+void combiner::addMuon(double iPt, double iEta, double iPhi, double charge, double quality){
+  // for now don't worry about the HCAL MIP matching for muons, just the track matching, so that means that the Calorimeter iEta,iPhi don't matter
+  float curPhi = iPhi;
+  if (iPhi > TMath::Pi()) curPhi = iPhi - 2*TMath::Pi();
+  double lSigma = getTrkRes(iPt,iEta,curPhi); // this needs to be updated with the muon resolutions!
+  Particle lParticle(iPt,iEta,curPhi,0.105,4,lSigma,0.,0,0,charge,quality); // id is 4 for muons
+  // insert(lParticle,fMuParticles); // this does something weird to muons
+  fMuParticles.push_back(lParticle);
+}
+
 //Iterate down in Track Pt
 void combiner::link() { 
+
+  // first do the muon/tracking matching
+  for(unsigned int i0   = 0; i0 < fMuParticles.size(); i0++) { 
+    float minPtDiff = 9999; // find the track that best matches the muon in pT
+    for(unsigned int i1 = 0; i1 < fTkParticles.size(); i1++) { 
+      float curDR = deltaRraw(fTkParticles[i1],fMuParticles[i0]);
+      float curDPT = (fMuParticles[i0].Et/fTkParticles[i1].Et);
+      if (curDPT < 1){ // invert it
+        float tmptmp = curDPT;
+        curDPT = 1/tmptmp;
+      }
+      if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
+        // std::cout << "Matched! " << fMuParticles[i0].Et << ", " << fTkParticles[i1].Et << "," << curDR << std::endl;
+        fTkParticles[i1].id = 4;
+        // fTkParticles[i1].charge = fMuParticles[i0].charge; // use tracks charge, more better like
+        minPtDiff = fabs(curDPT);
+      }
+    } 
+  }
+
+  // then do track + calo linking
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
+    if(fTkParticles[i0].id == 4) continue; // skip muons for now, add them at the end
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
+      // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
       if(fParticles[i1].id == 0 || fParticles[i1].id == 1) continue;
       merge(fTkParticles[i0],fParticles[i1],fParticles);
     }
   }
+
+  // now do muons...
+  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
+       if (fTkParticles[i0].id == 4) fParticles.push_back(fTkParticles[i0]);
+  }
+
 }
+
 //Merge Particles
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
+  
+  // std::cout << "iTkParticle id = " << iTkParticle.id << std::endl;
   double lTotSigma = sqrt(iTkParticle.sigma*iTkParticle.sigma + iParticle1.sigma*iParticle1.sigma);
   //Case 1 calo to large
   if(iParticle1.Et-iTkParticle.Et > 2*lTotSigma) { 
@@ -86,6 +133,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   }
   return;
 }
+
 //Order by pt
 void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
   if(iParticles.size() == 0) iParticles.push_back(iParticle);
@@ -95,10 +143,20 @@ void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) {
     break;
   }
 }
+
 //Delta R
 double  combiner::deltaR(Particle &iParticle1,Particle &iParticle2) {
   double pDPhi=fabs(iParticle1.caloPhi-iParticle2.caloPhi); 
   if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
   double pDEta=iParticle1.caloEta-iParticle2.caloEta;
+  return sqrt(pDPhi*pDPhi+pDEta*pDEta);
+}
+
+//Delta R
+double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
+  // std::cout << iParticle1.Phi << "," << iParticle2.Phi << ", " << iParticle1.Eta << "," << iParticle2.Eta << std::endl;
+  double pDPhi=fabs(iParticle1.Phi-iParticle2.Phi); 
+  if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
+  double pDEta=iParticle1.Eta-iParticle2.Eta;
   return sqrt(pDPhi*pDPhi+pDEta*pDEta);
 }

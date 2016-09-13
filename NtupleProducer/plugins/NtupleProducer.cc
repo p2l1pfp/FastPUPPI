@@ -226,54 +226,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel(GenParTag_,hGenParProduct);
   const reco::GenParticleCollection genParticles = *(hGenParProduct.product());  
 
-  /// ----------------Muon INFO-------------------
-  /// Stealing Jia Fu's code!
-  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
-  edm::Handle< L1MuGMTReadoutCollection > gmtrc;
-  iEvent.getByLabel(MuonTPTag_, gmtrc);
 
-  std::vector<L1MuGMTReadoutRecord> gmt_records = gmtrc->getRecords();
-  std::vector<L1MuGMTReadoutRecord>::const_iterator igmtrr;
-  for(igmtrr=gmt_records.begin(); igmtrr!=gmt_records.end(); igmtrr++) {
- 
-    std::vector<L1MuGMTExtendedCand>::const_iterator gmt_iter;
-    std::vector<L1MuGMTExtendedCand> exc = igmtrr->getGMTCands();
-    std::cout << "exc->size() = " << exc.size() << std::endl;
-
-    for(gmt_iter=exc.begin(); gmt_iter!=exc.end(); gmt_iter++) {
-
-      // float mu_Bx = (*gmt_iter).bx();
-      float mu_Eta = (*gmt_iter).etaValue();
-      float mu_Phi = (*gmt_iter).phiValue();
-      float mu_Pt  = (*gmt_iter).ptValue();
-      float mu_Cha = (*gmt_iter).charge();
-      float mu_Qua = (*gmt_iter).quality();
-      std::cout << mu_Pt << "," << mu_Phi << "," << mu_Eta << "," << mu_Cha << "," << mu_Qua << std::endl;
-
-      /// Quality codes:
-      ///
-      /// 0 .. no muon 
-      /// 1 .. beam halo muon (CSC)
-      /// 2 .. very low quality level 1 (e.g. ignore in single and di-muon trigger)
-      /// 3 .. very low quality level 2 (e.g. ignore in single muon trigger use in di-muon trigger)
-      /// 4 .. very low quality level 3 (e.g. ignore in di-muon trigger, use in single-muon trigger)
-      /// 5 .. unmatched RPC 
-      /// 6 .. unmatched DT or CSC
-      /// 7 .. matched DT-RPC or CSC-RPC
-      ///
-      /// attention: try not to rely on quality codes in analysis: they may change again
-
-
-    }
-  }
+  connector_->clear();
+  rawconnector_->clear();
 
   /// ----------------TRACK INFO-------------------
   /// Stealing Jia Fu's code!
   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
   edm::Handle< vec_track > pixelDigiTTTracks;
   iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
-  connector_->clear();
-  rawconnector_->clear();
   if (pixelDigiTTTracks.isValid()) {
     
     edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
@@ -313,8 +274,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       trkPhi = momentum.phi();
       trkz0  = poca.z();
       trkd0  = poca.perp();
-      connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi);      
-      rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi);      
+      connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
+      rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
 
       std::vector<double> lGenVars;
       genMatch(lGenVars,0,double(trkEta),double(trkPhi),double(trkPt),genParticles);
@@ -333,6 +294,46 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
     }  
   }
    
+  /// ----------------Muon INFO-------------------
+  /// Stealing Jia Fu's code!
+  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
+  edm::Handle< L1MuGMTReadoutCollection > gmtrc;
+  iEvent.getByLabel(MuonTPTag_, gmtrc);
+
+  std::vector<L1MuGMTReadoutRecord> gmt_records = gmtrc->getRecords();
+  std::vector<L1MuGMTReadoutRecord>::const_iterator igmtrr;
+  for(igmtrr=gmt_records.begin(); igmtrr!=gmt_records.end(); igmtrr++) {
+ 
+    std::vector<L1MuGMTExtendedCand>::const_iterator gmt_iter;
+    std::vector<L1MuGMTExtendedCand> exc = igmtrr->getGMTCands();
+    for(gmt_iter=exc.begin(); gmt_iter!=exc.end(); gmt_iter++) {
+
+      // float mu_Bx = (*gmt_iter).bx();
+      float mu_Eta = (*gmt_iter).etaValue();
+      float mu_Phi = (*gmt_iter).phiValue();
+      float mu_Pt  = (*gmt_iter).ptValue();
+      float mu_Cha = (*gmt_iter).charge();
+      float mu_Qua = (*gmt_iter).quality();
+      // std::cout << mu_Pt << "," << mu_Phi << "," << mu_Eta << "," << mu_Cha << "," << mu_Qua << std::endl;
+      connector_->addMuon(mu_Pt, mu_Eta, mu_Phi, mu_Cha, mu_Qua);
+      
+      /// Quality codes:
+      ///
+      /// 0 .. no muon 
+      /// 1 .. beam halo muon (CSC)
+      /// 2 .. very low quality level 1 (e.g. ignore in single and di-muon trigger)
+      /// 3 .. very low quality level 2 (e.g. ignore in single muon trigger use in di-muon trigger)
+      /// 4 .. very low quality level 3 (e.g. ignore in di-muon trigger, use in single-muon trigger)
+      /// 5 .. unmatched RPC 
+      /// 6 .. unmatched DT or CSC
+      /// 7 .. matched DT-RPC or CSC-RPC
+      ///
+      /// attention: try not to rely on quality codes in analysis: they may change again
+
+    }
+    // std::cout << "exc->size() = " << exc.size() << "," << connector_->mucandidates().size() << std::endl;
+
+  }   
   
   /// ----------------ECAL INFO-------------------
   /// Stealing Jia Fu's code!
@@ -503,6 +504,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       if (nh > 99999) break;
     }
   }
+
   std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
   std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
   connector_->link();
@@ -519,6 +521,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
   metanalyzer_->fill();
+
 }
 
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
@@ -530,7 +533,9 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
     if(iCandidates[i0].id == 1) id = reco::PFCandidate::ParticleType::e;
     if(iCandidates[i0].id == 2) id = reco::PFCandidate::ParticleType::h0;
     if(iCandidates[i0].id == 3) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].id == 4) id = reco::PFCandidate::ParticleType::mu;
     if(iCandidates[i0].id < 2)  pCharge = 1;
+    if(iCandidates[i0].id == 4)  pCharge = iCandidates[i0].charge;
     TLorentzVector pVec;  pVec. SetPtEtaPhiM(iCandidates[i0].Et,iCandidates[i0].Eta,iCandidates[i0].Phi,iCandidates[i0].M);
     LorentzVector  pLVec; pLVec.SetPxPyPzE(pVec.Px(),pVec.Py(),pVec.Pz(),pVec.E());
     reco::PFCandidate pCand(pCharge,pLVec,id);
@@ -667,6 +672,7 @@ TLorentzVector NtupleProducer::getVector(double iPt[][72],int iEta,int iPhi,int 
   //if(lPt > 0) for(unsigned int i0 = 0; i0 < lGrow.size(); i0++) { lVec += getVector(iPt,lGrow[i0].first,lGrow[i0].second,iEta,iPhi,iEta,iPhiC);}
   return lVec;
 }
+
 //--- Simple Clustering Start with Local maxima (in 3x3) keep adding neighbors 2sigma above threshold require bottom left to be equal or greater (to avoid points with the same value)
 void NtupleProducer::simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][72],double iNSigma,double iENoise) { 
   for(int i0 = 0; i0 < 61; i0++) { 

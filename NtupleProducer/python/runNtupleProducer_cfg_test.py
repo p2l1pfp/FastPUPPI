@@ -6,7 +6,7 @@ process = cms.Process("OUT")
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 100
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(20) )
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
@@ -86,15 +86,7 @@ process.pfMetTK.calculateSignificance = False
 
 process.out = cms.OutputModule("PoolOutputModule",
                                fileName = cms.untracked.string('TESTFILE.root'),
-                               outputCommands = cms.untracked.vstring('drop *',
-                                                                      "keep *_*_*Met_*",
-                                                                      "keep *_simEcalTriggerPrimitiveDigis_*_*",
-                                                                      "keep *_*_ecalET_*",
-                                                                      "keep *_*_trkPtPerp_*",
-                                                                      "keep *_*_trkPtEta_*",
-                                                                      "keep *_*_trkPtPhi_*",
-                                                                      "keep *_*_trkPOCAz_*",
-                                                                      "keep *_*_*_OUT")
+                               outputCommands = cms.untracked.vstring('drop *') # killing my disk space
                                )
 
 
