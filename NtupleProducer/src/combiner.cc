@@ -84,12 +84,15 @@ void combiner::link() {
   // then do track + calo linking
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].id == 4) continue; // skip muons for now, add them at the end
+    bool pFill = false;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
       if(fParticles[i1].id == 0 || fParticles[i1].id == 1) continue;
       merge(fTkParticles[i0],fParticles[i1],fParticles);
+      pFill = true;
     }
+    if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
 
   // now do muons...

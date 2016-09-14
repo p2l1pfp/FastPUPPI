@@ -48,7 +48,6 @@ void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle) {
       break;
     }
   }
-  // std::cout << "nmuons = " << nmuons << ", z mass = " << fVar[0] << std::endl;
 }
 void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticle,bool iAdd) {
   int lId = 4+iId*4;
@@ -58,7 +57,7 @@ void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticl
     TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iParticle[i0].Et,0,iParticle[i0].Phi,0);
     lVec-=pVec1;
   }
-  //if(iAdd) lVec -= lZ;
+  if(iAdd) lVec -= lZ;
   fVar[lId+0] = lVec.Pt();
   fVar[lId+1] = lVec.Phi();
   lVec += lZ;
