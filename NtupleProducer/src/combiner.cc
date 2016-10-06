@@ -7,7 +7,7 @@
 
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
-  fDRMatch = 0.1;
+  fDRMatch = 0.15;
   fNEta  = 61;
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
@@ -30,12 +30,12 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   double lEt  = iCalo;
   double lEta = iCaloEta;
   double lPhi = iCaloPhi;
-  if(iCalo < 1.1*iEcal) lEt  = iEcal;
-  if(iCalo < 1.1*iEcal) lEta = iEcalEta;
-  if(iCalo < 1.1*iEcal) lPhi = iEcalPhi;
+  if(iCalo < 1.5*iEcal) lEt  = iEcal;
+  if(iCalo < 1.5*iEcal) lEta = iEcalEta;
+  if(iCalo < 1.5*iEcal) lPhi = iEcalPhi;
   double lSigma = lEt;
-  iCalo < 1.1*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
-  int lId = 2; if(iCalo < 1.1*iEcal) lId = 3;
+  iCalo < 1.5*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
+  int lId = 2; if(iCalo < 1.5*iEcal) lId = 3;
   Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
   insert(lParticle,fParticles);
 }
@@ -61,7 +61,6 @@ void combiner::addMuon(double iPt, double iEta, double iPhi, double charge, doub
 
 //Iterate down in Track Pt
 void combiner::link() { 
-
   // first do the muon/tracking matching
   for(unsigned int i0   = 0; i0 < fMuParticles.size(); i0++) { 
     float minPtDiff = 9999; // find the track that best matches the muon in pT
@@ -73,7 +72,7 @@ void combiner::link() {
         curDPT = 1/tmptmp;
       }
       if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
-        // std::cout << "Matched! " << fMuParticles[i0].Et << ", " << fTkParticles[i1].Et << "," << curDR << std::endl;
+        //std::cout << "Matched! " << fMuParticles[i0].Et << ", " << fTkParticles[i1].Et << "," << curDR << std::endl;
         fTkParticles[i1].id = 4;
         // fTkParticles[i1].charge = fMuParticles[i0].charge; // use tracks charge, more better like
         minPtDiff = fabs(curDPT);
@@ -88,27 +87,27 @@ void combiner::link() {
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
-      if(fParticles[i1].id == 0 || fParticles[i1].id == 1) continue;
+      if(fParticles[i1].id == 0 || fParticles[i1].id == 1)   continue;
       merge(fTkParticles[i0],fParticles[i1],fParticles);
       pFill = true;
     }
+    //Remove high pT fakes
+    if(fTkParticles[i0].Et > 30.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
 
   // now do muons...
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-       if (fTkParticles[i0].id == 4) fParticles.push_back(fTkParticles[i0]);
+    if (fTkParticles[i0].id == 4) fParticles.push_back(fTkParticles[i0]);
   }
 
 }
 
 //Merge Particles
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
-  
-  // std::cout << "iTkParticle id = " << iTkParticle.id << std::endl;
   double lTotSigma = sqrt(iTkParticle.sigma*iTkParticle.sigma + iParticle1.sigma*iParticle1.sigma);
   //Case 1 calo to large
-  if(iParticle1.Et-iTkParticle.Et > 2*lTotSigma) { 
+  if(iParticle1.Et-iTkParticle.Et > 3.*lTotSigma) { 
     TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle1.Et ,iParticle1.Eta ,iParticle1.Phi ,0.);
     TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.Eta,iTkParticle.Phi,0.);
     pVec0 -= pVec1;
@@ -117,7 +116,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 2 combined 
-  if(fabs(iParticle1.Et-iTkParticle.Et) < 2*lTotSigma) { 
+  if(fabs(iParticle1.Et-iTkParticle.Et) < 3.*lTotSigma) { 
     double pSigma   = iParticle1.sigma;
     double pTkSigma = iTkParticle.sigma;
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
@@ -130,9 +129,10 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 3 MIP
-  if(iParticle1.Et-iTkParticle.Et < -2*lTotSigma) { 
-    iParticle1.Et -= 2; //2 is a bullshit guess at the MIP energy lost
+  if(iParticle1.Et-iTkParticle.Et < -3*lTotSigma) { 
+    //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
+    iParticle1.Et -= 2; //2 is a bullshit guess at the MIP energy lost
   }
   return;
 }

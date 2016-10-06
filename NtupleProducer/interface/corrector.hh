@@ -5,14 +5,16 @@
 class corrector { 
 public:
   corrector(const std::string iFile,int iNFrac=11);
-  double correct(double iHcal,double iEcal,int iEta);
+  double correct(double iHcal,double iEcal,int iEta,int iPhi);
   double ecalFrac();
   double hcalFrac();
 private:
-  TGraph ***fGraph;
+  TGraph ****fGraph;
   int fNEta;
+  int fNPhi;
   int fNFrac;
   int fIEta;
+  int fIPhi;
   double fFrac;
   double fEcal;
   double fHcal;
