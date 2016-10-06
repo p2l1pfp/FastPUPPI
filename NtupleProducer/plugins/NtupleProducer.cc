@@ -87,6 +87,7 @@ public:
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
   const edm::InputTag CorrectorTag_;
+  const edm::InputTag Corrector2Tag_;
   const edm::InputTag ECorrectorTag_;
   const edm::InputTag TrackResTag_;
   const edm::InputTag EleResTag_;
@@ -114,6 +115,7 @@ private:
   int   translateIPhi(int iphi,bool iInvert=false);
 
   corrector* corrector_;
+  corrector* corrector2_;
   corrector* ecorrector_;
   combiner * connector_;
   combiner * rawconnector_;
@@ -132,8 +134,8 @@ private:
   float trkEcalEta, trkEcalPhi, trkEcalR;
   float genPt, genEta, genPhi, genId;
 
-  float ecal_subdet, ecal_ieta, ecal_iphi, ecal_curTwrEta, ecal_curTwrPhi, ecal_et, ecal_num;
-  float hcal_subdet, hcal_ieta, hcal_iphi, hcal_TwrR, hcal_et, hcal_num, hcal_ecal_et,hcal_ecal_etcorr,hcal_ecal_eta,hcal_ecal_phi;
+  float ecal_subdet, ecal_ieta, ecal_iphi, ecal_curTwrEta, ecal_curTwrPhi, ecal_et, ecal_num,ecal_dr;
+  float hcal_subdet, hcal_ieta, hcal_iphi, hcal_TwrR, hcal_et, hcal_num, hcal_ecal_et,hcal_ecal_etcorr,hcal_ecal_eta,hcal_ecal_phi,hcal_dr;
   float ecal_clust_et,ecal_clust_eta,ecal_clust_phi,ecal_corr_et;
   float hcal_clust_et,hcal_clust_eta,hcal_clust_phi,hcal_corr_et,hcal_corr_emf;
   float ecal_genPt, ecal_genEta, ecal_genPhi, ecal_genId;
@@ -170,6 +172,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (iConfig.getParameter<edm::InputTag>("corrector")),
+  Corrector2Tag_        (iConfig.getParameter<edm::InputTag>("corrector2")),
   ECorrectorTag_        (iConfig.getParameter<edm::InputTag>("ecorrector")),
   TrackResTag_          (iConfig.getParameter<edm::InputTag>("trackres")),
   EleResTag_            (iConfig.getParameter<edm::InputTag>("eleres")),
@@ -186,6 +189,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   ecalScale_  = new L1CaloEcalScale(0.5);
   hcalScale_  = new L1CaloHcalScale(0.5);
   corrector_  = new corrector(CorrectorTag_.label());
+  corrector2_ = new corrector(Corrector2Tag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
   connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
   rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
@@ -387,7 +391,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       if(pClust.size() > 0) ecal_clust_eta=pClust[0].Eta();
       if(pClust.size() > 0) ecal_clust_phi=pClust[0].Phi();
       pClust.clear();
-      ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta);
+      ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta,ecal_iphi);
       lEta[ne]  = it->id().ieta();
       lPhi[ne]  = it->id().iphi();
       lEt [ne][0] = ecal_clust_et;
@@ -396,15 +400,19 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       lEt [ne][3] = ecal_clust_phi;
       std::vector<double> lGenVars;
       genMatch(lGenVars,1,double(curTowerEta),double(curTowerPhi),double(et),genParticles);
-      ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0;
+      ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0; ecal_dr = 0;
       if(lGenVars.size() > 3) { 
       	ecal_genPt   = float(lGenVars[0]);
       	ecal_genEta  = float(lGenVars[1]);
       	ecal_genPhi  = float(lGenVars[2]);
       	ecal_genId   = float(lGenVars[3]);
+	float deltaEta = ecal_genEta-ecal_clust_eta;
+	float deltaPhi = fabs(ecal_genPhi-ecal_clust_phi); if(deltaPhi > 2.*TMath::Pi()-deltaPhi) deltaPhi = 2.*TMath::Pi()-deltaPhi;
+	ecal_dr      = sqrt(deltaEta*deltaEta+deltaPhi*deltaPhi);
       }
       if(ecal_genPt > 1. && zeroSuppress_) fEcalInfoTree->Fill();      
-      if(!zeroSuppress_) fEcalInfoTree->Fill();
+      //if(!zeroSuppress_) fEcalInfoTree->Fill();
+      if(!zeroSuppress_ && ecal_et > 1.) fEcalInfoTree->Fill();
       //std::cout << "ecal info: " << it->id().subDet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << curTowerPhi << "," << curTowerEta << std::endl;
       ne++;
       // if (ne > 20) break;
@@ -475,12 +483,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       //std::cout << "hcal info: " << it->id().subdet() << "," << it->id().ieta() << "," << it->id().iphi() << "," << et << "," << towerPhi << "," << towerEta << "," << towerR << std::endl;  
       std::vector<double> lGenVars;
       genMatch(lGenVars,1,double(hcal_clust_eta),double(hcal_clust_phi),double(et),genParticles);
-      hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0;
+      hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0; hcal_dr=0;
       if(lGenVars.size() > 3) { 
       	hcal_genPt   = float(lGenVars[0]);
       	hcal_genEta  = float(lGenVars[1]);
       	hcal_genPhi  = float(lGenVars[2]);
       	hcal_genId   = float(lGenVars[3]);
+	float deltaEta = hcal_genEta-hcal_clust_eta;
+	float deltaPhi = fabs(hcal_genPhi-hcal_clust_phi); if(deltaPhi > 2.*TMath::Pi()-deltaPhi) deltaPhi = 2.*TMath::Pi()-deltaPhi;
+	hcal_dr      = sqrt(deltaEta*deltaEta+deltaPhi*deltaPhi);
       }
       hcal_ecal_et   = -1;
       for(int i1 = 0; i1 < 4032; i1++) { 
@@ -493,13 +504,16 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       	break;
       }
       hcal_corr_et = 0;
-      if(hcal_ecal_et > -1 || hcal_clust_et > 0) hcal_corr_et   = corrector_->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta);
+      //if(hcal_ecal_et > -1) hcal_corr_et   = corrector_->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+      if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+      if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+      if(hcal_corr_et  < 0) hcal_corr_et   = 0;
       if(hcal_corr_et) hcal_corr_emf  = corrector_->ecalFrac();
       connector_->addCalo(double(hcal_corr_et),double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
       rawconnector_->addCalo(double(hcal_clust_et),double(hcal_ecal_et),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
-      //if(hcal_genPt > 5.) std::cout << "===> Ecal Clust " << hcal_ecal_et << " -- " << hcal_clust_et << " -- Et " << hcal_et << " ---> " << hcal_genPt << std::endl;
+      //if(hcal_genPt > 50.) std::cout << "===> Ecal Clust " << hcal_ecal_et << " -- " << hcal_clust_et << " -- Et " << hcal_et << " --->  gen: " << hcal_genPt << "  -- " << lGenVars.size() << " -- " << lGenVars[3] << std::endl;
       if(hcal_genPt > 1. && zeroSuppress_) fHcalInfoTree->Fill();      
-      if(!zeroSuppress_) fHcalInfoTree->Fill();
+      if(!zeroSuppress_ && hcal_et > 1.) fHcalInfoTree->Fill();
       nh++;
       if (nh > 99999) break;
     }
@@ -521,9 +535,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
   metanalyzer_->fill();
-
 }
-
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
@@ -620,7 +632,7 @@ void NtupleProducer::genMatch(std::vector<double> &iGenVars,int iType,double iEt
     double deltaEta = itGenP->eta()-iEta;
     double deltaPhi = fabs(itGenP->phi()-iPhi); if(deltaPhi > 2.*TMath::Pi()-deltaPhi) deltaPhi = 2.*TMath::Pi()-deltaPhi;
     double deltaR   = sqrt(deltaEta*deltaEta+deltaPhi*deltaPhi);
-    if(deltaR > 0.1) continue;
+    if(deltaR > 0.2) continue;
     if(iType == 0 && deltaR > lDeltaRMin) continue;
     if(iType == 0) lId = itGenP->pdgId();
     if(iType == 1 && itGenP->pt() > lPt) { 
@@ -664,7 +676,6 @@ TLorentzVector NtupleProducer::getVector(double iPt[][72],int iEta,int iPhi,int 
     }
   }      
   double lPt = iPt[iEta][iPhi];
-  if(lPtTot > 0 && iPt[iEta0][iPhi0]/lPtTot > 1) std::cout << "!!!!!!!!!!!!!====> ptfrac: " << iPt[iEta0][iPhi0]/lPtTot << std::endl;
   if(lPtTot >  iNSigma * iENoise && !(iEta0 == iEta && iPhi0 == iPhi)) lPt = iPt[iEta0][iPhi0]/lPtTot * lPt;
   if(lPtTot >  iNSigma * iENoise &&  iEta0 == iEta && iPhi0 == iPhi  ) lPt = 0;
   TLorentzVector lVec;
@@ -743,7 +754,8 @@ NtupleProducer::beginJob()
   fEcalInfoTree->Branch("genPt",   &ecal_genPt,"ecal_genPt/F");
   fEcalInfoTree->Branch("genEta",  &ecal_genEta,"ecal_genEta/F");
   fEcalInfoTree->Branch("genPhi",  &ecal_genPhi,"ecal_genPhi/F");
-  fEcalInfoTree->Branch("genid",   &ecal_genId, "ecal_enid/F");
+  fEcalInfoTree->Branch("genid",   &ecal_genId, "ecal_genid/F");
+  fEcalInfoTree->Branch("gendr",   &ecal_dr, "ecal_dr/F");
 
 
   fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
@@ -764,7 +776,8 @@ NtupleProducer::beginJob()
   fHcalInfoTree->Branch("genPt",   &hcal_genPt ,"hcal_genPt/F");
   fHcalInfoTree->Branch("genEta",  &hcal_genEta,"hcal_genEta/F");
   fHcalInfoTree->Branch("genPhi",  &hcal_genPhi,"hcal_genPhi/F");
-  fHcalInfoTree->Branch("genid",   &hcal_genId, "hcal_enid/F");
+  fHcalInfoTree->Branch("genid",   &hcal_genId, "hcal_genid/F");
+  fHcalInfoTree->Branch("gendr",   &hcal_dr ,"hcal_dr/F");  
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
