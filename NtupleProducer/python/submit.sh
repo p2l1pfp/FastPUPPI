@@ -27,12 +27,12 @@ for  x in `eos ls  $dir`; do
     bsub -q 8nh -o out.%J run.sh $dir $x $PWD Zmm
 done
 exit
-dir=/store/mc/TTI2023Upg14D/SinglePionMinusFlatPt0p2To50/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/
-for  x in `eos ls  $dir`; do
-     bsub -q 8nh -o out.%J run.sh $dir $x $PWD PiMinus
-done
+#dir=/store/mc/TTI2023Upg14D/SinglePionMinusFlatPt0p2To50/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/
+#for  x in `eos ls  $dir`; do
+#     bsub -q 8nh -o out.%J run.sh $dir $x $PWD PiMinus
+#done
 
-dir=/store/mc/TTI2023Upg14D/SinglePionPlusFlatPt0p2To50/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/
-for  x in `eos ls  $dir`; do
-     bsub -q 8nh run.sh $dir $x $PWD PiPlus
-done
+#dir=/store/mc/TTI2023Upg14D/SinglePionPlusFlatPt0p2To50/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/
+#for  x in `eos ls  $dir`; do
+#     bsub -q 8nh run.sh $dir $x $PWD PiPlus
+#done

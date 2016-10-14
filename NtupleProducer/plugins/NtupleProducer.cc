@@ -524,6 +524,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   connector_->link();
   std::vector<combiner::Particle> lCands        = connector_->candidates();
   std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
+  connector_->doVertexing();
+
   addPF(lRawCalo ,"RawCalo" ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);

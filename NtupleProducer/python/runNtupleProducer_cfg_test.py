@@ -5,14 +5,17 @@ process = cms.Process("OUT")
 # process.load('Configuration.Geometry.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load("FWCore.MessageService.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(5) )
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
-        '/store/mc/TTI2023Upg14D/PYTHIA6_Tauola_TTbar_TuneZ2star_14TeV/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/00F0F213-B1E5-E311-9C9A-002618943977.root'
+        #'/store/mc/TTI2023Upg14D/PYTHIA6_Tauola_TTbar_TuneZ2star_14TeV/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/00F0F213-B1E5-E311-9C9A-002618943977.root'
         #'/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/SingleTau1p/NoPU/SingleTau1p_E2023TTI_NoPU.root'
+        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/C050E16A-D1E6-E311-A244-0025905A60D2.root',
+        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/CCBD6681-D0E6-E311-9747-0025905964CC.root',
+        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/F4A1119F-DDE6-E311-A9D4-0025905AA9F0.root',
         )
                             )
 
@@ -40,12 +43,12 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  HcalTPTag   = cms.InputTag('simHcalTriggerPrimitiveDigis'), 
                                  MuonTPTag   = cms.InputTag('simGmtDigis'), 
                                  genParTag   = cms.InputTag('genParticles'),
-                                 corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
-                                 ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root")
+                                 corrector   = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
+                                 corrector2  = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
+                                 ecorrector  = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
+                                 trackres    = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
+                                 eleres      = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
+                                 pionres     = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root")
                                  )
 
 

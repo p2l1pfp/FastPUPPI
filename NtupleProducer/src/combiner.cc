@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <TFile.h>
+#include <TH1F.h>
 
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
@@ -162,4 +163,34 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
   if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
   double pDEta=iParticle1.Eta-iParticle2.Eta;
   return sqrt(pDPhi*pDPhi+pDEta*pDEta);
+}
+
+void combiner::doVertexing(){
+  
+  // std::vector<Particle> fTkParticlesWVertexing;
+
+  TH1F *h_dz = new TH1F("h_dz","h_dz",100,-20,20); // 1mm binning
+  for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
+
+  // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
+  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
+    // std::cout << "fTkParticles[i0].dZ " << i0 << ": " << fTkParticles[i0].dZ << "," << fTkParticles[i0].Et << std::endl;
+    float curdz  = fTkParticles[i0].dZ;
+    float curbin = h_dz->GetXaxis()->FindBin(curdz);
+    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curdz) + fTkParticles[i0].Et );
+  }
+
+  int imaxbin = h_dz->GetMaximumBin();
+  float pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
+  float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
+  float pvdz_lo = pvdz - 1.5*binwidth;
+  float pvdz_hi = pvdz + 1.5*binwidth;
+
+  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
+    float curdz  = fTkParticles[i0].dZ;
+    if (curdz < pvdz_hi && curdz > pvdz_lo) fTkParticlesWVertexing.push_back( fTkParticles[i0] );
+  }
+
+  // std::cout << "ntracks = " << fTkParticles.size() << ", " << fTkParticlesWVertexing.size() << std::endl;
+  // return fTkParticlesWVertexing;
 }

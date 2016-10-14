@@ -31,8 +31,9 @@ public:
   void addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge);
   void addMuon(double iPt, double iEta, double iPhi, double charge, double quality);
   void link();
+  void doVertexing();  
   void merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection);
-  inline void    clear() {fTkParticles.clear(); fParticles.clear(); fMuParticles.clear(); }
+  inline void    clear() {fTkParticles.clear(); fParticles.clear(); fMuParticles.clear(); fTkParticlesWVertexing.clear(); }
   inline std::vector<Particle> candidates()   { return fParticles;}
   inline std::vector<Particle> tkcandidates() { return fTkParticles;}
   inline std::vector<Particle> mucandidates() { return fMuParticles;}
@@ -50,6 +51,7 @@ private:
   int   fNEta;
   double fDRMatch;
   std::vector<Particle> fTkParticles;
+  std::vector<Particle> fTkParticlesWVertexing;  
   std::vector<Particle> fMuParticles;
   std::vector<Particle> fParticles;
 };
