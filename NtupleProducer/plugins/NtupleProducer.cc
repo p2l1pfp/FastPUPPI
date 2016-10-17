@@ -53,6 +53,7 @@
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
+#include "FastPUPPI/NtupleProducer/interface/PuppiContainer.h"
 
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
@@ -69,6 +70,7 @@ const double PI = 3.1415926535897;
 #include <TLorentzVector.h>
 #include <TMath.h>
 #include <TObject.h>
+
 
 typedef math::XYZTLorentzVector                        LorentzVector;
 typedef std::vector< reco::PFCandidate >               PFOutputCollection;
@@ -119,6 +121,7 @@ private:
   corrector* ecorrector_;
   combiner * connector_;
   combiner * rawconnector_;
+  PuppiContainer* puppi_;
   metanalyzer* metanalyzer_;
   // declare variables for output file
   std::string           fOutputName;
@@ -194,10 +197,14 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
   rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
   metanalyzer_   = new metanalyzer("MetFile.root");
+  //const edm::ParameterSet& lConfig1 = lConfig->getParameter<edm::ParameterSet>("puppi");
+  puppi_         = new PuppiContainer(iConfig.getParameter<edm::ParameterSet>("puppi"));
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
+  produces<PFOutputCollection>("PVTK");
+  produces<PFOutputCollection>("Puppi");
 }
 
 
@@ -525,17 +532,26 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   std::vector<combiner::Particle> lCands        = connector_->candidates();
   std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
   connector_->doVertexing();
+  puppi_->initialize(connector_->candidates());
+  puppi_->setNPV(100.);
+  puppi_->puppiFetch();
+  std::vector<combiner::Particle> lPVTks        = connector_->pvtkcandidates();
+  std::vector<combiner::Particle> lPups         = puppi_->puppiParticles();
 
   addPF(lRawCalo ,"RawCalo" ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
+  addPF(lPVTks   ,"PVTK"    ,iEvent);
+  addPF(lPups    ,"Puppi"   ,iEvent);
   metanalyzer_->clear();
-  metanalyzer_->setZ(lTKCands);
+  metanalyzer_->setZ(lTKCands,connector_->dZ());
   metanalyzer_->setMETRecoil(2,lTKCands ,false);
   metanalyzer_->setMETRecoil(0,lCands   ,false);
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
+  metanalyzer_->setMETRecoil(4,lPVTks   ,false);
+  metanalyzer_->setMETRecoil(5,lPups    ,false);
   metanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 

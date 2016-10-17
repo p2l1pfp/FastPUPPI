@@ -1,3 +1,4 @@
+import os
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("OUT")
@@ -32,7 +33,8 @@ process.L1Tracks.geometry = cms.untracked.string('BE5D')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
-
+cmssw_base = os.environ['CMSSW_BASE']
+process.load('FastPUPPI.NtupleProducer.Puppi_cff')
 process.InfoOut = cms.EDProducer('NtupleProducer',
                                  zeroSuppress = cms.bool(True),
                                  L1TrackTag  = cms.InputTag('TTTracksFromPixelDigis','Level1TTTracks'),
@@ -40,12 +42,13 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  HcalTPTag   = cms.InputTag('simHcalTriggerPrimitiveDigis'), 
                                  MuonTPTag   = cms.InputTag('simGmtDigis'), 
                                  genParTag   = cms.InputTag('genParticles'), 
-                                 corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
-                                 ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root")
+                                 corrector   = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
+                                 corrector2  = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
+                                 ecorrector  = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
+                                 trackres    = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/tkres.root"),
+                                 eleres      = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/eres.root"),
+                                 pionres     = cms.InputTag(cmssw_base+"/src/FastPUPPI/NtupleProducer/data/pionres.root"),
+                                 puppi       = process.puppi
                                  )
 
 process.out = cms.OutputModule("PoolOutputModule",

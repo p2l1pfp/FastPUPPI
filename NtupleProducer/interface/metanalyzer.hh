@@ -9,7 +9,7 @@
 class metanalyzer { 
 public:
   metanalyzer(std::string iFile);
-  void setZ(std::vector<combiner::Particle> &iParticle);
+  void setZ(std::vector<combiner::Particle> &iParticle,double iDZ);
   void setMETRecoil(int iId,std::vector<combiner::Particle> &iParticle,bool iAdd);
   inline void clear() {for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;}
   inline void fill()  {fFile->cd(); fTree->Fill();}

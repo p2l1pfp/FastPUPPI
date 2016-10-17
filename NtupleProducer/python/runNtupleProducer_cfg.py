@@ -28,7 +28,6 @@ process.load('L1Trigger.Configuration.CaloTriggerPrimitives_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
 # process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgrade2019', '')
-
 process.InfoOut = cms.EDProducer('NtupleProducer',
                                  L1TrackTag  = cms.InputTag('TTTracksFromPixelDigis','Level1TTTracks'),
                                  EcalTPTag   = cms.InputTag('simEcalTriggerPrimitiveDigis'),

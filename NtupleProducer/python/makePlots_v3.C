@@ -73,16 +73,13 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   double lRMS  [lN]; 
   double lEMean[lN]; 
   double lERMS [lN]; 
-  std::string lCut  = "(pt_z > 0 && m_z > 60 && m_z < 120)*("+iMet+"met > 0)";
+  std::string lCut  = "(pt_z > 0 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.0)*("+iMet+"met > 0)";
 
   TH1F *lXH = new TH1F(("Met"+iVar).c_str(),("Met"+iVar).c_str(),26,0,330); lXH->Sumw2();
   lXH->GetXaxis()->SetTitle("#slash{E_{T}} (GeV)");
   lXH->SetLineColor(iColor);
   std::string lHDraw = iMet+"met>>Met"+iVar;
-  //std::string lHDraw = "evt0_puppet>>Met"+iVar;
-  //std::string lHDraw = "evt0_met>>Met"+iVar;
-  if(iVar.find("r") != std::string::npos) lHDraw = "evt0_puppet2>>Met"+iVar;
-
+  std::cout << "===> " << lHDraw << " -- " << lCut << std::endl;
   lTree->Draw(lHDraw.c_str(),lCut.c_str());
   fH = lXH;
   fH->GetYaxis()->SetTitle("Events/5 GeV");
@@ -141,11 +138,11 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   }
   fF1 = lF1;
 }
-void makePlots_v3(//mettree_pt3_dR04_NoLep_200",
-		  std::string iFile0="zmmmet13.root",
-		  std::string iFile1="zmmmet13.root",
-		  std::string iFile2="zmmmet13.root",
-		  std::string iFile3="zmmmet13.root"
+void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
+		  std::string iFile0="pupmet_nomu_dz_nocut.root",
+		  std::string iFile1="pupmet_nomu_dz_nocut.root",
+		  std::string iFile2="pupmet_nomu_dz_nocut.root",
+		  std::string iFile3="pupmet_nomu_dz_nocut.root"
 	       ) { 
   //Prep();
   setTDRStyle();
@@ -154,22 +151,22 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",
   std::string lLabel_b="calo";
   std::string lLabel2_b="";
   std::string lLast  ="";
-  makeMETPlotsFile(lLabel_b+"u1"+lLast,lLabel2_b,iFile0,kRed);
+  makeMETPlotsFile(lLabel_b+"u1"+lLast,"calo",iFile0,kRed);
   TH1F * lH0    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF0 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG0 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u1"+lLast,lLabel2,iFile1,kGreen+1);
+  makeMETPlotsFile(lLabel+"u1"+lLast,"",iFile1,kGreen+1);
   TH1F * lH1    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF1 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG1 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"tku1"+lLast,lLabel2,iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku1"+lLast,"pvtk",iFile2,kOrange-9);
   TH1F * lH2    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF2 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG2 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"ucalou1"+lLast,lLabel2,iFile3,kBlue-9);
+  makeMETPlotsFile(lLabel+"pupu1"+lLast,"pup",iFile3,kBlue-9);
   TH1F * lH3    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF3 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG3 = (TGraphErrors*) fG1->Clone("Res0"); 
@@ -178,22 +175,22 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",
   TGraphErrors  * lPupF20 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG20 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u2"+lLast,lLabel2,iFile1,kGreen+1);
+  makeMETPlotsFile(lLabel+"u2"+lLast,"",iFile1,kGreen+1);
   TGraphErrors  * lPupF21 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG21 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"tku2"+lLast,lLabel2,iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku2"+lLast,"pvtk",iFile2,kOrange-9);
   TGraphErrors  * lPupF22 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG22 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"ucalou2"+lLast,lLabel2,iFile3,kBlue-9);
+  makeMETPlotsFile(lLabel+"pupu2"+lLast,"pup",iFile3,kBlue-9);
   TGraphErrors  * lPupF23 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG23 = (TGraphErrors*) fG1->Clone("Res0"); 
 
   std::string lLeg1 = "Calo";
   std::string lLeg2 = "PF";
-  std::string lLeg3 = "TK";
-  std::string lLeg4 = "uncorr calo";
+  std::string lLeg3 = "TK from PV";
+  std::string lLeg4 = "puppi";
   TLegend *lL = new TLegend(0.2,0.2,0.7,0.5); lL->SetBorderSize(0); lL->SetFillColor(0); 
   lL->AddEntry(lH0,lLeg1.c_str(),"l");  
   lL->AddEntry(lH1,lLeg2.c_str(),"l");

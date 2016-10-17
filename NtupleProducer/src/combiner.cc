@@ -8,7 +8,7 @@
 
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
-  fDRMatch = 0.15;
+  fDRMatch = 0.2;
   fNEta  = 61;
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
@@ -37,7 +37,7 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   double lSigma = lEt;
   iCalo < 1.5*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
   int lId = 2; if(iCalo < 1.5*iEcal) lId = 3;
-  Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
+  Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,0.,lEta,lPhi);
   insert(lParticle,fParticles);
 }
 
@@ -45,7 +45,7 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
 void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge) { 
   if(iPt < 1) return;
   double lSigma = getTrkRes(iPt,iEta,iPhi);
-  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,iCaloEta,iCaloPhi,iCharge);
+  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,0,iCaloEta,iCaloPhi,iCharge);
   insert(lParticle,fTkParticles);
 }
 
@@ -55,7 +55,7 @@ void combiner::addMuon(double iPt, double iEta, double iPhi, double charge, doub
   float curPhi = iPhi;
   if (iPhi > TMath::Pi()) curPhi = iPhi - 2*TMath::Pi();
   double lSigma = getTrkRes(iPt,iEta,curPhi); // this needs to be updated with the muon resolutions!
-  Particle lParticle(iPt,iEta,curPhi,0.105,4,lSigma,0.,0,0,charge,quality); // id is 4 for muons
+  Particle lParticle(iPt,iEta,curPhi,0.105,4,lSigma,0.,0,iEta,iPhi,charge,quality); // id is 4 for muons
   // insert(lParticle,fMuParticles); // this does something weird to muons
   fMuParticles.push_back(lParticle);
 }
@@ -93,7 +93,7 @@ void combiner::link() {
       pFill = true;
     }
     //Remove high pT fakes
-    if(fTkParticles[i0].Et > 30.) pFill = true;
+    if(fTkParticles[i0].Et > 10.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
 
@@ -127,6 +127,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     iParticle1.Phi  = iTkParticle.Phi;
     if(iParticle1.id == 3) iParticle1.M    = 0.137;
     iParticle1.id -= 2;
+    iParticle1.charge = iTkParticle.charge;
     return;
   }
   //Case 3 MIP
@@ -166,10 +167,10 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
 }
 
 void combiner::doVertexing(){
-  
+  fDZ  = -999;
   // std::vector<Particle> fTkParticlesWVertexing;
 
-  TH1F *h_dz = new TH1F("h_dz","h_dz",100,-20,20); // 1mm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",200,-20,20); // 0.5mm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
 
   // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
@@ -177,7 +178,7 @@ void combiner::doVertexing(){
     // std::cout << "fTkParticles[i0].dZ " << i0 << ": " << fTkParticles[i0].dZ << "," << fTkParticles[i0].Et << std::endl;
     float curdz  = fTkParticles[i0].dZ;
     float curbin = h_dz->GetXaxis()->FindBin(curdz);
-    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curdz) + fTkParticles[i0].Et );
+    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + fTkParticles[i0].Et );
   }
 
   int imaxbin = h_dz->GetMaximumBin();
@@ -185,12 +186,22 @@ void combiner::doVertexing(){
   float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
   float pvdz_lo = pvdz - 1.5*binwidth;
   float pvdz_hi = pvdz + 1.5*binwidth;
+  fDZ = pvdz;
 
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     float curdz  = fTkParticles[i0].dZ;
-    if (curdz < pvdz_hi && curdz > pvdz_lo) fTkParticlesWVertexing.push_back( fTkParticles[i0] );
+    if( (curdz < pvdz_hi && curdz > pvdz_lo)) fTkParticles[i0].pvid = 1;
+    if(!(curdz < pvdz_hi && curdz > pvdz_lo)) fTkParticles[i0].pvid = 2;
+    if (curdz < pvdz_hi && curdz > pvdz_lo)  fTkParticlesWVertexing.push_back( fTkParticles[i0] );
+    if(fTkParticles[i0].id == 4 && fTkParticles[i0].Et > 20) std::cout << " ---> " << curdz << " --> " << pvdz_hi << " -- " << pvdz_lo << std::endl;
   }
 
-  // std::cout << "ntracks = " << fTkParticles.size() << ", " << fTkParticlesWVertexing.size() << std::endl;
-  // return fTkParticlesWVertexing;
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    float curdz  = fParticles[i0].dZ;
+    int   curid  = fParticles[i0].id;
+    if( (curdz < pvdz_hi && curdz > pvdz_lo) || curid == 2 || curid == 3)  fCHSParticles.push_back( fParticles[i0] );
+    if( (curdz < pvdz_hi && curdz > pvdz_lo) && curid != 2 && curid != 3)  fParticles[i0].pvid = 1;
+    if(!(curdz < pvdz_hi && curdz > pvdz_lo) && curid != 2 && curid != 3)  fParticles[i0].pvid = 2;
+    if(                                         curid == 2 || curid == 3)  fParticles[i0].pvid = 0;
+  }
 }
