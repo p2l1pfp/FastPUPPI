@@ -3,13 +3,19 @@
 #include "TGraph.h"
 #include <algorithm>  
 #include <iostream>
+#include "TFile.h"
+#include "TTree.h"
+
+#ifdef __MAKECINT__
+#pragma link C++ class vector<float>+;
+#endif
 
 class combiner { 
 public:
   struct Particle { 
-    Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma,double iDZ,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999) 
+    Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma,double iDZ,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999, double iIsPV = 0, float alphaF = -999, float alphaC = -999, float puppiWeight = -99) 
     {
-      Et=iEt; Eta=iEta; Phi=iPhi; M=iM; id=iId; sigma=iSigma; dZ=iDZ; caloEta=iCaloEta; caloPhi=iCaloPhi; charge = iCharge; quality = iQuality;
+      Et=iEt; Eta=iEta; Phi=iPhi; M=iM; id=iId; sigma=iSigma; dZ=iDZ; caloEta=iCaloEta; caloPhi=iCaloPhi; charge = iCharge; quality = iQuality; isPV = iIsPV;
     }
     double Et;
     double Eta;
@@ -22,9 +28,15 @@ public:
     double charge;
     double quality;
     int id;
+    int isPV; 
+
+    float alphaF;
+    float alphaC;
+    float puppiWeight;
+
   };
 
-  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile);
+  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile);
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);
@@ -32,11 +44,17 @@ public:
   void addMuon(double iPt, double iEta, double iPhi, double charge, double quality);
   void link();
   void doVertexing();  
+  void fetchPuppi();
+  void fill();
+  void write(){fFile->cd(); fTree->Write(); fFile->Write(); fFile->Close();}
   void merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection);
-  inline void    clear() {fTkParticles.clear(); fParticles.clear(); fMuParticles.clear(); fTkParticlesWVertexing.clear(); }
+  inline void    clear() {fTkParticles.clear(); fParticles.clear(); fMuParticles.clear(); fTkParticlesWVertexing.clear(); fParticlesPuppi.clear(); }
   inline std::vector<Particle> candidates()   { return fParticles;}
   inline std::vector<Particle> tkcandidates() { return fTkParticles;}
+  inline std::vector<Particle> tkvtxcandidates() { return fTkParticlesWVertexing;}
   inline std::vector<Particle> mucandidates() { return fMuParticles;}
+  inline std::vector<Particle> puppiFetch() { return fParticlesPuppi; }
+
 private:
   void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
   inline double  getTrkRes (double iPt,double iEta,double iPhi) { return fTrackRes   [translateIEta(iEta)]->Eval(iPt);}
@@ -54,5 +72,31 @@ private:
   std::vector<Particle> fTkParticlesWVertexing;  
   std::vector<Particle> fMuParticles;
   std::vector<Particle> fParticles;
+  std::vector<Particle> fParticlesPuppi;
+  TFile  *fFile;
+  TTree  *fTree;
+
+  void computeAlphas(std::vector<Particle> neighborParticles, int isCentral);
+  void computeMedRMS();
+  void computeWeights();
+  float alphaFMed;
+  float alphaFRms;
+  float alphaCMed;
+  float alphaCRms;
+  std::vector<float> b_pt;
+  std::vector<float> b_alphaF;
+  std::vector<float> b_alphaC;
+  std::vector<float> b_Eta;
+  std::vector<float> b_Phi;
+  std::vector<float> b_Et;
+  std::vector<float> b_PuppiWeight;
+  int b_nParticles; 
+  float b_alphaFMed;
+  float b_alphaFRms;
+  float b_alphaCMed;
+  float b_alphaCRms;
+
+
+
 };
 #endif

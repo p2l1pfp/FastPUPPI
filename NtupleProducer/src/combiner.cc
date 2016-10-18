@@ -5,14 +5,33 @@
 #include <sstream>
 #include <TFile.h>
 #include <TH1F.h>
+#include <algorithm>
+#include "TMath.h"
+#include "Math/QuantFuncMathCore.h"
+#include "Math/SpecFuncMathCore.h"
+#include "Math/ProbFunc.h"
 
-
-combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
+combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile = "puppi.root") {
   fDRMatch = 0.15;
   fNEta  = 61;
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
   loadFile(fTrackRes   ,iTrackFile);
+
+  fFile = new TFile(iFile.c_str(),"RECREATE");
+  fTree = new TTree("puppi","puppi");
+  fTree->Branch("pt",&b_pt);
+  fTree->Branch("alphaF",&b_alphaF);
+  fTree->Branch("alphaC",&b_alphaC);
+  fTree->Branch("eta",&b_Eta);
+  fTree->Branch("phi",&b_Phi);
+  fTree->Branch("et",&b_Et);
+  fTree->Branch("puppiWeight",&b_PuppiWeight);
+  fTree->Branch("alphaFMed",&b_alphaFMed);
+  fTree->Branch("alphaCMed",&b_alphaCMed);
+  fTree->Branch("alphaFRms",&b_alphaFRms);
+  fTree->Branch("alphaCRms",&b_alphaCRms);
+  fTree->Branch("nPars",&b_nParticles,"nPars/I");
 }
 
 void combiner::loadFile(TGraph** &iF1, std::string iFile) { 
@@ -169,15 +188,18 @@ void combiner::doVertexing(){
   
   // std::vector<Particle> fTkParticlesWVertexing;
 
-  TH1F *h_dz = new TH1F("h_dz","h_dz",100,-20,20); // 1mm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",200,-20,20); // 2mm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
 
   // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
-  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-    // std::cout << "fTkParticles[i0].dZ " << i0 << ": " << fTkParticles[i0].dZ << "," << fTkParticles[i0].Et << std::endl;
-    float curdz  = fTkParticles[i0].dZ;
+  int ntracks = 0;
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    if (fParticles[i0].charge == 0) continue;
+    ntracks++;
+    // std::cout << i0 << ": fParticles[i0].dZ = " << fParticles[i0].dZ << "," << fParticles[i0].Et << ", " << fParticles[i0].id << std::endl;
+    float curdz  = fParticles[i0].dZ;
     float curbin = h_dz->GetXaxis()->FindBin(curdz);
-    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curdz) + fTkParticles[i0].Et );
+    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + fParticles[i0].Et );
   }
 
   int imaxbin = h_dz->GetMaximumBin();
@@ -186,11 +208,207 @@ void combiner::doVertexing(){
   float pvdz_lo = pvdz - 1.5*binwidth;
   float pvdz_hi = pvdz + 1.5*binwidth;
 
-  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-    float curdz  = fTkParticles[i0].dZ;
-    if (curdz < pvdz_hi && curdz > pvdz_lo) fTkParticlesWVertexing.push_back( fTkParticles[i0] );
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    float curdz  = fParticles[i0].dZ;
+    if (curdz < pvdz_hi && curdz > pvdz_lo){
+      fTkParticlesWVertexing.push_back( fParticles[i0] );
+      fParticles[i0].isPV = 1;
+    }
   }
 
-  // std::cout << "ntracks = " << fTkParticles.size() << ", " << fTkParticlesWVertexing.size() << std::endl;
+  // std::cout << "ntracks = " << ntracks << ", " << fTkParticlesWVertexing.size() << ", " << fTkParticles.size() << std::endl;
   // return fTkParticlesWVertexing;
+}
+
+
+////////////////////////////////////////////////////////////////////////////
+// PUPPI TIME!
+////////////////////////////////////////////////////////////////////////////
+
+void combiner::fetchPuppi(){
+
+  // std::cout << "fetching puppi..." << std::endl;
+
+  // separate particles out into neutrals and charged PU and charged PV
+  std::vector<Particle> puppi_neutrals;
+  std::vector<Particle> puppi_chargedPU;
+  std::vector<Particle> puppi_chargedPV;
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    if (fParticles[i0].charge == 0) puppi_neutrals.push_back(fParticles[i0]);
+    if (fParticles[i0].charge != 0 && fParticles[i0].isPV != 0 && fParticles[i0].id != 4) puppi_chargedPV.push_back(fParticles[i0]);
+    if (fParticles[i0].charge != 0 && fParticles[i0].isPV == 0) puppi_chargedPU.push_back(fParticles[i0]);
+  }
+  std::cout << fParticles.size() << ", " << puppi_neutrals.size() << ", " << puppi_chargedPU.size() << ", " << puppi_chargedPV.size() << std::endl;
+
+  // compute alphas (not efficient, but we don't have that many particles)
+  computeAlphas(fParticles,0);
+  computeAlphas(puppi_chargedPV,1);
+
+  // compute median and RMS
+  computeMedRMS();
+
+  // compute weights 
+  computeWeights();
+
+}
+
+void combiner::computeAlphas(std::vector<Particle> neighborParticles, int isCentral){
+
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    float curalpha = 0;
+    for (unsigned int j0 = 0; j0 < neighborParticles.size(); j0++) {
+
+      float curdr = deltaRraw(fParticles[i0],neighborParticles[j0]);
+      if (curdr < 0.5 && curdr != 0.) curalpha += neighborParticles[j0].Et * neighborParticles[j0].Et / curdr / curdr;
+
+    }
+
+    float logcuralpha = -99;
+    if (curalpha != 0.) logcuralpha = log(curalpha);
+    if (isCentral == 0) fParticles[i0].alphaF = logcuralpha;
+    if (isCentral == 1) fParticles[i0].alphaC = logcuralpha;
+  }
+
+}
+
+void combiner::computeMedRMS(){
+
+  // std::cout << "computing alpha med/rms..." << std::endl;
+  std::vector<float> v_alphaFs;
+  std::vector<float> v_alphaCs;
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+    // if (fParticles[i0].charge != 0 && fParticles[i0].isPV == 0){
+    // if (fParticles[i0].alphaF > -98) v_alphaFs.push_back(fParticles[i0].alphaF);
+    // if (fParticles[i0].alphaC > -98) v_alphaCs.push_back(fParticles[i0].alphaC);
+    if (fParticles[i0].alphaF > -98 && fabs(fParticles[i0].Eta) > 2.5) v_alphaFs.push_back(fParticles[i0].alphaF); // no eta extrap
+    if (fParticles[i0].alphaC > -98 && fabs(fParticles[i0].Eta) < 2.5) v_alphaCs.push_back(fParticles[i0].alphaC); // no eta extrap
+    // }
+  }
+  std::sort(v_alphaCs.begin(),v_alphaCs.end());
+  std::sort(v_alphaFs.begin(),v_alphaFs.end());
+
+  // std::cout << v_alphaCs.size() << ", " << v_alphaFs.size() << std::endl;
+
+  if (v_alphaCs.size() > 0){
+    int medIndex = v_alphaCs.size()/2+1;
+    alphaCMed = v_alphaCs[medIndex];
+    double sum = 0.0;
+    for(unsigned int i = 0; i < v_alphaCs.size(); i++)
+      sum += v_alphaCs[i] * v_alphaCs[i];
+    alphaCRms = sqrt(sum / float(v_alphaCs.size()));
+  }
+  else{
+    alphaCMed = 8.;
+    alphaCRms = 8.;
+  }
+
+  if (v_alphaFs.size() > 0){
+    int medIndex = v_alphaFs.size()/2+1;
+    alphaFMed = v_alphaFs[medIndex];
+    double sum = 0.0;
+    for(unsigned int i = 0; i < v_alphaFs.size(); i++)
+      sum += v_alphaFs[i] * v_alphaFs[i];
+    alphaFRms = sqrt(sum / float(v_alphaFs.size()));
+  }
+  else{
+    alphaFMed = 6.;
+    alphaFRms = 6.;
+  }
+
+  // fudging this for now
+  alphaCRms /= 2;
+  alphaFRms /= 2;
+
+}
+
+void combiner::computeWeights(){
+
+  // std::cout << "computing weights..." << std::endl;
+
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+
+    float curmed = alphaFMed;
+    float currms = alphaFRms;
+    float curalpha = fParticles[i0].alphaF;
+    if (fabs(fParticles[i0].Eta) < 2.5){ // central!
+      curmed = alphaCMed;
+      currms = alphaCRms;
+      curalpha = fParticles[i0].alphaC;
+    }
+    
+    if (fParticles[i0].isPV == 1 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 1; continue;}
+    if (fParticles[i0].isPV == 0 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 0; continue;}
+    if (curalpha < -98){ fParticles[i0].puppiWeight = 0; continue; }
+
+    float lVal = (curalpha - curmed)*fabs((curalpha - curmed))/currms/currms;
+    float lPval = ROOT::Math::chisquared_cdf(lVal,1);
+    // std::cout << "curmed = " << curmed << ", currms = " << currms << ", curalpha = " << curalpha << "..." << lVal << ", " << lPval << std::endl;
+    
+    fParticles[i0].puppiWeight = lPval;
+    // if (curalpha - curmed) fParticles[i0].puppiWeight = 1;
+  }
+
+  // std::cout << "write out PUPPI collection..." << std::endl;
+  int puppictr = 0;
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+
+    float ptcutC = 1.0;
+    float ptcutF = 4.0;
+    if (fParticles[i0].puppiWeight <= 0.01) continue;
+    if (fParticles[i0].puppiWeight == 1) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
+    if (fParticles[i0].puppiWeight < 1 && fParticles[i0].puppiWeight > 0.01){
+      if (fabs(fParticles[i0].Eta < 2.5)){
+        if (fParticles[i0].Et*fParticles[i0].puppiWeight > ptcutC){
+          fParticlesPuppi.push_back(fParticles[i0]);
+          fParticlesPuppi[puppictr].Et = fParticles[i0].Et*fParticles[i0].puppiWeight;          
+          puppictr++;
+        }
+      }
+      else{
+        if (fParticles[i0].Et*fParticles[i0].puppiWeight > ptcutF){
+          fParticlesPuppi.push_back(fParticles[i0]);
+          fParticlesPuppi[puppictr].Et = fParticles[i0].Et*fParticles[i0].puppiWeight;
+          puppictr++;
+        }
+      }
+    }
+  }
+
+  // std::cout << "puppi particles = " << fParticlesPuppi.size() << std::endl;
+
+}
+
+void combiner::fill(){
+
+  fFile->cd();
+
+  // std::cout << "filling..." << std::endl;
+  b_pt.clear();
+  b_alphaC.clear();
+  b_alphaF.clear();
+  b_Phi.clear();
+  b_Eta.clear();
+  b_Et.clear();
+  b_PuppiWeight.clear();
+
+  b_nParticles = fParticles.size();
+  b_alphaFMed = alphaFMed;
+  b_alphaFRms = alphaFRms;
+  b_alphaCMed = alphaCMed;
+  b_alphaCRms = alphaCRms;
+
+  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
+
+    b_pt.push_back(fParticles[i0].Et);
+    b_alphaC.push_back(fParticles[i0].alphaC);
+    b_alphaF.push_back(fParticles[i0].alphaF);
+    b_Eta.push_back(fParticles[i0].Eta);
+    b_Phi.push_back(fParticles[i0].Phi);
+    b_Et.push_back(fParticles[i0].Et);
+    b_PuppiWeight.push_back(fParticles[i0].puppiWeight);
+
+    // std::cout << "alphaF = " << fParticles[i0].alphaF << ", puppiWeight = " << fParticles[i0].puppiWeight << std::endl;
+  }
+
+  fTree->Fill();
 }

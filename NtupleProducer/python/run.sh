@@ -13,3 +13,5 @@ cd -
 cmsRun runNtupleProducer_cfg.py
 #mv ntuple.root  $dir/F${label}$file
 mv MetFile.root $dir/M${label}$file
+#mv puppi.root $dir/PUP${label}$file
+rm puppi.root

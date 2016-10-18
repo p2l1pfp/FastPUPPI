@@ -191,8 +191,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   corrector_  = new corrector(CorrectorTag_.label());
   corrector2_ = new corrector(Corrector2Tag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
-  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
-  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label());
+  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root");
+  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root");
   metanalyzer_   = new metanalyzer("MetFile.root");
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
@@ -525,6 +525,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   std::vector<combiner::Particle> lCands        = connector_->candidates();
   std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
   connector_->doVertexing();
+  std::vector<combiner::Particle> lTKVtxCands      = connector_->tkvtxcandidates();
+  connector_->fetchPuppi();
+  connector_->fill();
+  std::vector<combiner::Particle> lPupCands     = connector_->puppiFetch();
 
   addPF(lRawCalo ,"RawCalo" ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
@@ -536,6 +540,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   metanalyzer_->setMETRecoil(0,lCands   ,false);
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
+  metanalyzer_->setMETRecoil(4,lPupCands,false);
+  metanalyzer_->setMETRecoil(5,lTKVtxCands ,false);
   metanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
@@ -558,6 +564,9 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
   //Fill!
   iEvent.put(corrCandidates_,iLabel);
 }
+//////////////////////////// ------------------------------------------------------
+//////////////////////////// ------------------------------------------------------
+
 // -- propagator 
 void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const XYZTLorentzVector& iMom,const XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
   BaseParticlePropagator particle = BaseParticlePropagator(RawParticle(iMom,iVtx),0.,0.,iBField);
@@ -788,6 +797,8 @@ NtupleProducer::endJob() {
   //
   // Save to ROOT file
   //
+
+  connector_->write();
   metanalyzer_->write();
   fOutputFile->cd();
   fTotalEvents->Write();

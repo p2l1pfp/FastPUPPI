@@ -28,6 +28,14 @@ metanalyzer::metanalyzer(std::string iFile) {
   fTree->Branch("ucalometphi",&fVar[17],"ucalometphi/D");
   fTree->Branch("ucalou1"    ,&fVar[18],"ucalou1/D");
   fTree->Branch("ucalou2"    ,&fVar[19],"ucalou2/D");
+  fTree->Branch("puppimet"   ,&fVar[20],"puppimet/D");
+  fTree->Branch("puppimetphi",&fVar[21],"puppimetphi/D");
+  fTree->Branch("puppiu1"    ,&fVar[22],"puppiu1/D");
+  fTree->Branch("puppiu2"    ,&fVar[23],"puppiu2/D");
+  fTree->Branch("tkvtxmet"   ,&fVar[24],"tkvtxmet/D");
+  fTree->Branch("tkvtxmetphi",&fVar[25],"tkvtxmetphi/D");
+  fTree->Branch("tkvtxu1"    ,&fVar[26],"tkvtxu1/D");
+  fTree->Branch("tkvtxu2"    ,&fVar[27],"tkvtxu2/D");
 }
 void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle) {
   int nmuons = 0;
@@ -48,6 +56,7 @@ void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle) {
       break;
     }
   }
+  std::cout << "zinfo: m = " << fVar[0] << ", pt = " << fVar[1] << std::endl;
 }
 void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticle,bool iAdd) {
   int lId = 4+iId*4;
