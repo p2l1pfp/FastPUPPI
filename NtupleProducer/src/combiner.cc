@@ -173,7 +173,7 @@ void combiner::doVertexing(){
   fDZ  = -999;
   // std::vector<Particle> fTkParticlesWVertexing;
 
-  TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",80,-20,20); // 1cm binning
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++)h_dz->Fill(fTkParticles[i0].dZ,fTkParticles[i0].Et );
   int imaxbin = h_dz->GetMaximumBin();
   float pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
