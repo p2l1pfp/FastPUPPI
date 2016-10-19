@@ -210,6 +210,7 @@ void combiner::doVertexing(){
   float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
   float pvdz_lo = pvdz - 1.5*binwidth;
   float pvdz_hi = pvdz + 1.5*binwidth;
+  fDZ = pvdz;
 
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
     float curdz  = fParticles[i0].dZ;

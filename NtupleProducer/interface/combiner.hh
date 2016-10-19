@@ -54,7 +54,7 @@ public:
   inline std::vector<Particle> tkvtxcandidates() { return fTkParticlesWVertexing;}
   inline std::vector<Particle> mucandidates() { return fMuParticles;}
   inline std::vector<Particle> puppiFetch() { return fParticlesPuppi; }
-
+  inline double dZ() { return fDZ;} 
 private:
   void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
   inline double  getTrkRes (double iPt,double iEta,double iPhi) { return fTrackRes   [translateIEta(iEta)]->Eval(iPt);}
@@ -75,6 +75,7 @@ private:
   std::vector<Particle> fParticlesPuppi;
   TFile  *fFile;
   TTree  *fTree;
+  double  fDZ;
 
   void computeAlphas(std::vector<Particle> neighborParticles, int isCentral);
   void computeMedRMS();

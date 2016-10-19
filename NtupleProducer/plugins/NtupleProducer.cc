@@ -535,7 +535,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   addPF(lTKCands ,"TK"      ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
   metanalyzer_->clear();
-  metanalyzer_->setZ(lTKCands);
+  metanalyzer_->setZ(lTKCands,connector_->dZ());
   metanalyzer_->setMETRecoil(2,lTKCands ,false);
   metanalyzer_->setMETRecoil(0,lCands   ,false);
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
