@@ -8,7 +8,7 @@
 
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
-  fDRMatch = 0.10;
+  fDRMatch = 0.15;
   fNEta  = 61;
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
@@ -108,7 +108,7 @@ void combiner::link() {
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
   double lTotSigma = sqrt(iTkParticle.sigma*iTkParticle.sigma + iParticle1.sigma*iParticle1.sigma);
   //Case 1 calo to large
-  if(iParticle1.Et-iTkParticle.Et > 3.*lTotSigma) { 
+  if(iParticle1.Et-iTkParticle.Et > 2.*lTotSigma) { 
     TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle1.Et ,iParticle1.Eta ,iParticle1.Phi ,0.);
     TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.caloEta,iTkParticle.caloPhi,0.);
     pVec0 -= pVec1;
@@ -117,7 +117,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 2 combined 
-  if(fabs(iParticle1.Et-iTkParticle.Et) < 3.*lTotSigma) { 
+  if(fabs(iParticle1.Et-iTkParticle.Et) < 2.*lTotSigma) { 
     double pSigma   = iParticle1.sigma;
     double pTkSigma = iTkParticle.sigma;
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
@@ -131,7 +131,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 3 MIP
-  if(iParticle1.Et-iTkParticle.Et < -3*lTotSigma) { 
+  if(iParticle1.Et-iTkParticle.Et < -2*lTotSigma) { 
     //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
     iParticle1.Et -= 2; //2 is a bullshit guess at the MIP energy lost
@@ -178,8 +178,8 @@ void combiner::doVertexing(){
   int imaxbin = h_dz->GetMaximumBin();
   float pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
   float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
-  float pvdz_lo = pvdz - 3.5*binwidth;
-  float pvdz_hi = pvdz + 3.5*binwidth;
+  float pvdz_lo = pvdz - 1.5*binwidth;
+  float pvdz_hi = pvdz + 1.5*binwidth;
   fDZ = pvdz;
 
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
