@@ -112,7 +112,7 @@ void combiner::link() {
       pFill = true;
     }
     //Remove high pT fakes
-    if(fTkParticles[i0].Et > 30.) pFill = true;
+    if(fTkParticles[i0].Et > 300.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
 
@@ -190,8 +190,8 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
 void combiner::doVertexing(){
   
   // std::vector<Particle> fTkParticlesWVertexing;
-
-  TH1F *h_dz = new TH1F("h_dz","h_dz",200,-20,20); // 2mm binning
+  
+  TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
 
   // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
@@ -283,6 +283,9 @@ void combiner::computeMedRMS(){
     // if (fParticles[i0].charge != 0 && fParticles[i0].isPV == 0){
     // if (fParticles[i0].alphaF > -98) v_alphaFs.push_back(fParticles[i0].alphaF);
     // if (fParticles[i0].alphaC > -98) v_alphaCs.push_back(fParticles[i0].alphaC);
+
+    //Use non-pv tracks for alphaF in central
+    if (fabs(fParticles[i0].Eta) < 2.5 && (fParticles[i0].id == 2 || fParticles[i0].id == 3 || fParticles[i0].isPV == 1)) continue;
     if (fParticles[i0].alphaF > -98 && fabs(fParticles[i0].Eta) > 2.5) v_alphaFs.push_back(fParticles[i0].alphaF); // no eta extrap
     if (fParticles[i0].alphaC > -98 && fabs(fParticles[i0].Eta) < 2.5) v_alphaCs.push_back(fParticles[i0].alphaC); // no eta extrap
     // }
@@ -338,9 +341,9 @@ void combiner::computeWeights(){
       currms = alphaCRms;
       curalpha = fParticles[i0].alphaC;
     }
-    
-    if (fParticles[i0].isPV == 1 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 1; continue;}
-    if (fParticles[i0].isPV == 0 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 0; continue;}
+    //PH: Getting good performance
+    //if (fParticles[i0].isPV == 1 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 1; continue;}
+    //if (fParticles[i0].isPV == 0 && fParticles[i0].charge != 0){ fParticles[i0].puppiWeight = 0; continue;}
     if (curalpha < -98){ fParticles[i0].puppiWeight = 0; continue; }
 
     float lVal = (curalpha - curmed)*fabs((curalpha - curmed))/currms/currms;
@@ -355,7 +358,7 @@ void combiner::computeWeights(){
   int puppictr = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
 
-    float ptcutC = 1.0;
+    float ptcutC = 4.0;//Tight cuts for high PU
     float ptcutF = 4.0;
     if (fParticles[i0].puppiWeight <= 0.01) continue;
     if (fParticles[i0].puppiWeight == 1) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
