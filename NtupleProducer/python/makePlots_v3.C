@@ -67,13 +67,14 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   const int lN = 11;
   double lEnd = 750; 
   double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,150,200};
+  //double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,200};
   double lX    [lN]; 
   double lEX   [lN]; 
   double lMean [lN]; 
   double lRMS  [lN]; 
   double lEMean[lN]; 
   double lERMS [lN]; 
-  std::string lCut  = "(pt_z > 0 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.0)*("+iMet+"met > 0)";
+  std::string lCut  = "(pt_z > 5 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.5)*("+iMet+"met > 0)";
 
   TH1F *lXH = new TH1F(("Met"+iVar).c_str(),("Met"+iVar).c_str(),26,0,330); lXH->Sumw2();
   lXH->GetXaxis()->SetTitle("#slash{E_{T}} (GeV)");
@@ -109,7 +110,7 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   //lG0->Fit("pol2","R","",30,lEnd);
   lG0->SetLineColor  (iColor); 
   lG0->SetMarkerColor(iColor); 
-  lG0->GetYaxis()->SetRangeUser(-0.5,1.5);
+  lG0->GetYaxis()->SetRangeUser(0.,1.5);
   lG0->GetXaxis()->SetTitle("p_{T}^{Z} (GeV)");
   lG0->GetYaxis()->SetTitle("<u_{#parallel}>/p_{T}");
   fG0 = lG0;
@@ -125,7 +126,7 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   //lG1->Fit("func","","R",30,lEnd);
   lG1->SetLineColor  (iColor); 
   lG1->SetMarkerColor(iColor);   
-  lG1->GetYaxis()->SetRangeUser(0,200);
+  lG1->GetYaxis()->SetRangeUser(0,100);
   if(iVar.find("pup")  != std::string::npos) lG1->GetYaxis()->SetRangeUser(0,55);
   fG1 = lG1;
   lG1->GetXaxis()->SetTitle("p_{T}^{Z} (GeV)");
@@ -139,11 +140,11 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   fF1 = lF1;
 }
 void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
-		  std::string iFile0="pupmet_nomu_dz_nocut.root",
-		  std::string iFile1="pupmet_nomu_dz_nocut.root",
-		  std::string iFile2="pupmet_nomu_dz_nocut.root",
-		  std::string iFile3="pupmet_nomu_dz_nocut.root"
-	       ) { 
+		  std::string iFile0="pupmet_fix2_23.root",
+		  std::string iFile1="pupmet_fix2_23.root",
+		  std::string iFile2="pupmet_fix2_23.root",
+		  std::string iFile3="pupmet_fix2_23.root"
+	       ) {  
   //Prep();
   setTDRStyle();
   std::string lLabel="";
@@ -151,7 +152,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   std::string lLabel_b="calo";
   std::string lLabel2_b="";
   std::string lLast  ="";
-  makeMETPlotsFile(lLabel_b+"u1"+lLast,"calo",iFile0,kRed);
+  makeMETPlotsFile(lLabel+"tku1"+lLast,"tk",iFile0,kRed);
   TH1F * lH0    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF0 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG0 = (TGraphErrors*) fG1->Clone("Res0"); 

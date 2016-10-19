@@ -13,10 +13,13 @@ process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
         #'/store/mc/TTI2023Upg14D/PYTHIA6_Tauola_TTbar_TuneZ2star_14TeV/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/00F0F213-B1E5-E311-9C9A-002618943977.root'
-        #'/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/SingleTau1p/NoPU/SingleTau1p_E2023TTI_NoPU.root'
-        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/C050E16A-D1E6-E311-A244-0025905A60D2.root',
-        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/CCBD6681-D0E6-E311-9747-0025905964CC.root',
-        '/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/F4A1119F-DDE6-E311-A9D4-0025905AA9F0.root',
+        '/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/SingleTau1p/NoPU/SingleTau1p_E2023TTI_NoPU.root'
+        #'/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/C050E16A-D1E6-E311-A244-0025905A60D2.root',
+        #'/store/mc/TTI2023Upg14D/Zmumu_TuneZ2star_14TeV_Eta4-pythia6/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/CCBD6681-D0E6-E311-9747-0025905964CC.root',
+        #'/store/user/pharris/FastPuppi/ZMM/file_9919.root'
+        #'/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/Zjets_uds/NoPU/Zjets_uds_E2023TTI_NoPU_1.root'
+        #'/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/TTbar/NoPU/TTbar_E2023TTI_NoPU.root'
+        #'/store/group/dpg_trigger/comm_trigger/L1TrackTrigger/620_SLHC12/Extended2023TTI/TTbar/PU200/TTbar_E2023TTI_PU200_95.root'
         )
                             )
 
@@ -73,8 +76,8 @@ process.out = cms.OutputModule("PoolOutputModule",
                                outputCommands = cms.untracked.vstring('drop *') # killing my disk space
                                )
 
-process.TT_step           = cms.Path(process.TrackTriggerTTTracks)
-process.TTAssociator_step = cms.Path(process.TrackTriggerAssociatorTracks)
+#process.TT_step           = cms.Path(process.TrackTriggerTTTracks)
+#process.TTAssociator_step = cms.Path(process.TrackTriggerAssociatorTracks)
 process.ana               = cms.Path(process.InfoOut*process.pfMet*process.pfMetCalo*process.pfMetRawCalo*process.pfMetTK)
-process.p = cms.Schedule(process.TT_step,process.TTAssociator_step,process.ana)
+process.p = cms.Schedule(process.ana)
 process.e = cms.EndPath(process.out)

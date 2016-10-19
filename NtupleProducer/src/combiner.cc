@@ -8,7 +8,7 @@
 
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile) {
-  fDRMatch = 0.2;
+  fDRMatch = 0.10;
   fNEta  = 61;
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
@@ -93,7 +93,7 @@ void combiner::link() {
       pFill = true;
     }
     //Remove high pT fakes
-    if(fTkParticles[i0].Et > 10.) pFill = true;
+    if(fTkParticles[i0].Et > 1000.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
 
@@ -110,7 +110,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   //Case 1 calo to large
   if(iParticle1.Et-iTkParticle.Et > 3.*lTotSigma) { 
     TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle1.Et ,iParticle1.Eta ,iParticle1.Phi ,0.);
-    TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.Eta,iTkParticle.Phi,0.);
+    TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.caloEta,iTkParticle.caloPhi,0.);
     pVec0 -= pVec1;
     iParticle1.Et = pVec0.Pt(); iParticle1.Eta = pVec0.Eta(); iParticle1.Phi = pVec0.Phi(); iParticle1.M = 0;
     iCollection.push_back(iTkParticle);
@@ -141,12 +141,15 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
 
 //Order by pt
 void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
-  if(iParticles.size() == 0) iParticles.push_back(iParticle);
+  if(iParticles.size() == 0) {iParticles.push_back(iParticle); return;}
+  bool iFill=false;
   for(std::vector<Particle>::iterator pParticle = iParticles.begin(); pParticle != iParticles.end(); pParticle++) { 
     if(pParticle->Et > iParticle.Et) continue; 
     iParticles.insert(pParticle,iParticle);
+    iFill = true;
     break;
   }
+  if(!iFill) iParticles.push_back(iParticle);
 }
 
 //Delta R
@@ -170,30 +173,20 @@ void combiner::doVertexing(){
   fDZ  = -999;
   // std::vector<Particle> fTkParticlesWVertexing;
 
-  TH1F *h_dz = new TH1F("h_dz","h_dz",200,-20,20); // 0.5mm binning
-  for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
-
-  // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
-  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-    // std::cout << "fTkParticles[i0].dZ " << i0 << ": " << fTkParticles[i0].dZ << "," << fTkParticles[i0].Et << std::endl;
-    float curdz  = fTkParticles[i0].dZ;
-    float curbin = h_dz->GetXaxis()->FindBin(curdz);
-    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + fTkParticles[i0].Et );
-  }
-
+  TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
+  for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++)h_dz->Fill(fTkParticles[i0].dZ,fTkParticles[i0].Et );
   int imaxbin = h_dz->GetMaximumBin();
   float pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
   float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
-  float pvdz_lo = pvdz - 1.5*binwidth;
-  float pvdz_hi = pvdz + 1.5*binwidth;
+  float pvdz_lo = pvdz - 3.5*binwidth;
+  float pvdz_hi = pvdz + 3.5*binwidth;
   fDZ = pvdz;
 
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     float curdz  = fTkParticles[i0].dZ;
     if( (curdz < pvdz_hi && curdz > pvdz_lo)) fTkParticles[i0].pvid = 1;
     if(!(curdz < pvdz_hi && curdz > pvdz_lo)) fTkParticles[i0].pvid = 2;
-    if (curdz < pvdz_hi && curdz > pvdz_lo)  fTkParticlesWVertexing.push_back( fTkParticles[i0] );
-    if(fTkParticles[i0].id == 4 && fTkParticles[i0].Et > 20) std::cout << " ---> " << curdz << " --> " << pvdz_hi << " -- " << pvdz_lo << std::endl;
+    if (curdz < pvdz_hi && curdz > pvdz_lo)   fTkParticlesWVertexing.push_back( fTkParticles[i0] );
   }
 
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 

@@ -647,6 +647,7 @@ void NtupleProducer::genMatch(std::vector<double> &iGenVars,int iType,double iEt
   TLorentzVector lVec; lVec.SetPtEtaPhiM(0,0,0,0);
   for (reco::GenParticleCollection::const_iterator itGenP = iGenParticles.begin(); itGenP!=iGenParticles.end(); ++itGenP) {
     if(iType == 0 && itGenP->charge() == 0) continue;
+    if(itGenP->status() != 1) continue;
     double deltaEta = itGenP->eta()-iEta;
     double deltaPhi = fabs(itGenP->phi()-iPhi); if(deltaPhi > 2.*TMath::Pi()-deltaPhi) deltaPhi = 2.*TMath::Pi()-deltaPhi;
     double deltaR   = sqrt(deltaEta*deltaEta+deltaPhi*deltaPhi);
@@ -757,7 +758,10 @@ NtupleProducer::beginJob()
   fTrkInfoTree->Branch("genEta",      &genEta,  "genEta/F");
   fTrkInfoTree->Branch("genPhi",      &genPhi,  "genPhi/F");
   fTrkInfoTree->Branch("genid",       &genId,   "genid/F");
-  
+
+  fEcalInfoTree->Branch("runNum",  &runNum,  "runNum/F");
+  fEcalInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
+  fEcalInfoTree->Branch("evtNum",  &evtNum,  "evtNum/F");  
   fEcalInfoTree->Branch("ecal_subdet", &ecal_subdet, "ecal_subdet/F");
   fEcalInfoTree->Branch("ecal_ieta", &ecal_ieta, "ecal_ieta/F");
   fEcalInfoTree->Branch("ecal_iphi", &ecal_iphi, "ecal_iphi/F");
@@ -776,6 +780,9 @@ NtupleProducer::beginJob()
   fEcalInfoTree->Branch("gendr",   &ecal_dr, "ecal_dr/F");
 
 
+  fHcalInfoTree->Branch("runNum",  &runNum,  "runNum/F");
+  fHcalInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
+  fHcalInfoTree->Branch("evtNum",  &evtNum,  "evtNum/F");  
   fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
   fHcalInfoTree->Branch("hcal_ieta", &hcal_ieta, "hcal_ieta/F");
   fHcalInfoTree->Branch("hcal_iphi", &hcal_iphi, "hcal_iphi/F");

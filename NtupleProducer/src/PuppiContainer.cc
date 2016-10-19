@@ -188,11 +188,12 @@ std::vector<double> const & PuppiContainer::puppiFetch() {
         for(int i1 = 0; i1 < lNAlgos; i1++) pVals.push_back(fVals[lNParticles*i1+i0]);
         pWeight = fPuppiAlgo[pPupId].compute(pVals,pChi2);
         //Apply the CHS weights
-        if(fPFParticles[i0].id == 1 && fApplyCHS ) pWeight = 1;
-        if(fPFParticles[i0].id == 2 && fApplyCHS ) pWeight = 0;
+        if(fPFParticles[i0].pvid == 1 && fApplyCHS ) pWeight = 1;
+        if(fPFParticles[i0].pvid == 2 && fApplyCHS ) pWeight = 0;
+	//if(fPFParticles[i0].pvid == 0) pWeight = 1;
         //Basic Cuts
         if(pWeight                         < fPuppiWeightCut) pWeight = 0;  //==> Elminate the low Weight stuff
-        if(pWeight*fPFParticles[i0].Et     < fPuppiAlgo[pPupId].neutralPt(fNPV) && fPFParticles[i0].id == 0 ) pWeight = 0;  //threshold cut on the neutral Pt
+        if(pWeight*fPFParticles[i0].Et     < fPuppiAlgo[pPupId].neutralPt(fNPV) && fPFParticles[i0].pvid == 0 ) pWeight = 0;  //threshold cut on the neutral Pt
         if(fInvert) pWeight = 1.-pWeight;
         fWeights .push_back(pWeight);
         fAlphaMed.push_back(fPuppiAlgo[pPupId].median());

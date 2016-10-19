@@ -85,8 +85,8 @@ void PuppiAlgo::add(const combiner::Particle &iParticle,const double &iVal,const
     if(iParticle.Et < fRMSPtMin[iAlgo]) return;
     int puppi_register = iParticle.pvid;
     if(fCharged[iAlgo] && std::abs(puppi_register)  < 1) return;
-    if(fCharged[iAlgo] && (std::abs(puppi_register) >=1 && std::abs(puppi_register) <=2)) fPupsPV.push_back(iVal);
-    if(fCharged[iAlgo] && std::abs(puppi_register) < 3) return;
+    if(fCharged[iAlgo] && std::abs(puppi_register) == 1) fPupsPV.push_back(iVal);
+    if(fCharged[iAlgo] && std::abs(puppi_register)  < 2) return;
     fPups.push_back(iVal); //original
     fNCount[iAlgo]++;
 
