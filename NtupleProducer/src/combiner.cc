@@ -129,7 +129,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   //Case 1 calo to large
   if(iParticle1.Et-iTkParticle.Et > 3.*lTotSigma) { 
     TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle1.Et ,iParticle1.Eta ,iParticle1.Phi ,0.);
-    TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.Eta,iTkParticle.Phi,0.);
+    TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.caloEta,iTkParticle.caloPhi,0.);
     pVec0 -= pVec1;
     iParticle1.Et = pVec0.Pt(); iParticle1.Eta = pVec0.Eta(); iParticle1.Phi = pVec0.Phi(); iParticle1.M = 0;
     iCollection.push_back(iTkParticle);
@@ -159,12 +159,15 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
 
 //Order by pt
 void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
-  if(iParticles.size() == 0) iParticles.push_back(iParticle);
+  if(iParticles.size() == 0) {iParticles.push_back(iParticle); return;}
+  bool lFill = false;
   for(std::vector<Particle>::iterator pParticle = iParticles.begin(); pParticle != iParticles.end(); pParticle++) { 
     if(pParticle->Et > iParticle.Et) continue; 
     iParticles.insert(pParticle,iParticle);
+    lFill = true;
     break;
   }
+  if(!lFill) iParticles.push_back(iParticle);
 }
 
 //Delta R
