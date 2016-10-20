@@ -540,8 +540,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   metanalyzer_->setMETRecoil(0,lCands   ,false);
   metanalyzer_->setMETRecoil(3,lRawCalo ,true);
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
-  metanalyzer_->setMETRecoil(4,lPupCands,false);
-  metanalyzer_->setMETRecoil(5,lTKVtxCands ,false);
+  metanalyzer_->setMETRecoil(5,lPupCands,false);
+  metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
   metanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
