@@ -35,8 +35,8 @@ TH1F* Xratio(TH1F *iRatio,TH1F *iBase,bool iSame=false) {
   lRatio->GetXaxis()->SetTitleSize(10);
   lRatio->GetYaxis()->SetTitleSize(0.08);
   lRatio->GetYaxis()->SetTitleOffset(0.6);
-  lRatio->GetYaxis()->SetTitle("Phase I/Phase I ext. tk");
-  lRatio->GetYaxis()->SetRangeUser(0.001,20);
+  lRatio->GetYaxis()->SetTitle("Puppi/PF");
+  lRatio->GetYaxis()->SetRangeUser(0.001,10);
   lRatio->GetYaxis()->SetLabelSize(0.1);
   if(!iSame) lRatio->Draw("ep");
   if(iSame)  lRatio->Draw("ep sames");
@@ -64,10 +64,10 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
 		      int iColor=1) { 
   TFile *lFile = new TFile(iName.c_str());
   TTree *lTree = (TTree*) lFile->FindObjectAny("met");
-  const int lN = 11;
+  const int lN = 10;
   double lEnd = 750; 
-  double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,150,200};
-  //double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,200};
+  //double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,150,200};
+  double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,200};
   double lX    [lN]; 
   double lEX   [lN]; 
   double lMean [lN]; 
@@ -140,10 +140,10 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   fF1 = lF1;
 }
 void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
-		  std::string iFile0="pupmet_fix2_29.root",
-		  std::string iFile1="pupmet_fix2_29.root",
-		  std::string iFile2="pupmet_fix2_29.root",
-		  std::string iFile3="pupmet_fix2_29.root"
+		  std::string iFile0="pupmet_fix2_30.root",
+		  std::string iFile1="pupmet_fix2_30.root",
+		  std::string iFile2="pupmet_fix2_30.root",
+		  std::string iFile3="pupmet_fix2_30.root"
 	       ) {  
   //Prep();
   setTDRStyle();
@@ -152,7 +152,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   std::string lLabel_b="calo";
   std::string lLabel2_b="";
   std::string lLast  ="";
-  makeMETPlotsFile(lLabel+"tku1"+lLast,"tk",iFile0,kRed);
+  makeMETPlotsFile(lLabel+"calou1"+lLast,"calo",iFile0,kRed);
   TH1F * lH0    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF0 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG0 = (TGraphErrors*) fG1->Clone("Res0"); 
@@ -192,7 +192,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   std::string lLeg2 = "PF";
   std::string lLeg3 = "TK from PV";
   std::string lLeg4 = "puppi";
-  TLegend *lL = new TLegend(0.2,0.2,0.7,0.5); lL->SetBorderSize(0); lL->SetFillColor(0); 
+  TLegend *lL = new TLegend(0.2,0.2,0.5,0.5); lL->SetBorderSize(0); lL->SetFillColor(0); 
   lL->AddEntry(lH0,lLeg1.c_str(),"l");  
   lL->AddEntry(lH1,lLeg2.c_str(),"l");
   lL->AddEntry(lH2,lLeg3.c_str(),"l");  
@@ -212,13 +212,13 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   lL->Draw();
   formatCanvas(lCX);
   lCX->cd(2)->SetPad(0,0,1.0,0.3); gPad->SetLeftMargin(0.2) ;
-  Xratio(lH0,lH1);
-  Xratio(lH2,lH3,true);
+  Xratio(lH0,lH3);
+  Xratio(lH1,lH3,true);
   //lCX->SaveAs("Met200.pdf");
   //lCX->SaveAs("Met200.png");
   //lCX->SaveAs("Met200.C");
  
-  TLegend *lL1 = new TLegend(0.6,0.6,0.9,0.9); lL1->SetBorderSize(0); lL1->SetFillColor(0); 
+  TLegend *lL1 = new TLegend(0.6,0.2,0.9,0.5); lL1->SetBorderSize(0); lL1->SetFillColor(0); 
   lL1->AddEntry(lPupF0,lLeg1.c_str(),"lp");
   lL1->AddEntry(lPupF1,lLeg2.c_str(),"lp");
   lL1->AddEntry(lPupF2,lLeg3.c_str(),"lp");
@@ -236,7 +236,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   //lC0->SaveAs("Response200.png");
   //lC0->SaveAs("Response200.C");
 
-  TLegend *lL2 = new TLegend(0.6,0.6,0.9,0.9); lL2->SetBorderSize(0); lL2->SetFillColor(0); 
+  TLegend *lL2 = new TLegend(0.6,0.2,0.9,0.5); lL2->SetBorderSize(0); lL2->SetFillColor(0); 
   lL2->AddEntry(lPupG0,lLeg1.c_str(),"lp");  
   lL2->AddEntry(lPupG1,lLeg2.c_str(),"lp");
   lL2->AddEntry(lPupG2,lLeg3.c_str(),"lp");
@@ -253,7 +253,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   //lC1->SaveAs("U1Res200.pdf");
   //lC1->SaveAs("U1Res200.C");
 
-  TLegend *lL3 = new TLegend(0.6,0.6,0.9,0.9); lL3->SetBorderSize(0); lL3->SetFillColor(0); 
+  TLegend *lL3 = new TLegend(0.6,0.2,0.9,0.5); lL3->SetBorderSize(0); lL3->SetFillColor(0); 
   lL3->AddEntry(lPupG20,lLeg1.c_str(),"lp");  
   lL3->AddEntry(lPupG21,lLeg2.c_str(),"lp");
   lL3->AddEntry(lPupG22,lLeg3.c_str(),"lp");
