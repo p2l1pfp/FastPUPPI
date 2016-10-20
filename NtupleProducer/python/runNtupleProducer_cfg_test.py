@@ -48,7 +48,8 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  ecorrector  = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
                                  trackres    = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
                                  eleres      = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root")
+                                 pionres     = cms.InputTag("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go7/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root"),
+                                 trkPtCut    = cms.double(0)
                                  )
 
 

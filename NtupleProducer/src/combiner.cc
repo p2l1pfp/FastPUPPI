@@ -127,7 +127,7 @@ void combiner::link() {
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
   double lTotSigma = sqrt(iTkParticle.sigma*iTkParticle.sigma + iParticle1.sigma*iParticle1.sigma);
   //Case 1 calo to large
-  if(iParticle1.Et-iTkParticle.Et > 3.*lTotSigma) { 
+  if(iParticle1.Et-iTkParticle.Et > 2.5*lTotSigma) { 
     TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle1.Et ,iParticle1.Eta ,iParticle1.Phi ,0.);
     TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iTkParticle.Et,iTkParticle.caloEta,iTkParticle.caloPhi,0.);
     pVec0 -= pVec1;
@@ -136,7 +136,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 2 combined 
-  if(fabs(iParticle1.Et-iTkParticle.Et) < 3.*lTotSigma) { 
+  if(fabs(iParticle1.Et-iTkParticle.Et) < 2.5*lTotSigma) { 
     double pSigma   = iParticle1.sigma;
     double pTkSigma = iTkParticle.sigma;
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
@@ -149,7 +149,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 3 MIP
-  if(iParticle1.Et-iTkParticle.Et < -3*lTotSigma) { 
+  if(iParticle1.Et-iTkParticle.Et < -2.5*lTotSigma) { 
     //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
     iParticle1.Et -= 2; //2 is a bullshit guess at the MIP energy lost
@@ -361,8 +361,8 @@ void combiner::computeWeights(){
 
     float ptcutC = 4.0;//Tight cuts for high PU
     float ptcutF = 4.0;
-    if (fParticles[i0].puppiWeight <= 0.01) continue;
     if (fParticles[i0].id == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
+    if (fParticles[i0].puppiWeight <= 0.01) continue;
     if (fParticles[i0].id != 4 && fParticles[i0].puppiWeight > 0.01){
       if (fabs(fParticles[i0].Eta < 2.5)){
         if (fParticles[i0].Et*fParticles[i0].puppiWeight > ptcutC || (fParticles[i0].id != 3 &&  fParticles[i0].id != 2) ){

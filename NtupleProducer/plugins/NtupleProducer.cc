@@ -114,6 +114,7 @@ private:
   int   translateIEta(int ieta,bool iInvert=false);
   int   translateIPhi(int iphi,bool iInvert=false);
 
+  float trkPt_;
   corrector* corrector_;
   corrector* corrector2_;
   corrector* ecorrector_;
@@ -177,6 +178,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   TrackResTag_          (iConfig.getParameter<edm::InputTag>("trackres")),
   EleResTag_            (iConfig.getParameter<edm::InputTag>("eleres")),
   PionResTag_           (iConfig.getParameter<edm::InputTag>("pionres")),
+  trkPt_                (iConfig.getParameter<double>       ("trkPtCut")),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -278,8 +280,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       trkPhi = momentum.phi();
       trkz0  = poca.z();
       trkd0  = poca.perp();
-      connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
-      rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
+      if(trkPt > trkPt_) connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
+      if(trkPt > trkPt_) rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
 
       std::vector<double> lGenVars;
       genMatch(lGenVars,0,double(trkEta),double(trkPhi),double(trkPt),genParticles);

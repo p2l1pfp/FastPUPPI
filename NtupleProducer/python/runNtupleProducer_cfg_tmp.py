@@ -45,7 +45,8 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
                                  trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
                                  eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root")
+                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root"),
+                                 trkPtCut    = cms.double(0)
                                  )
 
 process.out = cms.OutputModule("PoolOutputModule",
