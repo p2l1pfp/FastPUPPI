@@ -797,8 +797,8 @@ NtupleProducer::endJob() {
   //
   // Save to ROOT file
   //
-
-  connector_->write();
+  
+  //connector_->write();
   metanalyzer_->write();
   fOutputFile->cd();
   fTotalEvents->Write();

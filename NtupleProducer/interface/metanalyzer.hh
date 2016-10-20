@@ -18,6 +18,6 @@ private:
   TFile  *fFile;
   TTree  *fTree;
   int     fNVars;
-  double  fVar[28];
+  double  fVar[30];
 };
 #endif
