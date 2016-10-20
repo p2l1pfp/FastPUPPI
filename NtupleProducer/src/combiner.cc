@@ -362,10 +362,10 @@ void combiner::computeWeights(){
     float ptcutC = 4.0;//Tight cuts for high PU
     float ptcutF = 4.0;
     if (fParticles[i0].puppiWeight <= 0.01) continue;
-    if (fParticles[i0].puppiWeight == 1) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
-    if (fParticles[i0].puppiWeight < 1 && fParticles[i0].puppiWeight > 0.01){
+    if (fParticles[i0].id == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
+    if (fParticles[i0].id != 4 && fParticles[i0].puppiWeight > 0.01){
       if (fabs(fParticles[i0].Eta < 2.5)){
-        if (fParticles[i0].Et*fParticles[i0].puppiWeight > ptcutC){
+        if (fParticles[i0].Et*fParticles[i0].puppiWeight > ptcutC || (fParticles[i0].id != 3 &&  fParticles[i0].id != 2) ){
           fParticlesPuppi.push_back(fParticles[i0]);
           fParticlesPuppi[puppictr].Et = fParticles[i0].Et*fParticles[i0].puppiWeight;          
           puppictr++;
