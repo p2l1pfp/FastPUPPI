@@ -191,7 +191,7 @@ void combiner::doVertexing(){
   
   // std::vector<Particle> fTkParticlesWVertexing;
   
-  TH1F *h_dz = new TH1F("h_dz","h_dz",80,-20,20); // 1cm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
 
   // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
