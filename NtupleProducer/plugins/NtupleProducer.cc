@@ -27,6 +27,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "Geometry/TrackerGeometryBuilder/interface/StackedTrackerGeometry.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTrack.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTypes.h"     
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
@@ -114,7 +115,7 @@ private:
   int   translateIEta(int ieta,bool iInvert=false);
   int   translateIPhi(int iphi,bool iInvert=false);
 
-  float trkPt_;
+  double trkPt_;
   corrector* corrector_;
   corrector* corrector2_;
   corrector* ecorrector_;
@@ -232,6 +233,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel(GenParTag_,hGenParProduct);
   const reco::GenParticleCollection genParticles = *(hGenParProduct.product());  
 
+  //edm::ESHandle<StackedTrackerGeometry>           stackedGeometryHandle;
+  //const StackedTrackerGeometry*                   theStackedGeometry;
+  //theStackedGeometry = stackedGeometryHandle.product(); 
 
   connector_->clear();
   rawconnector_->clear();
@@ -280,8 +284,22 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       trkPhi = momentum.phi();
       trkz0  = poca.z();
       trkd0  = poca.perp();
-      if(trkPt > trkPt_) connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
-      if(trkPt > trkPt_) rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge);      
+      int pQuality = 0;
+      float nPS = 0.;     // number of stubs in PS modules
+      float nstubs = 0;
+      std::vector< edm::Ref< edmNew::DetSetVector< TTStub< Ref_PixelDigi_ > >, TTStub< Ref_PixelDigi_ > > >  theStubs = it-> getStubRefs() ;
+      // loop over the stubs
+      for (unsigned int istub=0; istub<(unsigned int)theStubs.size(); istub++) {
+	nstubs ++;
+	StackedTrackerDetId detIdStub( theStubs.at(istub)->getDetId() );
+	bool isPS = true;//theStackedGeometry -> isPSModule( detIdStub );
+	if (isPS) nPS ++;
+      } // end loop over stubs
+      if(nPS           > 2) pQuality++;
+      if(nstubs        > 3) pQuality+=2;
+      if(it->getChi2() < 100.    ) pQuality += 4; 
+      if(trkPt > trkPt_) connector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge,pQuality);      
+      if(trkPt > trkPt_) rawconnector_->addTrack(trkPt,trkEta,trkPhi,trkz0,trkEcalEta,trkEcalPhi,charge,pQuality);      
 
       std::vector<double> lGenVars;
       genMatch(lGenVars,0,double(trkEta),double(trkPhi),double(trkPt),genParticles);

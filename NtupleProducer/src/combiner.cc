@@ -61,10 +61,10 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
 }
 
 //Add Tracks
-void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge) { 
+void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality) { 
   if(iPt < 1) return;
   double lSigma = getTrkRes(iPt,iEta,iPhi);
-  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,iCaloEta,iCaloPhi,iCharge);
+  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,iCaloEta,iCaloPhi,iCharge,iQuality);
   insert(lParticle,fTkParticles);
 }
 
@@ -152,7 +152,8 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   if(iParticle1.Et-iTkParticle.Et < -2.5*lTotSigma) { 
     //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
-    iParticle1.Et -= 2; //2 is a bullshit guess at the MIP energy lost
+    double pVal = 2; if(iParticle1.Et < 2.) pVal = iParticle1.Et+0.1;
+    iParticle1.Et -= pVal; //2 is a bullshit guess at the MIP energy lost
   }
   return;
 }
@@ -200,9 +201,10 @@ void combiner::doVertexing(){
     if (fParticles[i0].charge == 0) continue;
     ntracks++;
     // std::cout << i0 << ": fParticles[i0].dZ = " << fParticles[i0].dZ << "," << fParticles[i0].Et << ", " << fParticles[i0].id << std::endl;
+    if(fParticles[i0].quality < 7) continue;
     float curdz  = fParticles[i0].dZ;
     float curbin = h_dz->GetXaxis()->FindBin(curdz);
-    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + fParticles[i0].Et );
+    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + std::min(fParticles[i0].Et,50.) );
   }
 
   int imaxbin = h_dz->GetMaximumBin();
@@ -247,6 +249,7 @@ void combiner::fetchPuppi(){
   // compute alphas (not efficient, but we don't have that many particles)
   computeAlphas(fParticles,0);
   computeAlphas(puppi_chargedPV,1);
+  //computeAlphas(fParticles,1);
 
   // compute median and RMS
   computeMedRMS();
