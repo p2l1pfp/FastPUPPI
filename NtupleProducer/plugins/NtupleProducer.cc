@@ -27,9 +27,11 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#ifdef HASL1TK
 #include "Geometry/TrackerGeometryBuilder/interface/StackedTrackerGeometry.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTrack.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTypes.h"     
+#endif
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
@@ -95,7 +97,7 @@ public:
   const edm::InputTag PionResTag_;
   const L1CaloEcalScale* ecalScale_;
   const L1CaloHcalScale* hcalScale_;
-  std::auto_ptr<PFOutputCollection > corrCandidates_;
+  std::unique_ptr<PFOutputCollection > corrCandidates_;
  
 private:
   virtual void beginJob() override;
@@ -221,7 +223,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
   fTotalEvents->Fill(1);  
   using namespace edm;
+#ifdef HASL1TK
   typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
+#endif
   
   iSetup.get<CaloGeometryRecord>().get(calo);
   const CaloGeometry* geo = calo.product(); 
@@ -240,6 +244,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   connector_->clear();
   rawconnector_->clear();
 
+#ifdef HASL1TK
   /// ----------------TRACK INFO-------------------
   /// Stealing Jia Fu's code!
   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
@@ -317,10 +322,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
       // if (n > 10) break; // just for testing so cut it off for now
     }  
   }
-   
+#endif
+
   /// ----------------Muon INFO-------------------
-  /// Stealing Jia Fu's code!
-  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
   edm::Handle< L1MuGMTReadoutCollection > gmtrc;
   iEvent.getByLabel(MuonTPTag_, gmtrc);
 
@@ -360,8 +364,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup)
   }   
   
   /// ----------------ECAL INFO-------------------
-  /// Stealing Jia Fu's code!
-  /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
   /// 72 in phi and 56 in eta
   /// Ecal TPs
   edm::Handle< EcalTrigPrimDigiCollection > ecalTPs;
@@ -582,7 +584,7 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
     corrCandidates_->push_back(pCand);
   }
   //Fill!
-  iEvent.put(corrCandidates_,iLabel);
+  iEvent.put(std::move(corrCandidates_),iLabel);
 }
 //////////////////////////// ------------------------------------------------------
 //////////////////////////// ------------------------------------------------------
