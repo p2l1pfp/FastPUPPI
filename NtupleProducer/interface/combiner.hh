@@ -5,6 +5,7 @@
 #include <iostream>
 #include "TFile.h"
 #include "TTree.h"
+#include "L1TPFParticle.h"
 
 #ifdef __MAKECINT__
 #pragma link C++ class vector<float>+;
@@ -12,29 +13,7 @@
 
 class combiner { 
 public:
-  struct Particle { 
-    Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma,double iDZ,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999, double iIsPV = 0, float alphaF = -999, float alphaC = -999, float puppiWeight = -99) 
-    {
-      Et=iEt; Eta=iEta; Phi=iPhi; M=iM; id=iId; sigma=iSigma; dZ=iDZ; caloEta=iCaloEta; caloPhi=iCaloPhi; charge = iCharge; quality = iQuality; isPV = iIsPV;
-    }
-    double Et;
-    double Eta;
-    double Phi;
-    double M;
-    double dZ;
-    double sigma;
-    double caloEta;
-    double caloPhi;
-    double charge;
-    double quality;
-    int id;
-    int isPV; 
-
-    float alphaF;
-    float alphaC;
-    float puppiWeight;
-
-  };
+  typedef l1tpf::Particle Particle;
 
   combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile);
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);

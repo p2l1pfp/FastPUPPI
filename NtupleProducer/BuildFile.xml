@@ -1,5 +1,6 @@
 <flags CXXFLAGS="-g -Wall"/>
 <use name="root"/>
+<use name="DataFormats/Candidate"/>
 <export>
   <lib name="1"/>
 </export>

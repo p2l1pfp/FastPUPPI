@@ -571,16 +571,14 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
-    if(iCandidates[i0].id == 0) id = reco::PFCandidate::ParticleType::h;
-    if(iCandidates[i0].id == 1) id = reco::PFCandidate::ParticleType::e;
-    if(iCandidates[i0].id == 2) id = reco::PFCandidate::ParticleType::h0;
-    if(iCandidates[i0].id == 3) id = reco::PFCandidate::ParticleType::gamma;
-    if(iCandidates[i0].id == 4) id = reco::PFCandidate::ParticleType::mu;
-    if(iCandidates[i0].id < 2)  pCharge = 1;
-    if(iCandidates[i0].id == 4)  pCharge = iCandidates[i0].charge;
-    TLorentzVector pVec;  pVec. SetPtEtaPhiM(iCandidates[i0].Et,iCandidates[i0].Eta,iCandidates[i0].Phi,iCandidates[i0].M);
-    LorentzVector  pLVec; pLVec.SetPxPyPzE(pVec.Px(),pVec.Py(),pVec.Pz(),pVec.E());
-    reco::PFCandidate pCand(pCharge,pLVec,id);
+    if(iCandidates[i0].pdgId() == 0) id = reco::PFCandidate::ParticleType::h;
+    if(iCandidates[i0].pdgId() == 1) id = reco::PFCandidate::ParticleType::e;
+    if(iCandidates[i0].pdgId() == 2) id = reco::PFCandidate::ParticleType::h0;
+    if(iCandidates[i0].pdgId() == 3) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].pdgId() == 4) id = reco::PFCandidate::ParticleType::mu;
+    if(iCandidates[i0].pdgId() < 2)  pCharge = 1;
+    if(iCandidates[i0].pdgId() == 4)  pCharge = iCandidates[i0].charge();
+    reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
     corrCandidates_->push_back(pCand);
   }
   //Fill!

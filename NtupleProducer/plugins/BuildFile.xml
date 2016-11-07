@@ -10,7 +10,6 @@
 <use name="DataFormats/ParticleFlowReco"/>
 <use name="DataFormats/HepMCCandidate"/>
 <use name="Geometry/CaloTopology"/>
-<use name="Geometry/HCalTowerAlgo"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
 <use name="CondFormats/DataRecord"/>
 <use name="CondFormats/HcalObjects"/>
