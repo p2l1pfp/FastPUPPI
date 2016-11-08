@@ -9,12 +9,14 @@
 <use name="DataFormats/HepMCCandidate"/>
 <use name="Geometry/CaloTopology"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
+<use name="Geometry/HGCalGeometry"/>
 <use name="CondFormats/DataRecord"/>
 <use name="CondFormats/HcalObjects"/>
 <use name="CalibCalorimetry/HcalAlgos"/>
 <use name="CalibCalorimetry/HcalTPGAlgos"/>
 <use name="CalibFormats/HcalObjects"/>
 <use name="CalibFormats/CaloTPG"/>
+<use name="CommonTools/Utils"/>
 <use name="DataFormats/ParticleFlowCandidate"/>
 <use name="DataFormats/Math"/>
 <use name="FastPUPPI/NtupleProducer"/>

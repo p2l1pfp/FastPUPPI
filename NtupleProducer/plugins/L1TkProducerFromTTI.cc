@@ -15,6 +15,7 @@
 #endif
 
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 namespace l1tpf {
     class TkProducerFromTTI : public edm::EDProducer {
@@ -37,7 +38,7 @@ namespace l1tpf {
     }; // class
 } // namespace
 
-l1tpf::TkProducerFromTTI::TkProducerFromTTI(const edm::ParameterSet&)
+l1tpf::TkProducerFromTTI::TkProducerFromTTI(const edm::ParameterSet&iConfig)
 {
 #ifdef HASL1TK
     L1TrackTag_ = consumes<std::vector<TTTrack<Ref_PixelDigi_>>>(iConfig.getParameter<edm::InputTag>("L1TrackTag"));
@@ -58,21 +59,20 @@ l1tpf::TkProducerFromTTI::produce(edm::Event & iEvent, const edm::EventSetup &)
   typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
 
   edm::Handle< vec_track > pixelDigiTTTracks;
-  iEvent.getByLabel(L1TrackTag_, pixelDigiTTTracks);
+  iEvent.getByToken(L1TrackTag_, pixelDigiTTTracks);
   if (pixelDigiTTTracks.isValid()) {
     
     edm::LogInfo("NTupleTracks") << "Size: " << pixelDigiTTTracks->size();
     
     unsigned nPar = 4;
-    unsigned n = 0;
     for (vec_track::const_iterator it = pixelDigiTTTracks->begin(); it != pixelDigiTTTracks->end(); ++it) {
       const GlobalVector&          momentum = it->getMomentum(nPar);
       const GlobalPoint&           poca     = it->getPOCA(nPar);  // point of closest approach
       bool iIsEle=false;
       double mass  = iIsEle ? 0.0005 : 0.139; 
       double energy=sqrt((mass*mass)+(momentum.mag()*momentum.mag()));
-      const XYZTLorentzVector      tMom (momentum.x(),momentum.y(),momentum.z(),energy);
-      const XYZTLorentzVector      tVtx (poca.x()     ,poca.y()     ,poca.z(),0.);
+      const math::XYZTLorentzVector tMom(momentum.x(),momentum.y(),momentum.z(),energy);
+      const math::XYZTLorentzVector tVtx(poca.x()     ,poca.y()     ,poca.z(),0.);
       
       double charge = it->getRInv()/fabs(it->getRInv());
 
