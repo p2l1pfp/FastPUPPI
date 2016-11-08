@@ -61,11 +61,10 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
 }
 
 //Add Tracks
-void combiner::addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality) { 
-  if(iPt < 1) return;
-  double lSigma = getTrkRes(iPt,iEta,iPhi);
-  Particle lParticle(iPt,iEta,iPhi,0.137,0,lSigma,idZ,iCaloEta,iCaloPhi,iCharge,iQuality);
-  insert(lParticle,fTkParticles);
+void combiner::addTrack(l1tpf::Particle particle) { 
+  if(particle.pt() < 1) return; // FIXME: GP: this looks unneeded
+  particle.setSigma(getTrkRes(particle.pt(), particle.eta(), particle.phi())); // the combiner knows the sigma, the track producer doesn't
+  insert(particle,fTkParticles);
 }
 
 //Add muons
@@ -155,7 +154,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   return;
 }
 
-//Order by pt
+//Order by pt // FIXME: GP: why do you need to do this?
 void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
   if(iParticles.size() == 0) {iParticles.push_back(iParticle); return;}
   bool lFill = false;

@@ -19,7 +19,7 @@ public:
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);
-  void addTrack(double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality);
+  void addTrack(l1tpf::Particle particle); //double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality);
   void addMuon(double iPt, double iEta, double iPhi, double charge, double quality);
   void link();
   void doVertexing();  

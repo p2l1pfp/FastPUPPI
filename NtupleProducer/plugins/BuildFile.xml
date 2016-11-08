@@ -4,10 +4,8 @@
 <use name="CondFormats/L1TObjects"/>
 <use name="DataFormats/EcalDigi"/>
 <use name="DataFormats/HcalDigi"/>
-<use name="FastSimulation/BaseParticlePropagator"/>
 <use name="MagneticField/Engine"/>
 <use name="MagneticField/Records"/>
-<use name="DataFormats/ParticleFlowReco"/>
 <use name="DataFormats/HepMCCandidate"/>
 <use name="Geometry/CaloTopology"/>
 <use name="Geometry/TrackerGeometryBuilder"/>
@@ -20,4 +18,5 @@
 <use name="DataFormats/ParticleFlowCandidate"/>
 <use name="DataFormats/Math"/>
 <use name="FastPUPPI/NtupleProducer"/>
+<use name="L1Trigger/L1TCalorimeter"/>
 <flags EDM_PLUGIN="1"/>

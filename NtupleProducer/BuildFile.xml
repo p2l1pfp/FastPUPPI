@@ -1,6 +1,8 @@
 <flags CXXFLAGS="-g -Wall"/>
 <use name="root"/>
 <use name="DataFormats/Candidate"/>
+<use name="FastSimulation/BaseParticlePropagator"/>
+<use name="DataFormats/ParticleFlowReco"/>
 <export>
   <lib name="1"/>
 </export>
