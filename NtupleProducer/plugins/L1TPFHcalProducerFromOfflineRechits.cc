@@ -25,6 +25,7 @@ namespace l1tpf {
         private:
             edm::EDGetTokenT<HBHERecHitCollection> src_;
             double etCut_, eCut_;
+            std::array<bool,15> subdets_;
             edm::ESHandle<CaloGeometry> pG;
 
             virtual void produce(edm::Event&, const edm::EventSetup&) override;
@@ -44,6 +45,10 @@ l1tpf::HcalProducerFromOfflineRechits::HcalProducerFromOfflineRechits(const edm:
 {
     //produces<std::vector<l1tpf::Particle>>("crystals");
     produces<std::vector<l1tpf::Particle>>("towers");
+    std::fill(subdets_.begin(), subdets_.end(), false);
+    for (const auto sub : iConfig.getParameter<std::vector<uint32_t>>("subdets")) {
+        subdets_[sub] = true;
+    }
 }
 
 
@@ -62,6 +67,7 @@ l1tpf::HcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
     edm::Handle<HBHERecHitCollection> src;
     iEvent.getByToken(src_, src);
     for (const HBHERecHit & hit : *src) {
+        if (!subdets_[hit.id().subdet()]) continue;
         if (hit.energy() < eCut_) continue;
         const GlobalPoint & pos = caloGeom->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();
