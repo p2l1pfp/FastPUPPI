@@ -12,11 +12,10 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/HGCalGeometry/interface/HGCalGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
-
 #include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
-
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 
 namespace l1tpf {
@@ -86,12 +85,9 @@ l1tpf::HGCalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::E
         }
         etaetsum /= etsum;
         phietsum /= etsum;
-        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0);
-        //out_tower->back().setIEtaIPhi(pair.first.first, pair.first.second);
-        //out_tower->back().setCaloEtaPhi( l1t::CaloTools::towerEta(pair.first.first), 
-        //                                 l1t::CaloTools::towerPhi(pair.first.first, pair.first.second) );
+	//So the input is not discretized into towers, but the l1tpfcandidates will discretize it with dEta
+        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.));
     }
-
     //iEvent.put(std::move(out_crystal), "crystals");
     iEvent.put(std::move(out_tower), "towers");
 }

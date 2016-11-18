@@ -1,6 +1,6 @@
 <lcgdict>
-    <class name="l1tpf::Particle"  ClassVersion="10">
-        <version ClassVersion="10" checksum="3726633297"/>
+    <class name="l1tpf::Particle"  ClassVersion="11">
+        <version ClassVersion="11" checksum="3274669475"/>
     </class>
     <class name="std::vector<l1tpf::Particle>" />
     <class name="edm::Wrapper<std::vector<l1tpf::Particle>>" />

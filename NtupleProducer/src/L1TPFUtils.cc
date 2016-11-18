@@ -21,4 +21,56 @@ void l1tpf::propagate(int iOption,std::vector<double> &iVars,const math::XYZTLor
     iVars.push_back(point.phi());
     iVars.push_back(point.rho());
 }
+std::pair<float,float> l1tpf::towerEtaBounds(int ieta) {
+  const float towerEtas[33] = {0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479,1.566,1.653,1.740,1.830,1.930,2.043,2.172,2.322,2.5,2.650,3.000,3.5,4.0,4.5,5.0}; 
+  return std::make_pair( towerEtas[abs(ieta)-1],towerEtas[abs(ieta)] );
+}
+float l1tpf::towerEtaSize(int ieta) {
+  std::pair<float,float> bounds = towerEtaBounds(ieta);
+  float size = (bounds.second-bounds.first);
+  return size;
+}
+float l1tpf::towerPhiSize(int ieta) {
+  const int kNphi = 72;
+  return 2.*M_PI/kNphi;
+}
+int l1tpf::towerNPhi(int ieta) {
+  const int kNphi = 72;
+  return kNphi;
+}
+int l1tpf::translateIEta(float eta) { 
+  const float towerEtas[33] = {0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479,1.566,1.653,1.740,1.830,1.930,2.043,2.172,2.322,2.5,2.650,3.000,3.5,4.0,4.5,5.0}; 
+  int ieta = 0;
+  for(int i0 = 0; i0 < 32; i0++) if(fabs(eta) > towerEtas[i0] && fabs(eta) < towerEtas[i0+1]) ieta = i0;
+  float sign = eta>0 ? 1. : -1.;
+  return sign*ieta;
+}
+int l1tpf::translateIPhi(float phi,float eta) {
+  int iphi = int(phi/towerPhiSize(eta)+0.5);
+  if (iphi < 0)                 iphi = iphi + towerNPhi(eta);
+  if (iphi > towerNPhi(eta))    iphi = iphi - towerNPhi(eta);
+  if (iphi > towerNPhi(eta) || iphi < 0) return 0;
+  return iphi;
+}
+int l1tpf::translateAEta(int ieta,bool iInvert) {
+  int lEta = ieta+30;
+  if(iInvert) lEta = ieta-30;
+  return lEta;
+}
+int l1tpf::translateAPhi(int iphi,bool iInvert) {
+  int lPhi = iphi-1;
+  if(iInvert) lPhi = iphi+1;
+  return lPhi;
+}
+float l1tpf::towerEta(int ieta) {
+  std::pair<float,float> bounds = towerEtaBounds(ieta);
+  float eta = (bounds.second+bounds.first)/2.;
+  float sign = ieta>0 ? 1. : -1.;
+  return sign*eta; 
+}
+float l1tpf::towerPhi(int ieta, int iphi){
+  float phi = (float(iphi)-0.5)*towerPhiSize(ieta);
+  if (phi > M_PI) phi = phi - (2*M_PI);
+  return phi;
+}
 

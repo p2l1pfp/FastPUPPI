@@ -1,6 +1,7 @@
 #ifndef FASTPUPPI_NTUPLERPRODUCER_L1TPFCandidate_HH
 #define FASTPUPPI_NTUPLERPRODUCER_L1TPFCandidate_HH
 
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "DataFormats/Candidate/interface/LeafCandidate.h"
 #include <TLorentzVector.h>
 
@@ -14,7 +15,7 @@ namespace l1tpf {
                 sigma_(iSigma),
                 caloEta_(iCaloEta),
                 caloPhi_(iCaloPhi),
-                iEta_(0),iPhi_(0),
+                eta_(iEta),phi_(iPhi),
                 quality_(iQuality),
                 isPV_(iIsPV),
                 alphaF_(alphaF),
@@ -25,20 +26,28 @@ namespace l1tpf {
             float sigma() const { return sigma_; }  
             float caloEta() const { return caloEta_; }
             float caloPhi() const { return caloPhi_; }
-            int iEta() const { return iEta_; }
-            int iPhi() const { return iPhi_; }
-            float quality() const { return quality_; }
+	    //iEta,iPhi (usuals)
+	    int   iEta() const { return l1tpf::translateIEta(eta_);}
+	    int   iPhi() const { return l1tpf::translateIPhi(phi_,eta_);}
+	    //iEta,iPhi as they are stored in Arrays
+	    int   aEta() const { return l1tpf::translateAEta(iEta());}
+	    int   aPhi() const { return l1tpf::translateAPhi(iPhi());}
+	    //Center of the trigger tower
+	    float dEta() const { return l1tpf::towerEta(l1tpf::translateIEta(eta_));}
+	    float dPhi() const { return l1tpf::towerPhi(l1tpf::translateIEta(eta_),l1tpf::translateIPhi(phi_,eta_));}
+            //Other stuff
+	    float quality() const { return quality_; }
             float alphaF() const { return alphaF_; }
             float alphaC() const { return alphaC_; }
             float puppiWeight() const { return puppiWeight_; }
             int isPV() const { return isPV_; }
-
+	    
             void setCaloEta(float caloEta) { caloEta_ = caloEta; }
             void setCaloPhi(float caloPhi) { caloPhi_ = caloPhi; }
-            void setIEta(int iEta) { iEta_ = iEta; }
-            void setIPhi(int iPhi) { iPhi_ = iPhi; }
+            void setEta(float iEta) { eta_ = iEta; }
+            void setPhi(float iPhi) { phi_ = iPhi; }
             void setCaloEtaPhi(float caloEta, float caloPhi) { caloEta_ = caloEta; caloPhi_ = caloPhi; }
-            void setIEtaIPhi(int iEta, int iPhi) { iEta_ = iEta; iPhi_ = iPhi; }
+            //void setIEtaIPhi(int iEta, int iPhi) { iEta_ = iEta; iPhi_ = iPhi; }
 
             void setDz(float dz) { dZ_ = dz; }
             void setSigma(float sigma) { sigma_ = sigma; }  
@@ -60,7 +69,7 @@ namespace l1tpf {
             float dZ_;
             float sigma_;
             float caloEta_, caloPhi_;
-            int   iEta_, iPhi_;
+	    float eta_, phi_;
             float quality_;
             int isPV_;
             float alphaF_, alphaC_, puppiWeight_;

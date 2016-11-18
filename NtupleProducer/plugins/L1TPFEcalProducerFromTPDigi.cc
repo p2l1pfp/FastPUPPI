@@ -8,6 +8,7 @@
 #include "CondFormats/L1TObjects/interface/L1CaloEcalScale.h"
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 namespace l1tpf {
     class EcalProducerFromTPDigi : public edm::EDProducer {
@@ -46,10 +47,9 @@ l1tpf::EcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
       short sign = 1; if(it->id().ieta() < 0) sign=-1;
       double et = ecalScale_->et( it->compressedEt(),(unsigned short)abs(it->id().ieta()), sign);
       if(et < 0.1) continue;
-      float curTowerEta = l1t::CaloTools::towerEta(it->id().ieta());
-      float curTowerPhi = l1t::CaloTools::towerPhi(it->id().ieta(),it->id().iphi());
+      float curTowerEta = l1tpf::towerEta(it->id().ieta());
+      float curTowerPhi = l1tpf::towerPhi(it->id().ieta(),it->id().iphi());
       out->emplace_back( et, curTowerEta, curTowerPhi, 0,  0,0,0, curTowerEta, curTowerPhi, 0 );
-      out->back().setIEtaIPhi( it->id().iphi(), it->id().ieta() );
   }
 
   iEvent.put(std::move(out));

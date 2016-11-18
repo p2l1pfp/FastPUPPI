@@ -15,6 +15,7 @@
 #include "DataFormats/Math/interface/deltaPhi.h"
 
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 
 namespace l1tpf {
@@ -70,23 +71,21 @@ l1tpf::EcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
         if (et < etCut_) continue; 
         EBDetId id(hit.detid());
         out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0, 0, 0, 0, pos.eta(), pos.phi());
-        out_crystal->back().setIEtaIPhi(id.ieta(), id.iphi());
         towers[make_pair(id.tower_ieta(), id.tower_iphi())].emplace_back(et, pos.eta(), pos.phi());
     }
     for (const auto & pair : towers) {
         double etsum = 0., etaetsum = 0., phietsum = 0.; 
         double reta = pair.second.front().eta, rphi = pair.second.front().phi;
         for (const SimpleHit & hit : pair.second) {
-            etsum += hit.et;
-            etaetsum += (hit.eta - reta) * hit.et;
-            phietsum += reco::deltaPhi(hit.phi, rphi) * hit.et;
+	  etsum += hit.et;
+	  etaetsum += (hit.eta - reta) * hit.et;
+	  phietsum += reco::deltaPhi(hit.phi, rphi) * hit.et;
         }
-        etaetsum /= etsum;
-        phietsum /= etsum;
-        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0);
-        out_tower->back().setIEtaIPhi(pair.first.first, pair.first.second);
-        out_tower->back().setCaloEtaPhi( l1t::CaloTools::towerEta(pair.first.first), 
-                                         l1t::CaloTools::towerPhi(pair.first.first, pair.first.second) );
+	if(etsum > 0)  {
+	  etaetsum /= etsum;
+	  phietsum /= etsum;
+	}
+	out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0,etaetsum + reta,reco::deltaPhi(phietsum + rphi, 0.));
     }
 
   iEvent.put(std::move(out_crystal), "crystals");

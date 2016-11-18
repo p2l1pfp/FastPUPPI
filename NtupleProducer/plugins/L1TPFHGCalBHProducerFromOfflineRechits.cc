@@ -16,6 +16,7 @@
 #include "DataFormats/Math/interface/deltaPhi.h"
 
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 
 namespace l1tpf {
@@ -84,10 +85,7 @@ l1tpf::HGCalBHProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm:
         }
         etaetsum /= etsum;
         phietsum /= etsum;
-        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0);
-        out_tower->back().setIEtaIPhi(pair.first.first, pair.first.second);
-        out_tower->back().setCaloEtaPhi( l1t::CaloTools::towerEta(pair.first.first), 
-                                         l1t::CaloTools::towerPhi(pair.first.first, pair.first.second) );
+        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.));
     }
 
     //iEvent.put(std::move(out_crystal), "crystals");

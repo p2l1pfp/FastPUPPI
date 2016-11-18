@@ -8,6 +8,7 @@
 #include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
 #include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FWCore/Framework/interface/ESHandle.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
@@ -93,7 +94,6 @@ l1tpf::HcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
       towerEta /= float(ndetsPerTower);
       towerR /= float(ndetsPerTower);
       out->emplace_back( et, towerEta, towerPhi, 0,  0,0,0, towerEta, towerPhi, 0 );
-      out->back().setIEtaIPhi( it->id().iphi(), it->id().ieta() );
   }
 
   iEvent.put(std::move(out));

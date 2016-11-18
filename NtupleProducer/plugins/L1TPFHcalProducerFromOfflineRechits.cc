@@ -9,10 +9,10 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "Geometry/Records/interface/CaloGeometryRecord.h"
-
 #include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
 
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
 
 
@@ -86,10 +86,7 @@ l1tpf::HcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
         }
         etaetsum /= etsum;
         phietsum /= etsum;
-        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0);
-        out_tower->back().setIEtaIPhi(pair.first.first, pair.first.second);
-        out_tower->back().setCaloEtaPhi( l1t::CaloTools::towerEta(pair.first.first), 
-                                         l1t::CaloTools::towerPhi(pair.first.first, pair.first.second) );
+        out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0,etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.));
     }
 
     //iEvent.put(std::move(out_crystal), "crystals");

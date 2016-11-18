@@ -1,45 +1,40 @@
 import FWCore.ParameterSet.Config as cms
 
 process = cms.Process("OUT")
-
-# process.load('Configuration.Geometry.GeometryRecoDB_cff')
+process.load('Configuration.StandardSequences.Services_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D3Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
-process.load("FWCore.MessageService.MessageLogger_cfi")
-process.MessageLogger.cerr.FwkReport.reportEvery = 100
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
+process.load('Configuration.StandardSequences.EndOfProcess_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+
+process.load("FWCore.MessageLogger.MessageLogger_cfi")
+process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
+process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
         'XXXX'
         )
-                            )
+)
 
-
-process.load('Configuration.StandardSequences.MagneticField_38T_PostLS1_cff')
-process.load('IOMC.EventVertexGenerators.VtxSmearedGauss_cfi')
-process.load('Configuration.Geometry.GeometryExtended2023TTIReco_cff')
-process.load('Geometry.TrackerGeometryBuilder.StackedTrackerGeometry_cfi')
-
-process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-process.load('L1Trigger.Configuration.SimL1Emulator_cff')
-process.load('L1Trigger.Configuration.CaloTriggerPrimitives_cff')
-process.load("SLHCUpgradeSimulations.L1TrackTrigger.L1TTrack_cfi")
-
-process.load('Configuration.StandardSequences.L1TrackTrigger_cff')
-process.BeamSpotFromSim =cms.EDProducer("BeamSpotFromSimProducer")
-process.L1Tracks.geometry = cms.untracked.string('BE5D')
-
-from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:upgradePLS3', '')
+process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
+process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
 
 process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 zeroSuppress = cms.bool(True),
-                                 L1TrackTag  = cms.InputTag('TTTracksFromPixelDigis','Level1TTTracks'),
-                                 EcalTPTag   = cms.InputTag('simEcalTriggerPrimitiveDigis'),
-                                 HcalTPTag   = cms.InputTag('simHcalTriggerPrimitiveDigis'), 
+                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+                                 EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
+                                 HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
+                                 HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
+                                 HGHcalTPTag = cms.InputTag('l1tPFHGCalFHProducerFromOfflineRechits','towers'),
+                                 BHHcalTPTag = cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers'),
+                                 HFTPTag     = cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers'),
                                  MuonTPTag   = cms.InputTag('simGmtDigis'), 
-                                 genParTag   = cms.InputTag('genParticles'), 
+                                 genParTag   = cms.InputTag('genParticles'),
+                                 zeroSuppress = cms.bool(False),
                                  corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
                                  corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
                                  ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
@@ -49,20 +44,7 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  trkPtCut    = cms.double(0)
                                  )
 
-process.out = cms.OutputModule("PoolOutputModule",
-                               fileName = cms.untracked.string('TESTFILE.root'),
-                               outputCommands = cms.untracked.vstring('drop *',
-                                                                      "keep *_simEcalTriggerPrimitiveDigis_*_*",
-                                                                      "keep *_*_ecalET_*",
-                                                                      "keep *_*_trkPtPerp_*",
-                                                                      "keep *_*_trkPtEta_*",
-                                                                      "keep *_*_trkPtPhi_*",
-                                                                      "keep *_*_trkPOCAz_*",)
-                               )
 
-
-process.TT_step           = cms.Path(process.TrackTriggerTTTracks)
-process.TTAssociator_step = cms.Path(process.TrackTriggerAssociatorTracks)
-process.ana               = cms.Path(process.InfoOut)
-process.p = cms.Schedule(process.TT_step,process.TTAssociator_step,process.ana)
+process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
+process.p = cms.Path(process.l1Puppi*process.InfoOut)
 #process.e = cms.EndPath(process.out)
