@@ -440,16 +440,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       	break;
       }
       hcal_corr_et = 0;
-      for(int pEta   = std::max(it.aEta()-3,0); pEta < std::min(it.aEta()+3,66); pEta++) { 
-	for(int pPhi = std::max(it.aPhi()-3,0); pPhi < std::min(it.aPhi()+3,72); pPhi++) { 
-	  hcal_corr_et += lHEt[pEta][pPhi];
-	}
-      }
-      /*
       if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
       if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_ecal_et),hcal_ieta,hcal_iphi);
       if(hcal_corr_et  < 0) hcal_corr_et   = 0;
-      */
       if(hcal_corr_et) hcal_corr_emf  = corrector_->ecalFrac();
       connector_->addCalo(double(hcal_corr_et),double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
       rawconnector_->addCalo(double(hcal_clust_et),double(hcal_ecal_et),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
