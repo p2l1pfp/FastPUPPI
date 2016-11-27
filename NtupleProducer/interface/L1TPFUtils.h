@@ -8,14 +8,15 @@ namespace l1tpf {
    std::pair<float,float> towerEtaBounds(int ieta);
    float towerEtaSize(int ieta);
    float towerPhiSize(int ieta);
+   int   towerNEta();
    int   towerNPhi(int ieta);
    int   translateIEta(float eta);
    int   translateIPhi(float phi,float eta);
    float towerEta(int ieta);
    float towerPhi(int ieta, int iphi);
    //Map to array
-   int   translateAEta(int ieta,bool iInvert=false);
-   int   translateAPhi(int iphi,bool iInvert=false);
+   int   translateAEta   (int ieta,bool iInvert=false);
+   int   translateAPhi   (int iphi,bool iInvert=false);
 }
 
 #endif

@@ -17,7 +17,18 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 10
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
-        'file:step3_FEVTp.root'
+        #'/store/cmst3/user/gpetrucc/l1phase2/081116/DR_PU0/2023D3_guns/'
+        '/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/81X_upgrade2023_realistic_v3_2023D3Timing13TeV-v1/10000/44798C42-6F99-E611-A504-0CC47A7C354C.root'
+        #'/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/PU25ns_81X_upgrade2023_realistic_v3_2023D3Timing13TeVPU200r4-v1/10000/FA5DBF15-6CA6-E611-8CA8-0CC47A7C3420.root'
+        #'/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/81X_upgrade2023_realistic_v3_2023D4-v1/10000/00E6CE12-7A99-E611-8BAF-0CC47A4D75F2.root'
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_91.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_93.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_94.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_96.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_97.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_98.root',
+        #'/store/group/cmst3/user/pharris/L1PF/ZMM/ZMM_99.root'
+        #'file:step3_FEVTp.root'
         )
 )
 
@@ -25,7 +36,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff'
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
 
 process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksAll'),
                                  EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
                                  HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
                                  HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
@@ -34,18 +45,18 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  HFTPTag     = cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers'),
                                  MuonTPTag   = cms.InputTag('simGmtDigis'), 
                                  genParTag   = cms.InputTag('genParticles'),
-                                 zeroSuppress = cms.bool(True),
-                                 corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_hpu.root"),
-                                 ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_6_2_0_SLHC12/src/FastPUPPI/NtupleProducer/data/pionres.root"),
+                                 zeroSuppress = cms.bool(False),
+                                 corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
+                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res.root"),
+                                 ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
+                                 trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/tkres.root"),
+                                 eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/eres.root"),
+                                 pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pionres.root"),
                                  trkPtCut    = cms.double(0)
                                  )
 
 
-process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
+process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksAll)
 process.p = cms.Path(process.l1Puppi*process.InfoOut)
 #process.e = cms.EndPath(process.out)
 

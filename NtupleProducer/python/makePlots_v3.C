@@ -74,7 +74,7 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   double lRMS  [lN]; 
   double lEMean[lN]; 
   double lERMS [lN]; 
-  std::string lCut  = "(pt_z > 5 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.5)*("+iMet+"met > 0)";
+  std::string lCut  = "(pt_z > 5 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.5)";//*("+iMet+"met > 0)";
 
   TH1F *lXH = new TH1F(("Met"+iVar).c_str(),("Met"+iVar).c_str(),26,0,330); lXH->Sumw2();
   lXH->GetXaxis()->SetTitle("#slash{E_{T}} (GeV)");
@@ -139,64 +139,64 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   }
   fF1 = lF1;
 }
-void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
-		  std::string iFile0="zmmmet_pt4.root",
-		  std::string iFile1="zmmmet_pt3.root",
-		  std::string iFile2="zmmmet_pt2.root",
-		  std::string iFile3="zmmmet_pt1.root"
+void makePlots_v3(
+		  std::string iFile0="ZMM_Def.root",
+		  std::string iFile1="ZMM_Def.root",
+		  std::string iFile2="ZMM_Def.root",
+		  std::string iFile3="ZMM_Def.root"
 	       ) {  
   //Prep();
   setTDRStyle();
-  std::string lLabel="pup";
+  std::string lLabel="";
   std::string lLabel2="";
-  std::string lLabel_b="calo";
+  std::string lLabel_b="";
   std::string lLabel2_b="";
   std::string lLast  ="";
-  makeMETPlotsFile(lLabel+"u1"+lLast,"pup",iFile0,kRed);
+  makeMETPlotsFile(lLabel+"calou1"+lLast,"calo",iFile0,kRed);
   TH1F * lH0    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF0 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG0 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u1"+lLast,"pup",iFile1,kGreen+1);
+  makeMETPlotsFile(lLabel+"u1"+lLast,"",iFile1,kGreen+1);
   TH1F * lH1    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF1 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG1 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u1"+lLast,"pup",iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku1"+lLast,"tk",iFile2,kOrange-9);
   TH1F * lH2    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF2 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG2 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u1"+lLast,"pup",iFile3,kBlue-9);
+  makeMETPlotsFile(lLabel+"pupu1"+lLast,"pup",iFile3,kBlue-9);
   TH1F * lH3    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF3 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG3 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u2"+lLast,"pup",iFile0,kRed);
+  makeMETPlotsFile(lLabel+"calou2"+lLast,"calo",iFile0,kRed);
   TGraphErrors  * lPupF20 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG20 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u2"+lLast,"pup",iFile1,kGreen+1);
+  makeMETPlotsFile(lLabel+"u2"+lLast,"",iFile1,kGreen+1);
   TGraphErrors  * lPupF21 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG21 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u2"+lLast,"pup",iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku2"+lLast,"tk",iFile2,kOrange-9);
   TGraphErrors  * lPupF22 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG22 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"u2"+lLast,"pup",iFile3,kBlue-9);
+  makeMETPlotsFile(lLabel+"pupu2"+lLast,"pup",iFile3,kBlue-9);
   TGraphErrors  * lPupF23 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG23 = (TGraphErrors*) fG1->Clone("Res0"); 
 
   std::string lLeg1 = "Calo";
-  std::string lLeg2 = "PF";
-  std::string lLeg3 = "TK from PV";
-  std::string lLeg4 = "puppi";
+  std::string lLeg2 = "PF";//PF #Delta #eta";
+  std::string lLeg3 = "TK";//PF #Delta #eta 075";
+  std::string lLeg4 = "Pup";//PF #Delta #eta 25";
 
-  std::string lLeg1 = "4 GeV";
-  std::string lLeg2 = "3 GeV";
-  std::string lLeg3 = "2 GeV";
-  std::string lLeg4 = "1 GeV";
+  //std::string lLeg1 = "4 GeV";
+  //std::string lLeg2 = "3 GeV";
+  //std::string lLeg3 = "2 GeV";
+  //std::string lLeg4 = "1 GeV";
   TLegend *lL = new TLegend(0.25,0.2,0.5,0.5); lL->SetBorderSize(0); lL->SetFillColor(0); 
   lL->AddEntry(lH0,lLeg1.c_str(),"l");  
   lL->AddEntry(lH1,lLeg2.c_str(),"l");
@@ -220,7 +220,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   Xratio(lH2,lH1);
   Xratio(lH3,lH1,true);
   //lCX->SaveAs("Met200.pdf");
-  lCX->SaveAs((iFile1+"Met200.png").c_str());
+  //lCX->SaveAs((iFile1+"Met200.png").c_str());
   //lCX->SaveAs("Met200.C");
  
   TLegend *lL1 = new TLegend(0.6,0.15,0.9,0.4); lL1->SetBorderSize(0); lL1->SetFillColor(0); 
@@ -238,7 +238,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   lL1->Draw();
   formatCanvas(lC0);
   //lC0->SaveAs("Response200.pdf");
-  lC0->SaveAs((iFile1+"Response.png").c_str());
+  //lC0->SaveAs((iFile1+"Response.png").c_str());
   //lC0->SaveAs("Response200.C");
 
   TLegend *lL2 = new TLegend(0.6,0.15,0.9,0.4); lL2->SetBorderSize(0); lL2->SetFillColor(0); 
@@ -254,7 +254,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   lPupG3 ->Draw("pe sames");
   lL2->Draw();
   formatCanvas(lC1);
-  lC1->SaveAs((iFile1+"U1Res.png").c_str());
+  //lC1->SaveAs((iFile1+"U1Res.png").c_str());
   //lC1->SaveAs("U1Res200.pdf");
   //lC1->SaveAs("U1Res200.C");
 
@@ -271,7 +271,7 @@ void makePlots_v3(//mettree_pt3_dR04_NoLep_200",upmet_nomu_dz_nocut.root
   lPupG23 ->Draw("pe sames");
   lL3->Draw();
   formatCanvas(lC3);
-  lC3->SaveAs((iFile1+"U2Res.png").c_str());
+  //lC3->SaveAs((iFile1+"U2Res.png").c_str());
   //lC3->SaveAs("U2Res200.pdf");
   //lC3->SaveAs("U2Res200.C");
   return;

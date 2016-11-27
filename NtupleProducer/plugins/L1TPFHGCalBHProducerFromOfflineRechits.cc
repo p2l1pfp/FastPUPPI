@@ -73,7 +73,8 @@ l1tpf::HGCalBHProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm:
         HcalDetId detid(hit.detid());
         //out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0, 0, 0, 0, pos.eta(), pos.phi());
         //out_crystal->back().setIEtaIPhi(detid.ieta(), detid.iphi());
-        towers[make_pair(detid.ieta(), detid.iphi())].emplace_back(et, pos.eta(), pos.phi());
+        //towers[make_pair(detid.ieta(), detid.iphi())].emplace_back(et, pos.eta(), pos.phi());
+	towers[make_pair(l1tpf::translateIEta(pos.eta()),l1tpf::translateIPhi(pos.phi(),pos.eta()))].emplace_back(et, pos.eta(), pos.phi());
     }
     for (const auto & pair : towers) {
         double etsum = 0., etaetsum = 0., phietsum = 0.; 

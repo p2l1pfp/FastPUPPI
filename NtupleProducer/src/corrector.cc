@@ -1,12 +1,13 @@
 #include "../interface/corrector.hh"
+#include "../interface/L1TPFUtils.h"
 #include <iostream>
 #include <sstream>
 #include <TFile.h>
 
 corrector::corrector(const std::string iFile,int iNFrac) {
   TFile *lFile = new TFile(iFile.c_str());
-  fNEta  = 61;
-  fNPhi  = 72;
+  fNEta  = l1tpf::towerNEta();
+  fNPhi  = l1tpf::towerNPhi(1);
   fNFrac = iNFrac;
   fGraph = new TGraph***[fNEta];
   lFile->Print();
@@ -18,7 +19,7 @@ corrector::corrector(const std::string iFile,int iNFrac) {
 	std::stringstream pSS; 
 	pSS << "eta_";
 	int pEta = i0;
-	if(iNFrac > 1) pEta = i0-30;
+	if(iNFrac > 1) pEta = i0-fNEta/2;
 	pSS << pEta;
 	if(iNFrac > 1) pSS << "phi_" << (i1+1);
 	pSS << "_frac_" << i2;
@@ -28,17 +29,20 @@ corrector::corrector(const std::string iFile,int iNFrac) {
   }
 }
 double corrector::correct(double iHcal,double iEcal,int iEta,int iPhi) { 
-  if(fNFrac == 1  && iEcal       < 1. ) return 0;
-  if(fNFrac == 11 && iEcal+iHcal < 2. ) return 0; 
+  if(fNFrac == 1  && iEcal       < 0.5 ) return 0;
+  if(fNFrac == 11 && iEcal+iHcal < 2.0 ) return 0; 
   fEcal = 0; if(iEcal > 0) fEcal = iEcal; 
   fHcal = 0; if(iHcal > 0) fHcal = iHcal; 
+  if(iEcal < 0) fEcal = 0;
+  if(abs(iEta) > fNEta/2-1 || iPhi < 1 || iPhi > fNPhi-1) return fHcal+fEcal;
   double lFrac = fEcal/(fHcal+fEcal); 
   int    lIFrac=int(lFrac*10.);
-  fIEta = iEta+30;
+  fIEta = iEta+fNEta/2;
   fIPhi = iPhi-1;
   fFrac = lFrac;
   if(lIFrac > fNFrac-1) lIFrac = 0; 
   fPtCorr = (fGraph[fIEta][fIPhi][lIFrac])->Eval(fHcal+fEcal);
+  fPtCorr = std::min(3.*(fHcal+fEcal),fPtCorr);
   if(fPtCorr < 1.) fPtCorr = 0;
   return fPtCorr;
 }

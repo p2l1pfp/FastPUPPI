@@ -13,7 +13,7 @@
 
 combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile = "puppi.root") {
   fDRMatch = 0.15;
-  fNEta  = 61;
+  fNEta  = l1tpf::towerNEta();
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
   loadFile(fTrackRes   ,iTrackFile);
@@ -46,7 +46,7 @@ void combiner::loadFile(TGraph** &iF1, std::string iFile) {
 
 //Add Calo deposit
 void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) { 
-  if(iCalo < 1 && iEcal < 1) return;
+  if(iCalo+iEcal < 1.0) return;
   double lEt  = iCalo;
   double lEta = iCaloEta;
   double lPhi = iCaloPhi;
@@ -62,7 +62,7 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
 
 //Add Tracks
 void combiner::addTrack(l1tpf::Particle particle) { 
-  if(particle.pt() < 1) return; // FIXME: GP: this looks unneeded
+  if(particle.pt() < 0.1) return; //Just to avoid calling things that will crash later
   particle.setSigma(getTrkRes(particle.pt(), particle.eta(), particle.phi())); // the combiner knows the sigma, the track producer doesn't
   insert(particle,fTkParticles);
 }
@@ -91,42 +91,39 @@ void combiner::link() {
         curDPT = 1/tmptmp;
       }
       if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
-        //std::cout << "Matched! " << fMuParticles[i0].pt() << ", " << fTkParticles[i1].pt() << "," << curDR << std::endl;
         fTkParticles[i1].setPdgId(4);
-        // fTkParticles[i1].charge() = fMuParticles[i0].charge(); // use tracks charge, more better like
+        fTkParticles[i1].setMass(0.105);
         minPtDiff = fabs(curDPT);
       }
     } 
   }
-
   // then do track + calo linking
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].pdgId() == 4) continue; // skip muons for now, add them at the end
     bool pFill = false;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
-      // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks
+      // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
       if(fParticles[i1].pdgId() == 0 || fParticles[i1].pdgId() == 1)   continue;
       merge(fTkParticles[i0],fParticles[i1],fParticles);
       pFill = true;
+      break;
     }
     //Remove high pT fakes
     if(fTkParticles[i0].pt() > 300.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
-
   // now do muons...
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if (fTkParticles[i0].pdgId() == 4) fParticles.push_back(fTkParticles[i0]);
   }
-
 }
 
 //Merge Particles
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
   double lTotSigma = sqrt(iTkParticle.sigma()*iTkParticle.sigma() + iParticle1.sigma()*iParticle1.sigma());
   //Case 1 calo to large
-  if(iParticle1.pt()-iTkParticle.pt() > 2.5*lTotSigma) { 
+  if(iParticle1.pt()-iTkParticle.pt() > 2.0*lTotSigma) { 
     TLorentzVector pVec0 = iParticle1.tp4();
     TLorentzVector pVec1 = iTkParticle.tp4();
     pVec0 -= pVec1;
@@ -135,17 +132,18 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     return;
   }
   //Case 2 combined 
-  if(fabs(iParticle1.pt()-iTkParticle.pt()) < 2.5*lTotSigma) { 
+  if(fabs(iParticle1.pt()-iTkParticle.pt()) < 2.0*lTotSigma) { 
     double pSigma   = iParticle1.sigma();
     double pTkSigma = iTkParticle.sigma();
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
     double pAvgEt   = (iParticle1.pt()/pSigma/pSigma + iTkParticle.pt()/pTkSigma/pTkSigma)/pSigTot;
     iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), iParticle1.pdgId() == 3 ? 0.137 : iParticle1.mass());
-    iParticle1.setPdgId(iParticle1.pdgId() - 2); //FIXME: this line doesn't make sense to me (GP)
+    iParticle1.setPdgId(iParticle1.pdgId() - 2); //FIXME: this line doesn't make sense to me (GP) => PH it is to move neutral had to charged had
+    iParticle1.setMass (0.137);
     return;
   }
   //Case 3 MIP
-  if(iParticle1.pt()-iTkParticle.pt() < -2.5*lTotSigma) { 
+  if(iParticle1.pt()-iTkParticle.pt() < -2.0*lTotSigma) { 
     //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
     double pVal = 2; if(iParticle1.pt() < 2.) pVal = iParticle1.pt()+0.1;
@@ -154,7 +152,8 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   return;
 }
 
-//Order by pt // FIXME: GP: why do you need to do this?
+//Order by pt // FIXME: GP: why do you need to do this? => PH: the ordering affects the choice of what gets linked first if there are multiple links present. This changes what happens downstream.
+// Perhaps there is a better way :)
 void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
   if(iParticles.size() == 0) {iParticles.push_back(iParticle); return;}
   bool lFill = false;
@@ -177,7 +176,6 @@ double  combiner::deltaR(Particle &iParticle1,Particle &iParticle2) {
 
 //Delta R
 double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
-  // std::cout << iParticle1.phi() << "," << iParticle2.phi() << ", " << iParticle1.eta() << "," << iParticle2.eta() << std::endl;
   double pDPhi=fabs(iParticle1.phi()-iParticle2.phi()); 
   if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
   double pDEta=iParticle1.eta()-iParticle2.eta();
@@ -190,14 +188,11 @@ void combiner::doVertexing(){
   
   TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
-
-  // std::cout << "------ fTkParticles.size(): " << fTkParticles.size() << std::endl;
   int ntracks = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
     if (fParticles[i0].charge() == 0) continue;
     ntracks++;
-    // std::cout << i0 << ": fParticles[i0].dZ = " << fParticles[i0].dZ << "," << fParticles[i0].pt() << ", " << fParticles[i0].pdgId() << std::endl;
-    if(fParticles[i0].quality() < 7) continue;
+    //if(fParticles[i0].quality() < 7) continue;
     float curdz  = fParticles[i0].dz();
     float curbin = h_dz->GetXaxis()->FindBin(curdz);
     h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + std::min(fParticles[i0].pt(),50.) );
@@ -217,9 +212,6 @@ void combiner::doVertexing(){
       fParticles[i0].setIsPV(1);
     }
   }
-
-  // std::cout << "ntracks = " << ntracks << ", " << fTkParticlesWVertexing.size() << ", " << fTkParticles.size() << std::endl;
-  // return fTkParticlesWVertexing;
 }
 
 
@@ -228,7 +220,6 @@ void combiner::doVertexing(){
 ////////////////////////////////////////////////////////////////////////////
 
 void combiner::fetchPuppi(){
-
   // std::cout << "fetching puppi..." << std::endl;
 
   // separate particles out into neutrals and charged PU and charged PV
@@ -342,24 +333,22 @@ void combiner::computeWeights(){
       curalpha = fParticles[i0].alphaC();
     }
     //PH: Getting good performance
-    //if (fParticles[i0].isPV == 1 && fParticles[i0].charge() != 0){ fParticles[i0].puppiWeight() = 1; continue;}
-    //if (fParticles[i0].isPV == 0 && fParticles[i0].charge() != 0){ fParticles[i0].puppiWeight() = 0; continue;}
+    if (fParticles[i0].isPV() == 1 && fParticles[i0].charge() != 0){ fParticles[i0].setPuppiWeight(1); continue;}
+    if (fParticles[i0].isPV() == 0 && fParticles[i0].charge() != 0){ fParticles[i0].setPuppiWeight(0); continue;}
     if (curalpha < -98){ fParticles[i0].setPuppiWeight(0); continue; }
 
     float lVal = (curalpha - curmed)*fabs((curalpha - curmed))/currms/currms;
     float lPval = ROOT::Math::chisquared_cdf(lVal,1);
-    // std::cout << "curmed = " << curmed << ", currms = " << currms << ", curalpha = " << curalpha << "..." << lVal << ", " << lPval << std::endl;
     
     fParticles[i0].setPuppiWeight(lPval);
-    // if (curalpha - curmed) fParticles[i0].puppiWeight() = 1;
   }
 
   // std::cout << "write out PUPPI collection..." << std::endl;
   int puppictr = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
 
-    float ptcutC = 4.0;//Tight cuts for high PU
-    float ptcutF = 4.0;
+    float ptcutC = 0.1;//4.0;//Tight cuts for high PU
+    float ptcutF = 0.1;//4.0;
     if (fParticles[i0].pdgId() == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
     if (fParticles[i0].puppiWeight() <= 0.01) continue;
     if (fParticles[i0].pdgId() != 4 && fParticles[i0].puppiWeight() > 0.01){
@@ -379,8 +368,6 @@ void combiner::computeWeights(){
       }
     }
   }
-
-  // std::cout << "puppi particles = " << fParticlesPuppi.size() << std::endl;
 
 }
 

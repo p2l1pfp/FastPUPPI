@@ -16,8 +16,12 @@
 #     bsub -q 8nh run.sh /store/mc/TTI2023Upg14D/SinglePositronFlatPt0p2To50/GEN-SIM-DIGI-RAW/PU140bx25_PH2_1K_FB_V3-v2/00000/ $x $PWD
 #done
 cfg=$1
-dir=/store/cmst3/user/gpetrucc/l1phase2/081116/DR_PU0/2023D3_guns/
-for  x in `eos ls  $dir | grep FEVT | grep Pion`; do
+dir=/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/81X_upgrade2023_realistic_v3_2023D3Timing13TeV-v1/10000/
+#dir=/store/group/cmst3/user/pharris/L1PF/ZMM/
+#dir=/store/group/cmst3/user/pharris/L1PF/Pion/
+#dir=/store/cmst3/user/gpetrucc/l1phase2/081116/DR_PU0/2023D3_guns/
+#for  x in `eos ls  $dir | grep Photon | grep FEVT `; do
+for  x in `eos ls  $dir `; do
     bsub -q 8nh -o out.%J run.sh $dir $x $PWD Gun $cfg
 done
 exit

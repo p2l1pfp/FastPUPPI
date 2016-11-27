@@ -71,7 +71,9 @@ l1tpf::EcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
         if (et < etCut_) continue; 
         EBDetId id(hit.detid());
         out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0, 0, 0, 0, pos.eta(), pos.phi());
-        towers[make_pair(id.tower_ieta(), id.tower_iphi())].emplace_back(et, pos.eta(), pos.phi());
+	//Using Local iEta,iPhi conventions since all the others are driving me nuts
+	towers[make_pair(l1tpf::translateIEta(pos.eta()),l1tpf::translateIPhi(pos.phi(),pos.eta()))].emplace_back(et, pos.eta(), pos.phi());
+	//std::cout << "check ieta " << id.tower_ieta() << " -- " << id.tower_iphi() << " -- " << l1tpf::translateIEta(pos.eta()) << " -- " << l1tpf::translateIPhi(pos.phi(),pos.eta()) << std::endl;
     }
     for (const auto & pair : towers) {
         double etsum = 0., etaetsum = 0., phietsum = 0.; 

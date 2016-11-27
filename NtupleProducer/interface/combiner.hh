@@ -6,6 +6,7 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "L1TPFParticle.h"
+#include "L1TPFUtils.h"
 
 #ifdef __MAKECINT__
 #pragma link C++ class vector<float>+;
@@ -36,10 +37,10 @@ public:
   inline double dZ() { return fDZ;} 
 private:
   void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
-  inline double  getTrkRes (double iPt,double iEta,double iPhi) { return fTrackRes   [translateIEta(iEta)]->Eval(iPt);}
-  inline double  getPionRes(double iPt,double iEta,double iPhi) { return fElectronRes[translateIEta(iEta)]->Eval(iPt);}
-  inline double  getEleRes (double iPt,double iEta,double iPhi) { return fPionRes    [translateIEta(iEta)]->Eval(iPt);}
-  inline int     translateIEta(double iEta) { return int(10*std::max(std::min(iEta,3.0),-3.0))+30;}  
+  inline double  getTrkRes (double iPt,double iEta,double iPhi) {return fTrackRes   [translateIEtaOld(iEta)]->Eval(iPt);}
+  inline double  getEleRes (double iPt,double iEta,double iPhi) {return fElectronRes[translateIEtaOld(iEta)]->Eval(iPt);}
+  inline double  getPionRes(double iPt,double iEta,double iPhi) {return fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
+  inline int     translateIEtaOld(double iEta) { return int(10*std::max(std::min(iEta,3.0),-3.0))+30;}  
   double deltaR(Particle &iParticle1,Particle &iParticle2);
   double deltaRraw(Particle &iParticle1,Particle &iParticle2);
   TGraph **fTrackRes;

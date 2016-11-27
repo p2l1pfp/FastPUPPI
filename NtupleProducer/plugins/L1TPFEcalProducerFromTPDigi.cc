@@ -47,6 +47,7 @@ l1tpf::EcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
       short sign = 1; if(it->id().ieta() < 0) sign=-1;
       double et = ecalScale_->et( it->compressedEt(),(unsigned short)abs(it->id().ieta()), sign);
       if(et < 0.1) continue;
+      //!!!!Check ME
       float curTowerEta = l1tpf::towerEta(it->id().ieta());
       float curTowerPhi = l1tpf::towerPhi(it->id().ieta(),it->id().iphi());
       out->emplace_back( et, curTowerEta, curTowerPhi, 0,  0,0,0, curTowerEta, curTowerPhi, 0 );
