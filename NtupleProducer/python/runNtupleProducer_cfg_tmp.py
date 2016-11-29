@@ -25,7 +25,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff'
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
 
 process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksAll'),
                                  EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
                                  HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
                                  HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
@@ -45,6 +45,6 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  )
 
 
-process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
+process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksAll)
 process.p = cms.Path(process.l1Puppi*process.InfoOut)
 #process.e = cms.EndPath(process.out)

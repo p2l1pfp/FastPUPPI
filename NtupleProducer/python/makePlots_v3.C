@@ -64,9 +64,10 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
 		      int iColor=1) { 
   TFile *lFile = new TFile(iName.c_str());
   TTree *lTree = (TTree*) lFile->FindObjectAny("met");
-  const int lN = 11;
+  const int lN = 7;
   double lEnd = 750; 
-  double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,150,200};
+  //double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,150,200};
+  double lRange[lN+1]  = {0,10,20,30,40,60,100,150};
   //double lRange[lN+1]  = {0,10,20,30,40,50,60,80,100,125,200};
   double lX    [lN]; 
   double lEX   [lN]; 
@@ -74,7 +75,7 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   double lRMS  [lN]; 
   double lEMean[lN]; 
   double lERMS [lN]; 
-  std::string lCut  = "(pt_z > 5 && m_z > 60 && m_z < 120 && abs(dz-dzmu) < 1.5)";//*("+iMet+"met > 0)";
+  std::string lCut  = "(pt_z > 5 && m_z > 60 && m_z < 120 && abs(dzmu-dz) < 0.2)";//*("+iMet+"met > 0)";
 
   TH1F *lXH = new TH1F(("Met"+iVar).c_str(),("Met"+iVar).c_str(),26,0,330); lXH->Sumw2();
   lXH->GetXaxis()->SetTitle("#slash{E_{T}} (GeV)");
@@ -87,16 +88,22 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
 
   TCanvas *lC0 = new TCanvas("A","A",800,600); 
   for(int i0 = 0; i0 < lN; i0++) { 
-    TH1F *lH = new TH1F(("Res"+iVar).c_str(),("Res"+iVar).c_str(),100,-200,200);
-    std::string lDraw = "("+iVar+"-pt_z)>>Res"+iVar;
+    TH1F *lH  = new TH1F(("Res" +iVar).c_str(),( "Res"+iVar).c_str(),100,-1000,1000);
+    TH1F *lH0 = new TH1F(("HRes"+iVar).c_str(),("HRes"+iVar).c_str(),100,-1000,1000);
+    std::string lDraw  = "("+iVar+"-pt_z)>>Res"+iVar;
+    std::string lRDraw = "("+iVar+"-pt_z)>>HRes"+iVar;
     if(iVar.find("u2") != std::string::npos) lDraw = "("+iVar+")>>Res"+iVar;
     std::stringstream pSS; pSS << lCut << "*(pt_z > " << lRange[i0] << " && pt_z < " << lRange[i0+1] << ")";
     lTree->Draw(lDraw.c_str(),pSS.str().c_str());
-    lH->Fit("gaus","L");
+    if(iVar.find("u2") == std::string::npos) lTree->Draw(lRDraw.c_str(),pSS.str().c_str());
+    lH ->Fit("gaus");
+    if(iVar.find("u2") == std::string::npos) lH0->Fit("gaus");
     lX    [i0] = (lRange[i0] + lRange[i0+1])/2.;
     lEX   [i0] = fabs(lRange[i0] - lRange[i0+1])/2.;//sqrt(12.);
-    lMean [i0] = lH->GetFunction("gaus")->GetParameter(1);
-    lEMean[i0] = lH->GetFunction("gaus")->GetParError (1);
+    if(iVar.find("u2") != std::string::npos) lMean [i0] = lH->GetFunction("gaus")->GetParameter(1);
+    if(iVar.find("u2") != std::string::npos) lEMean[i0] = lH->GetFunction("gaus")->GetParError (1);
+    if(iVar.find("u2") == std::string::npos) lMean [i0] = lH0->GetMean();
+    if(iVar.find("u2") == std::string::npos) lEMean[i0] = lH0->GetRMS()/sqrt(lTree->GetEntries(pSS.str().c_str()));//GetFunction("gaus")->GetParError (1);
     lRMS  [i0] = lH->GetFunction("gaus")->GetParameter(2);
     lERMS [i0] = lH->GetFunction("gaus")->GetParError (2);
     delete lH;
@@ -140,10 +147,10 @@ void makeMETPlotsFile(std::string iVar="",std::string iMet="",std::string iName=
   fF1 = lF1;
 }
 void makePlots_v3(
-		  std::string iFile0="ZMM_Def.root",
-		  std::string iFile1="ZMM_Def.root",
-		  std::string iFile2="ZMM_Def.root",
-		  std::string iFile3="ZMM_Def.root"
+		  std::string iFile0="ZMM_def_200_v14.root",
+		  std::string iFile1="ZMM_def_200_v14.root",
+		  std::string iFile2="ZMM_def_200_v14.root",
+		  std::string iFile3="ZMM_def_200_v14.root"
 	       ) {  
   //Prep();
   setTDRStyle();
@@ -162,7 +169,7 @@ void makePlots_v3(
   TGraphErrors  * lPupF1 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG1 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"pvtku1"+lLast,"tk",iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku1"+lLast,"pvtk",iFile2,kOrange-9);
   TH1F * lH2    = (TH1F*)fH ->Clone("hist0"); 
   TGraphErrors  * lPupF2 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG2 = (TGraphErrors*) fG1->Clone("Res0"); 
@@ -180,7 +187,7 @@ void makePlots_v3(
   TGraphErrors  * lPupF21 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG21 = (TGraphErrors*) fG1->Clone("Res0"); 
 
-  makeMETPlotsFile(lLabel+"pvtku2"+lLast,"tk",iFile2,kOrange-9);
+  makeMETPlotsFile(lLabel+"pvtku2"+lLast,"pvtk",iFile2,kOrange-9);
   TGraphErrors  * lPupF22 = (TGraphErrors*) fG0->Clone("Rep0"); 
   TGraphErrors  * lPupG22 = (TGraphErrors*) fG1->Clone("Res0"); 
 

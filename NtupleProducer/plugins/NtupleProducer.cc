@@ -36,6 +36,7 @@
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
+#include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
@@ -92,8 +93,8 @@ private:
   virtual void endJob() override;
   void propagate(int iOption,std::vector<double> &iVars,const math::XYZTLorentzVector& iMom,const math::XYZTLorentzVector& iVtx,double iCharge,double iBField);
   void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
-  TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.01);
-  void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.01);
+  TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.5);
+  void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.5);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
   void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
 
@@ -114,6 +115,7 @@ private:
   combiner * connector_;
   combiner * rawconnector_;
   metanalyzer* metanalyzer_;
+  jetanalyzer* jetanalyzer_;
   // declare variables for output file
   std::string           fOutputName;
   TFile                 *fOutputFile;
@@ -183,6 +185,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root");
   rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root");
   metanalyzer_   = new metanalyzer("MetFile.root");
+  jetanalyzer_   = new jetanalyzer("JetFile.root");
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
@@ -467,18 +470,18 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   connector_->doVertexing();
   std::vector<combiner::Particle> lTKVtxCands   = connector_->tkvtxcandidates();
   connector_->fetchPuppi();
-  //connector_->fill();
+  connector_->fill();
   std::vector<combiner::Particle> lPupCands     = connector_->puppiFetch();
+  /*
   unsigned int lBase = lCands.size(); 
   bool *lFound = new bool[lBase]; for(unsigned int i0 = 0; i0 < lBase; i0++) lFound[i0] = false;  
   for (reco::GenParticleCollection::const_iterator itGenP = genParticles.begin(); itGenP!=genParticles.end(); ++itGenP) {
-    if(itGenP->status() != 1 || itGenP->pt() < 0.1) continue;
+    if(itGenP->status() != 1 || itGenP->pt() < 5) continue;
     bool pFound = false;
     for(unsigned int i0   = 0; i0 < lBase; i0++) { 
       double pDPhi = fabs(lCands[i0].phi()-itGenP->phi()); if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
       double pDEta = fabs(lCands[i0].eta()-itGenP->eta());
       if(sqrt(pDEta*pDEta+pDPhi*pDPhi) > 0.1) continue;
-      //std::cout << " dR -- " << sqrt(pDPhi*pDPhi+pDEta*pDEta)  << "===> G " << itGenP->pt() << " -- R " << lCands[i0].pt() << " -- G " << itGenP->eta() << " -- R " << lCands[i0].eta() << " -- G " << itGenP->phi() << " -- " << lCands[i0].phi() << " -- G " << itGenP->mass() << " - R " << lCands[i0].mass() << " G " << itGenP->pdgId() << " -- R" << lCands[i0].pdgId() << " -- " <<  std::endl;
       lFound[i0] = true;
       pFound = true;
     }
@@ -488,6 +491,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       //lCands.push_back(lPart);
     }
   }
+  */
   addPF(lRawCalo ,"RawCalo" ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
@@ -502,6 +506,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   metanalyzer_->setMETRecoil(5,lPupCands,false);
   metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
   metanalyzer_->fill();
+
+  jetanalyzer_->clear();
+  jetanalyzer_->setZ(lTKCands,connector_->dZ());
+  jetanalyzer_->setJets(lCands,0);
+  jetanalyzer_->setGenJets(genParticles,1);
+  jetanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
@@ -696,6 +706,7 @@ NtupleProducer::endJob() {
   
   //connector_->write();
   metanalyzer_->write();
+  jetanalyzer_->write();
   fOutputFile->cd();
   fTotalEvents->Write();
   fOutputFile->Write();

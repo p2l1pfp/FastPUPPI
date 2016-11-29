@@ -101,16 +101,33 @@ void combiner::link() {
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].pdgId() == 4) continue; // skip muons for now, add them at the end
     bool pFill = false;
+    int pIMatch = -1; double pPtMatch = -1;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
       if(fParticles[i1].pdgId() == 0 || fParticles[i1].pdgId() == 1)   continue;
-      merge(fTkParticles[i0],fParticles[i1],fParticles);
-      pFill = true;
-      break;
+      if(fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) < pPtMatch || fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) continue;
+      pIMatch = i1; pPtMatch = fabs(fParticles[i1].pt()-fTkParticles[i0].pt());
     }
+    if(pIMatch != -1) { 
+      merge(fTkParticles[i0],fParticles[pIMatch],fParticles);
+      pFill = true;
+    }
+    /*
+    if(fTkParticles[i0].pt() > 10. && !pFill) {
+      int pI1 = -1; double lDR = 100;
+      for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
+	if(fParticles[i1].pdgId() == 0 || fParticles[i1].pdgId() == 1)   continue;
+	double pDR = deltaR(fTkParticles[i0],fParticles[i1]);
+	if(lDR < pDR) continue;
+	lDR = pDR; 
+	pI1 = i1;
+      }
+      if(pI1 > -1) std::cout << "Missing Track ===> " << fTkParticles[i0].pt() << " --- " << fTkParticles[i0].eta() << "-- " << fTkParticles[i0].phi() << " -- " << fParticles[pI1].pt() << " -- " << lDR << std::endl;
+    }
+    */
     //Remove high pT fakes
-    if(fTkParticles[i0].pt() > 300.) pFill = true;
+    if(fTkParticles[i0].pt() > 10.) pFill = true;
     if(!pFill) fParticles.push_back(fTkParticles[i0]);
   }
   // now do muons...
@@ -146,7 +163,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   if(iParticle1.pt()-iTkParticle.pt() < -2.0*lTotSigma) { 
     //Now a cut to remove fake tracks
     iCollection.push_back(iTkParticle);
-    double pVal = 2; if(iParticle1.pt() < 2.) pVal = iParticle1.pt()+0.1;
+    double pVal = 2; if(iParticle1.pt() < 2.) pVal = iParticle1.pt()-0.1;
     iParticle1.setPt(iParticle1.pt() - pVal); //2 is a bullshit guess at the MIP energy lost
   }
   return;
@@ -186,7 +203,7 @@ void combiner::doVertexing(){
   
   // std::vector<Particle> fTkParticlesWVertexing;
   
-  TH1F *h_dz = new TH1F("h_dz","h_dz",40,-20,20); // 1cm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",120,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
   int ntracks = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
@@ -347,8 +364,8 @@ void combiner::computeWeights(){
   int puppictr = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
 
-    float ptcutC = 0.1;//4.0;//Tight cuts for high PU
-    float ptcutF = 0.1;//4.0;
+    float ptcutC = 4.0;//Tight cuts for high PU
+    float ptcutF = 4.0;
     if (fParticles[i0].pdgId() == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
     if (fParticles[i0].puppiWeight() <= 0.01) continue;
     if (fParticles[i0].pdgId() != 4 && fParticles[i0].puppiWeight() > 0.01){
