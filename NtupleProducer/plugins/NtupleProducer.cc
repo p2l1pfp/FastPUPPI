@@ -190,6 +190,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
+  produces<PFOutputCollection>("Puppi");
   TokGenPar_       = consumesCollector().mayConsume<reco::GenParticleCollection>( GenParTag_    );
   TokL1TrackTPTag_ = consumesCollector().mayConsume<L1PFCollection>( L1TrackTag_  );
   TokEcalTPTag_    = consumesCollector().mayConsume<L1PFCollection>( EcalTPTag_   );
@@ -496,6 +497,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
+  addPF(lPupCands,"Puppi"   ,iEvent);
   
   metanalyzer_->clear();
   metanalyzer_->setZ(lTKCands,connector_->dZ());
