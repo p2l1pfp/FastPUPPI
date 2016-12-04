@@ -45,6 +45,7 @@ double corrector::correct(double iHcal,double iEcal,int iEta,int iPhi) {
   fPtCorr = std::min(10.*(fHcal+fEcal),fPtCorr);
   if(fPtCorr < 1.) fPtCorr = 0;
   if(fabs(l1tpf::towerEta(iEta)) > 3.0) fPtCorr *= 0.66;//
+  if(fabs(l1tpf::towerEta(iEta)) > 2.853 && fabs(l1tpf::towerEta(iEta)) < 3.1 && iHcal > 4.) fPtCorr = 0;
   return fPtCorr;
 }
 //Double correction
