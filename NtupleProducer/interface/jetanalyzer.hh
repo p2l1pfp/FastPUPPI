@@ -17,13 +17,17 @@ public:
   void setGenJets(const reco::GenParticleCollection &iGenParticles,int iIndex);
   std::vector<fastjet::PseudoJet> cluster(std::vector < fastjet::PseudoJet > &particles, double iRadius,double iPt);
   double dz(fastjet::PseudoJet &iJet,std::vector<combiner::Particle> &iParticles);
+  double genmatch(int iId, fastjet::PseudoJet &matchjet,std::vector < fastjet::PseudoJet > &genjets);
   inline void clear() {for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;}
   inline void fill()  {fFile->cd(); fTree->Fill();}
   inline void write() {fFile->cd(); fTree->Write(); fFile->Write();}   
 private:
   TFile  *fFile;
   TTree  *fTree;
+  int     fBase;
+  int     fSize;
   int     fNVars;
-  double  fVar[28];
+  double  *fVar;
+  std::vector<fastjet::PseudoJet> fGenJets;
 };
 #endif

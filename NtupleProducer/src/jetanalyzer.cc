@@ -8,16 +8,8 @@
 #include <fastjet/JetDefinition.hh>
 
 jetanalyzer::jetanalyzer(std::string iFile) {
-  fNVars = 6+2*11;
-  for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;
   fFile = new TFile(iFile.c_str(),"RECREATE");
   fTree = new TTree("jet","jet");
-  fTree->Branch("m_z"   ,&fVar[0] ,"m_z/D");
-  fTree->Branch("pt_z"  ,&fVar[1] ,"pt_z/D");
-  fTree->Branch("eta_z" ,&fVar[2] ,"eta_z/D");
-  fTree->Branch("phi_z" ,&fVar[3] ,"phi_z/D");
-  fTree->Branch("dzmu"  ,&fVar[4] ,"dzmu/D");
-  fTree->Branch("dz"    ,&fVar[5] ,"dzmu/D");
   //Reco
   std::vector<std::string> lVec;
   lVec.push_back("jpt_1");
@@ -31,10 +23,36 @@ jetanalyzer::jetanalyzer(std::string iFile) {
   lVec.push_back("jm_2" );
   lVec.push_back("jdz_2");
   lVec.push_back("njets");
-  int lIndex = 6;
+  lVec.push_back("jptgen_1");
+  lVec.push_back("jdrgen_1");
+  lVec.push_back("jptgen_2");
+  lVec.push_back("jdfgen_2");
+  int lNIndex = 7;
+  fSize  = lVec.size();
+  fBase  = 6;
+  const int lNVars = fBase+lNIndex*fSize;
+  int lIndex = fBase;
+  fVar = new double[lNVars];
+  for(int i0 = 0; i0 < lNVars; i0++) fVar[i0] = 0;
+  fTree->Branch("m_z"   ,&fVar[0] ,"m_z/D");
+  fTree->Branch("pt_z"  ,&fVar[1] ,"pt_z/D");
+  fTree->Branch("eta_z" ,&fVar[2] ,"eta_z/D");
+  fTree->Branch("phi_z" ,&fVar[3] ,"phi_z/D");
+  fTree->Branch("dzmu"  ,&fVar[4] ,"dzmu/D");
+  fTree->Branch("dz"    ,&fVar[5] ,"dzmu/D");
   for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(     lVec[i0] .c_str(),&fVar[i0+lIndex],(    lVec[i0]+"/D").c_str());
   lIndex += lVec.size();
   for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("g"+lVec[i0]).c_str(),&fVar[i0+lIndex],("g"+lVec[i0]+"/D").c_str());
+  lIndex += lVec.size();
+  for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("tk"+lVec[i0]).c_str(),&fVar[i0+lIndex],("tk"+lVec[i0]+"/D").c_str());
+  lIndex += lVec.size();
+  for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("pvtk"+lVec[i0]).c_str(),&fVar[i0+lIndex],("pvtk"+lVec[i0]+"/D").c_str());
+  lIndex += lVec.size();
+  for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("ucalo"+lVec[i0]).c_str(),&fVar[i0+lIndex],("ucalo"+lVec[i0]+"/D").c_str());
+  lIndex += lVec.size();
+  for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("calo"+lVec[i0]).c_str(),&fVar[i0+lIndex],("calo"+lVec[i0]+"/D").c_str());
+  lIndex += lVec.size();
+  for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("pup"+lVec[i0]).c_str(),&fVar[i0+lIndex],("pup"+lVec[i0]+"/D").c_str());
 }
 void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
@@ -58,7 +76,8 @@ void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   }
 }
 void jetanalyzer::setJets(std::vector<combiner::Particle> &iParticles,int iIndex) {
-  int lIndex = 6+iIndex*11;
+  int lIndex = fBase+iIndex*fSize;
+  std::cout << "---> " << iIndex << " -- " << fSize << " -- " << lIndex << std::endl;
   std::vector < fastjet::PseudoJet > particles;
   for(unsigned   int i0 = 0; i0 < iParticles.size(); i0++) {
     if(iParticles[i0].pt() < 0.1 || iParticles[i0].pdgId() == 4) continue;
@@ -74,6 +93,8 @@ void jetanalyzer::setJets(std::vector<combiner::Particle> &iParticles,int iIndex
     fVar[lIndex+2] = lJets[0].phi();
     fVar[lIndex+3] = lJets[0].m();
     fVar[lIndex+4] = dz(lJets[0],iParticles);
+    fVar[lIndex+11] = genmatch(1,lJets[0],fGenJets);
+    fVar[lIndex+12] = genmatch(0,lJets[0],fGenJets);
   }
   if(lJets.size() > 1) { 
     fVar[lIndex+5] = lJets[1].pt();
@@ -81,10 +102,12 @@ void jetanalyzer::setJets(std::vector<combiner::Particle> &iParticles,int iIndex
     fVar[lIndex+7] = lJets[1].phi();
     fVar[lIndex+8] = lJets[1].m();
     fVar[lIndex+9] = dz(lJets[1],iParticles);
+    fVar[lIndex+13] = genmatch(1,lJets[1],fGenJets);
+    fVar[lIndex+14] = genmatch(0,lJets[1],fGenJets);
   }
 }
 void jetanalyzer::setGenJets(const reco::GenParticleCollection &iGenParticles,int iIndex) { 
-  int lIndex = 6+iIndex*11;
+  int lIndex = fBase+iIndex*fSize;
   std::vector < fastjet::PseudoJet > particles;
   for (reco::GenParticleCollection::const_iterator itGenP = iGenParticles.begin(); itGenP!=iGenParticles.end(); ++itGenP) {
     if(itGenP->status() != 1 && abs(itGenP->pdgId()) != 13) continue;
@@ -108,6 +131,8 @@ void jetanalyzer::setGenJets(const reco::GenParticleCollection &iGenParticles,in
     fVar[lIndex+8] = lJets[1].m();
     fVar[lIndex+9] = -999;
   }
+  fGenJets.clear();
+  for(unsigned int i0 = 0; i0 < lJets.size(); i0++) fGenJets.emplace_back(lJets[i0]);
 }
 std::vector<fastjet::PseudoJet> jetanalyzer::cluster(std::vector < fastjet::PseudoJet > &particles, double iRadius,double iPt){
   fastjet::JetDefinition jetDef(fastjet::antikt_algorithm, iRadius); 
@@ -131,4 +156,17 @@ double jetanalyzer::dz(fastjet::PseudoJet &iJet,std::vector<combiner::Particle> 
   }
   if(lPtTot > 0) lDZ/=lPtTot;
   return lDZ;
+}
+double jetanalyzer::genmatch(int iId, fastjet::PseudoJet &matchjet,std::vector < fastjet::PseudoJet > &genjets){
+  double lDR = 1000;
+  double lPt = -1;
+  for(unsigned int i0 = 0; i0 < genjets.size(); i0++) { 
+    double pDR = matchjet.delta_R(genjets[i0]);
+    if(pDR > 0.25) continue;
+    if(lDR < pDR)  continue;
+    lDR = pDR;
+    lPt = genjets[i0].pt();
+  }
+  if(iId == 0) return lDR;
+  return lPt;
 }

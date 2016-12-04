@@ -25,7 +25,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff'
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
 
 process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksAll'),
+                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
                                  EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
                                  HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
                                  HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
@@ -36,15 +36,18 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  genParTag   = cms.InputTag('genParticles'),
                                  zeroSuppress = cms.bool(False),
                                  corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res.root"),
+                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
                                  ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
                                  trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/tkres.root"),
                                  eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/eres.root"),
                                  pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(0)
+                                 trkPtCut    = cms.double(0), #2
+                                 metRate     = cms.bool(False),
+                                 etaCharged  = cms.double(3.5),
+                                 puppiPtCut  = cms.double(8.) #4
                                  )
 
 
-process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksAll)
+process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
 process.p = cms.Path(process.l1Puppi*process.InfoOut)
 #process.e = cms.EndPath(process.out)

@@ -17,7 +17,11 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 10
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
-        '/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/81X_upgrade2023_realistic_v3_2023D3Timing13TeV-v1/10000/44798C42-6F99-E611-A504-0CC47A7C354C.root'
+        #'/store/relval/CMSSW_8_1_0_pre15/RelValSingleMuPt100Extended/GEN-SIM-RECO/PU25ns_81X_upgrade2023_realistic_v3_2023D1PU140-v1/10000/204D0758-109A-E611-856C-003048FF9ABC.root'
+        #'/store/relval/CMSSW_8_1_0_pre15/RelValSingleMuPt100Extended/GEN-SIM-RECO/PU25ns_81X_upgrade2023_realistic_v3_2023D3PU140-v1/10000/0824BBCA-119A-E611-B39E-0025905A48F0.root'
+        #'/store/relval/CMSSW_8_1_0_pre15/RelValSingleMuPt100Extended/GEN-SIM-RECO/PU25ns_81X_upgrade2023_realistic_v3_2023D4PU140-v1/10000/025FF191-119A-E611-B262-0025905B8594.root'
+        '/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/PU25ns_81X_upgrade2023_realistic_v3_2023D3Timing13TeVPU140r1-v1/10000/DEF317C3-28A1-E611-9428-0CC47A4C8E2E.root'
+        #/store/relval/CMSSW_8_1_0_pre15/RelValZMM_13/GEN-SIM-RECO/81X_upgrade2023_realistic_v3_2023D3Timing13TeV-v1/10000/44798C42-6F99-E611-A504-0CC47A7C354C.root'
         )
 )
 
@@ -36,12 +40,15 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  genParTag   = cms.InputTag('genParticles'),
                                  zeroSuppress = cms.bool(False),
                                  corrector   = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res.root"),
+                                 corrector2  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
                                  ecorrector  = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
                                  trackres    = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/tkres.root"),
                                  eleres      = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/eres.root"),
                                  pionres     = cms.InputTag("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_8_1_0_pre16/src/FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(0)
+                                 trkPtCut    = cms.double(4.0),
+                                 metRate     = cms.bool(True),
+                                 etaCharged  = cms.double(2.5),
+                                 puppiPtCut  = cms.double(4.0)
                                  )
 
 

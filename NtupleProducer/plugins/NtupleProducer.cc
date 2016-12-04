@@ -93,8 +93,8 @@ private:
   virtual void endJob() override;
   void propagate(int iOption,std::vector<double> &iVars,const math::XYZTLorentzVector& iMom,const math::XYZTLorentzVector& iVtx,double iCharge,double iBField);
   void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
-  TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.5);
-  void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.5);
+  TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.2);
+  void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.2);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
   void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
 
@@ -107,8 +107,10 @@ private:
   edm::EDGetTokenT<L1PFCollection>                TokBHHcalTPTag_;
   edm::EDGetTokenT<L1PFCollection>                TokHFTPTag_;
   edm::EDGetTokenT<L1MuGMTReadoutCollection>      TokMuonTPTag_;
-
   double trkPt_;
+  bool   metRate_;
+  double etaCharged_;
+  double puppiPtCut_;
   corrector* corrector_;
   corrector* corrector2_;
   corrector* ecorrector_;
@@ -171,6 +173,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   EleResTag_            (iConfig.getParameter<edm::InputTag>("eleres")),
   PionResTag_           (iConfig.getParameter<edm::InputTag>("pionres")),
   trkPt_                (iConfig.getParameter<double>       ("trkPtCut")),
+  metRate_              (iConfig.getParameter<bool>         ("metRate")),
+  etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
+  puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -182,8 +187,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   corrector_  = new corrector(CorrectorTag_.label());
   corrector2_ = new corrector(Corrector2Tag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
-  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root");
-  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root");
+  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root",etaCharged_,puppiPtCut_);
+  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root",etaCharged_,puppiPtCut_);
   metanalyzer_   = new metanalyzer("MetFile.root");
   jetanalyzer_   = new jetanalyzer("JetFile.root");
   produces<PFOutputCollection>("TK");
@@ -233,7 +238,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       // adding objects to PF
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
       if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
-
       /// filling the tree    
       trkPx  = tk.px();
       trkPz  = tk.py();
@@ -443,7 +447,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       	if(abs(it.iEta()-lEcals[i1][0]) > 1) continue;
 	int pDPhi = abs(it.iPhi()-lEcals[i1][1]); if(pDPhi > l1tpf::towerNPhi(it.iEta())-pDPhi) pDPhi =   l1tpf::towerNPhi(it.iEta())-pDPhi;
       	if(abs(pDPhi) > 1) continue;
-	if(lEcals[i1][2] < 1) continue;
+	if(lEcals[i1][2] < 0.2) continue;
       	hcal_ecal_et     += lEcals[i1][2];
       	hcal_ecal_etcorr += lEcals[i1][3];
       	hcal_ecal_eta    += lEcals[i1][4];
@@ -452,7 +456,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       }
       hcal_corr_et = 0;
       if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
-      if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+      if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
       if(hcal_corr_et  < 0) hcal_corr_et   = 0;
       if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
       connector_   ->addCalo(double(hcal_corr_et) ,double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
@@ -464,7 +468,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
   std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
   std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
-  connector_->link();
+  connector_->link(metRate_);
   std::vector<combiner::Particle> lCands        = connector_->candidates();
   std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
   connector_->doVertexing();
@@ -505,12 +509,18 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   metanalyzer_->setMETRecoil(1,lCorrCalo,true);
   metanalyzer_->setMETRecoil(5,lPupCands,false);
   metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
+  metanalyzer_->setGenMET(genParticles);
   metanalyzer_->fill();
 
   jetanalyzer_->clear();
   jetanalyzer_->setZ(lTKCands,connector_->dZ());
-  jetanalyzer_->setJets(lCands,0);
   jetanalyzer_->setGenJets(genParticles,1);
+  jetanalyzer_->setJets(lCands,0);
+  jetanalyzer_->setJets(lTKCands,2);
+  jetanalyzer_->setJets(lTKVtxCands,3);
+  jetanalyzer_->setJets(lRawCalo ,4);
+  jetanalyzer_->setJets(lCorrCalo,5);
+  jetanalyzer_->setJets(lPupCands,6);
   jetanalyzer_->fill();
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
@@ -704,7 +714,7 @@ NtupleProducer::endJob() {
   // Save to ROOT file
   //
   
-  //connector_->write();
+  connector_->write();
   metanalyzer_->write();
   jetanalyzer_->write();
   fOutputFile->cd();

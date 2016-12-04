@@ -16,13 +16,13 @@ class combiner {
 public:
   typedef l1tpf::Particle Particle;
 
-  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile);
+  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt);
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);
   void addTrack(l1tpf::Particle particle); //double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality);
   void addMuon(double iPt, double iEta, double iPhi, double charge, double quality);
-  void link();
+  void link(bool iMetRate);
   void doVertexing();  
   void fetchPuppi();
   void fill();
@@ -40,9 +40,9 @@ private:
   inline double  getTrkRes (double iPt,double iEta,double iPhi) {return fTrackRes   [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
   inline double  getEleRes (double iPt,double iEta,double iPhi) {return fElectronRes[l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
   inline double  getPionRes(double iPt,double iEta,double iPhi) {
-    double lPt30 = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(30.);
+    //double lPt30 = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(30.);
     double lPt   = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);
-    return (sqrt(lPt*lPt+lPt30*lPt30));}
+    return lPt*0.5;}//(sqrt(lPt*lPt+lPt30*lPt30));}
   inline int     translateIEtaOld(double iEta) { return int(10*std::max(std::min(iEta,3.0),-3.0))+30;}  
   double deltaR(Particle &iParticle1,Particle &iParticle2);
   double deltaRraw(Particle &iParticle1,Particle &iParticle2);
@@ -50,7 +50,9 @@ private:
   TGraph **fElectronRes;
   TGraph **fPionRes;
   int   fNEta;
+  double fEta;
   double fDRMatch;
+  double fPuppiPt;
   std::vector<Particle> fTkParticles;
   std::vector<Particle> fTkParticlesWVertexing;  
   std::vector<Particle> fMuParticles;

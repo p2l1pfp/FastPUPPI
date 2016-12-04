@@ -6,6 +6,7 @@ class corrector {
 public:
   corrector(const std::string iFile,int iNFrac=11);
   double correct(double iHcal,double iEcal,int iEta,int iPhi);
+  double correct(double iCorr,double iHcal,double iEcal,int iEta,int iPhi);
   double ecalFrac();
   double hcalFrac();
 private:

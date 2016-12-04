@@ -42,7 +42,27 @@ double corrector::correct(double iHcal,double iEcal,int iEta,int iPhi) {
   fFrac = lFrac;
   if(lIFrac > fNFrac-1) lIFrac = 0; 
   fPtCorr = (fGraph[fIEta][fIPhi][lIFrac])->Eval(fHcal+fEcal);
-  fPtCorr = std::min(3.*(fHcal+fEcal),fPtCorr);
+  fPtCorr = std::min(10.*(fHcal+fEcal),fPtCorr);
+  if(fPtCorr < 1.) fPtCorr = 0;
+  if(fabs(l1tpf::towerEta(iEta)) > 3.0) fPtCorr *= 0.66;//
+  return fPtCorr;
+}
+//Double correction
+double corrector::correct(double iCorr,double iHcal,double iEcal,int iEta,int iPhi) { 
+  if(fNFrac == 1  && iCorr   < 0.1 ) return 0;
+  if(fNFrac == 11 && iCorr   < 0.1 ) return 0; 
+  fEcal = 0; if(iEcal > 0) fEcal = iEcal; 
+  fHcal = 0; if(iHcal > 0) fHcal = iHcal; 
+  if(iEcal < 0) fEcal = 0;
+  if(abs(iEta) > fNEta/2-1 || iPhi < 1 || iPhi > fNPhi-1) return iCorr;
+  double lFrac = fEcal/(fHcal+fEcal); 
+  int    lIFrac=int(lFrac*10.);
+  fIEta = iEta+fNEta/2;
+  fIPhi = iPhi-1;
+  fFrac = lFrac;
+  if(lIFrac > fNFrac-1) lIFrac = 0; 
+  fPtCorr = (fGraph[fIEta][fIPhi][lIFrac])->Eval(iCorr);
+  fPtCorr = std::min(3.*fPtCorr,fPtCorr);
   if(fPtCorr < 1.) fPtCorr = 0;
   return fPtCorr;
 }

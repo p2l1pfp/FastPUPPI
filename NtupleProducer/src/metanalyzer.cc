@@ -4,7 +4,7 @@
 #include "TTree.h"
 
 metanalyzer::metanalyzer(std::string iFile) {
-  fNVars = 30;
+  fNVars = 32;
   for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;
   fFile = new TFile(iFile.c_str(),"RECREATE");
   fTree = new TTree("met","met");
@@ -39,6 +39,8 @@ metanalyzer::metanalyzer(std::string iFile) {
   fTree->Branch("pupu2"      ,&fVar[27],"pupu2/D");
   fTree->Branch("dz"         ,&fVar[28],"dz/D");
   fTree->Branch("dzmu"       ,&fVar[29],"dzmu/D");
+  fTree->Branch("genmet"     ,&fVar[30],"genmet/D");
+  fTree->Branch("genmetphi"  ,&fVar[31],"genmetphi/D");
 }
 void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
@@ -75,4 +77,14 @@ void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticl
   lVec.RotateZ(-lZ.Phi());
   fVar[lId+2] = lVec.Px();
   fVar[lId+3] = lVec.Py();
+}
+void metanalyzer::setGenMET(const reco::GenParticleCollection &iGenParticles) { 
+  TLorentzVector lVec(0.,0.,0.,0.);
+  for (reco::GenParticleCollection::const_iterator itGenP = iGenParticles.begin(); itGenP!=iGenParticles.end(); ++itGenP) {
+    if(itGenP->status() != 1 || abs(itGenP->pdgId()) == 12 || abs(itGenP->pdgId()) == 14 || abs(itGenP->pdgId()) == 16) continue;
+    TLorentzVector pVec(0.,0.,0.,0.);  pVec.SetPtEtaPhiM(itGenP->pt(),0.,itGenP->phi(),0.);
+    lVec -= pVec;
+  }
+  fVar[30] = lVec.Pt();
+  fVar[31] = lVec.Phi();
 }
