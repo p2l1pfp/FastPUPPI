@@ -54,4 +54,7 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
 
 process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
 process.p = cms.Path(process.l1Puppi*process.InfoOut)
+process.out = cms.OutputModule("PoolOutputModule",
+    fileName = cms.untracked.string("l1pf_out.root"),
+)
 #process.e = cms.EndPath(process.out)
