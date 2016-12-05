@@ -16,7 +16,7 @@ class combiner {
 public:
   typedef l1tpf::Particle Particle;
 
-  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt);
+  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt,double iVtxRes);
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);
@@ -53,6 +53,7 @@ private:
   double fEta;
   double fDRMatch;
   double fPuppiPt;
+  double fVtxRes;
   std::vector<Particle> fTkParticles;
   std::vector<Particle> fTkParticlesWVertexing;  
   std::vector<Particle> fMuParticles;

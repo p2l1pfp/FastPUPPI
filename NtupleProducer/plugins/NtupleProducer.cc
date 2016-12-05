@@ -111,6 +111,7 @@ private:
   bool   metRate_;
   double etaCharged_;
   double puppiPtCut_;
+  double vtxRes_;
   corrector* corrector_;
   corrector* corrector2_;
   corrector* ecorrector_;
@@ -176,6 +177,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   metRate_              (iConfig.getParameter<bool>         ("metRate")),
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
+  vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -187,8 +189,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   corrector_  = new corrector(CorrectorTag_.label());
   corrector2_ = new corrector(Corrector2Tag_.label());
   ecorrector_ = new corrector(ECorrectorTag_.label(),1);
-  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root",etaCharged_,puppiPtCut_);
-  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root",etaCharged_,puppiPtCut_);
+  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root",etaCharged_,puppiPtCut_,vtxRes_);
+  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root",etaCharged_,puppiPtCut_,vtxRes_);
   metanalyzer_   = new metanalyzer("MetFile.root");
   jetanalyzer_   = new jetanalyzer("JetFile.root");
   produces<PFOutputCollection>("TK");

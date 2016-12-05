@@ -11,10 +11,11 @@
 #include "Math/SpecFuncMathCore.h"
 #include "Math/ProbFunc.h"
 
-combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt) {
+combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt,double iVtxRes) {
   fEta     = iEtaCharged;
   fPuppiPt = iPuppiPt;
   fDRMatch = 0.15;
+  fVtxRes  = iVtxRes;
   fNEta  = l1tpf::towerNEta();
   loadFile(fPionRes    ,iPionFile);
   loadFile(fElectronRes,iElectronFile);
@@ -194,8 +195,8 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
 void combiner::doVertexing(){
   
   // std::vector<Particle> fTkParticlesWVertexing;
-  
-  TH1F *h_dz = new TH1F("h_dz","h_dz",120,-20,20); // 1cm binning
+  int lNBins = int(40./fVtxRes);
+  TH1F *h_dz = new TH1F("h_dz","h_dz",lNBins,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
   int ntracks = 0;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
