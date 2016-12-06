@@ -25,6 +25,12 @@ class PhysObjList:
             ptsum += o.pt()
             log.write("      %9.3f  %+5.2f %+5.2f  %s\n" % (o.pt(), o.eta(), o.phi(), self.printer(o)))
         log.write("  TOT %8.2f\n\n" % ptsum)
+    def addToLegend(self,view,theLegend):
+        if "all" not in self.views and view not in self.views: 
+            return
+        for mod in reversed(self.drawers): 
+            if mod.label and mod.tobjForLegend():
+                theLegend.AddEntry(mod.tobjForLegend(), mod.label, "P")
     def writeZoom(self,view,center,size,radius,log):
         if "all" not in self.views and view not in self.views: 
             return
