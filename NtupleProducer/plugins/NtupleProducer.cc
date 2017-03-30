@@ -88,6 +88,12 @@ public:
   std::unique_ptr<PFOutputCollection > corrCandidates_;
  
 private:
+  struct MyEcalCluster { 
+    int ieta, iphi; float et, corr_et, eta, phi; 
+    MyEcalCluster(int iIeta, int iIphi, float iEt, float iCorr_et, float iEta, float iPhi) :
+        ieta(iIeta), iphi(iIphi), et(iEt), corr_et(iCorr_et), eta(iEta), phi(iPhi) {}
+  };
+
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
@@ -304,7 +310,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   }   
   /// ----------------ECAL INFO-------------------
-  std::vector<double*> lEcals;  
+  std::vector<MyEcalCluster> lEcals;  
   double lEEt[l1tpf::towerNEta()][73];
   double lHEt[l1tpf::towerNEta()][73];
   for(int i0 = 0; i0 < l1tpf::towerNEta(); i0++) { for(int i1 = 0; i1 <l1tpf::towerNPhi(1)+1; i1++) {lEEt[i0][i1]=0; lHEt[i0][i1] = 0;}}
@@ -341,14 +347,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta,ecal_iphi);
       //if(ecal_clust_et > 0) std::cout << "=ECalo=> " << ecal_clust_et << "---> " << ecal_corr_et << " ---> " << ecal_et << " -- " << ecal_clust_eta << " -- " << ecal_clust_phi << std::endl;
       if(ecal_clust_et > 0)  { 
-	double *lVals = new double[6];
-	lVals[0]  = it.iEta();
-	lVals[1]  = it.iPhi();
-	lVals[2] = ecal_clust_et;
-	lVals[3] = ecal_corr_et;
-	lVals[4] = ecal_clust_eta;
-	lVals[5] = ecal_clust_phi;
-	lEcals.push_back(lVals);
+	lEcals.push_back(MyEcalCluster(it.iEta(), it.iPhi(), ecal_clust_et, ecal_corr_et, ecal_clust_eta, ecal_clust_phi));
       }
       std::vector<double> lGenVars;
       genMatch(lGenVars,1,double(it.caloEta()),double(it.caloPhi()),double(et),genParticles);
@@ -446,15 +445,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       hcal_ecal_et   = 0; hcal_ecal_etcorr = 0; hcal_ecal_eta = 0; hcal_ecal_phi = 0; 
       for(unsigned int i1 = 0; i1 < lEcals.size(); i1++) { 
 	if(!isZero && !link) continue; //Avoid double counting ecal
-	if( isZero && (it.iEta() != lEcals[i1][4] || it.iPhi() != lEcals[i1][5])) continue;
-      	if(abs(it.iEta()-lEcals[i1][0]) > 1) continue;
-	int pDPhi = abs(it.iPhi()-lEcals[i1][1]); if(pDPhi > l1tpf::towerNPhi(it.iEta())-pDPhi) pDPhi =   l1tpf::towerNPhi(it.iEta())-pDPhi;
+	if( isZero && (it.iEta() != lEcals[i1].eta || it.iPhi() != lEcals[i1].phi)) continue;
+      	if(abs(it.iEta()-lEcals[i1].ieta) > 1) continue;
+	int pDPhi = abs(it.iPhi()-lEcals[i1].iphi); if(pDPhi > l1tpf::towerNPhi(it.iEta())-pDPhi) pDPhi =   l1tpf::towerNPhi(it.iEta())-pDPhi;
       	if(abs(pDPhi) > 1) continue;
-	if(lEcals[i1][2] < 0.2) continue;
-      	hcal_ecal_et     += lEcals[i1][2];
-      	hcal_ecal_etcorr += lEcals[i1][3];
-      	hcal_ecal_eta    += lEcals[i1][4];
-      	hcal_ecal_phi    += lEcals[i1][5];
+	if(lEcals[i1].et < 0.2) continue;
+      	hcal_ecal_et     = lEcals[i1].et;
+      	hcal_ecal_etcorr = lEcals[i1].corr_et;
+      	hcal_ecal_eta    = lEcals[i1].eta;
+      	hcal_ecal_phi    = lEcals[i1].phi;
       	break;
       }
       hcal_corr_et = 0;
@@ -532,13 +531,13 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
-    if(iCandidates[i0].pdgId() == 0) id = reco::PFCandidate::ParticleType::h;
-    if(iCandidates[i0].pdgId() == 1) id = reco::PFCandidate::ParticleType::e;
-    if(iCandidates[i0].pdgId() == 2) id = reco::PFCandidate::ParticleType::h0;
-    if(iCandidates[i0].pdgId() == 3) id = reco::PFCandidate::ParticleType::gamma;
-    if(iCandidates[i0].pdgId() == 4) id = reco::PFCandidate::ParticleType::mu;
-    if(iCandidates[i0].pdgId() < 2)  pCharge = 1;
-    if(iCandidates[i0].pdgId() == 4)  pCharge = iCandidates[i0].charge();
+    if(iCandidates[i0].pdgId() == combiner::CH) id = reco::PFCandidate::ParticleType::h;
+    if(iCandidates[i0].pdgId() == combiner::EL) id = reco::PFCandidate::ParticleType::e;
+    if(iCandidates[i0].pdgId() == combiner::NH) id = reco::PFCandidate::ParticleType::h0;
+    if(iCandidates[i0].pdgId() == combiner::GAMMA) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].pdgId() == combiner::MU) id = reco::PFCandidate::ParticleType::mu;
+    if(iCandidates[i0].pdgId() == combiner::CH || iCandidates[i0].pdgId() == combiner::EL)  pCharge = 1;
+    if(iCandidates[i0].pdgId() == combiner::MU)  pCharge = iCandidates[i0].charge();
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
     corrCandidates_->push_back(pCand);
   }
