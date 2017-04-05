@@ -14,9 +14,10 @@
 
 class combiner { 
 public:
+  enum MyParticleId { CH=0, EL=1, NH=2, GAMMA=3, MU=4 };
   typedef l1tpf::Particle Particle;
 
-  combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt,double iVtxRes);
+  combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes);
   void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);

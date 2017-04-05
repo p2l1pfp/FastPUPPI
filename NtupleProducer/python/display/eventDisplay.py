@@ -53,7 +53,7 @@ for iev,event in enumerate(events):
     physobj  = []
 
     genps = read(event, "genParticles", genp, filter = lambda g : g.status() == 1 and abs(g.pdgId()) not in (12,14,16))
-    phystruth.append(PhysObjList("genParticles", genps, drawGenCands, ["all"]))
+    phystruth.append(PhysObjList("genParticles", genps, drawGenCands, ["all"], printer = lambda p : "charge %+1d pdgId %+4d" % (p.charge(), p.pdgId())))
 
     vzs = [ g.vz() for g in genps ]; vzs.sort()
     Z0 = vzs[len(vzs)/2]
@@ -64,28 +64,34 @@ for iev,event in enumerate(events):
     phystruth.append(PhysObjList("genJets", genjs, drawGenJets, ["all"]))
 
     ## === RAW L1 objects (reverse-ordered by depth)===
-    physobj.append(PhysObjList("L1HgcBH", read(event, "l1tPFHGCalBHProducerFromOfflineRechits:towers", l1pfp), drawHGCalB, ["l1","l1in"]))
+    physobj.append(PhysObjList("L1HgcBH", read(event, "l1tPFHGCalBHProducerFromOfflineRechits:towers", l1pfp), drawHGCalB, ["l1","l1in","l1in+puppi"]))
     physobj.append(PhysObjList("L1Hcal", (read(event, "l1tPFHcalProducerFromOfflineRechits:towers", l1pfp) + 
-                                          read(event, "l1tPFHFProducerFromOfflineRechits:towers", l1pfp)), drawHcal,         ["l1","l1in"]))
-    physobj.append(PhysObjList("L1HgcFH", read(event, "l1tPFHGCalFHProducerFromOfflineRechits:towers", l1pfp), drawHGCalH, ["l1","l1in"]))
-    physobj.append(PhysObjList("L1HgcEE", read(event, "l1tPFHGCalEEProducerFromOfflineRechits:towers", l1pfp), drawHGCalE, ["l1","l1in"]))
-    physobj.append(PhysObjList("L1Ecal", read(event, "l1tPFEcalProducerFromOfflineRechits:towers", l1pfp), drawEcal,       ["l1","l1in"]))
-    physobj.append(PhysObjList("L1Tk",    read(event, "l1tPFTkProducersFromOfflineTracksStrips", l1pfp), drawTracks,       ["l1","l1in"]))
+                                          read(event, "l1tPFHFProducerFromOfflineRechits:towers", l1pfp)), drawHcal,       ["l1","l1in","l1in+puppi"]))
+    physobj.append(PhysObjList("L1HgcFH", read(event, "l1tPFHGCalFHProducerFromOfflineRechits:towers", l1pfp), drawHGCalH, ["l1","l1in","l1in+puppi"]))
+    physobj.append(PhysObjList("L1HgcEE", read(event, "l1tPFHGCalEEProducerFromOfflineRechits:towers", l1pfp), drawHGCalE, ["l1","l1in","l1in+puppi"]))
+    physobj.append(PhysObjList("L1Ecal", read(event, "l1tPFEcalProducerFromOfflineRechits:towers", l1pfp), drawEcal,       ["l1","l1in","l1in+puppi"]))
+    physobj.append(PhysObjList("L1Tk",    read(event, "l1tPFTkProducersFromOfflineTracksStrips", l1pfp), drawTracks,       ["l1","l1in","l1in+puppi"]))
     
     ## === CORRELATOR OUTPUTS ===
     physobj.append(PhysObjList("L1C_Calo",  read(event, "InfoOut:Calo",  pfcands), drawCaloCands,  ["l1","l1out"]))
     physobj.append(PhysObjList("L1C_TK",    read(event, "InfoOut:TK",    pfcands), drawTkCands,    ["l1","l1out"]))
     physobj.append(PhysObjList("L1C_PF",    read(event, "InfoOut:PF",    pfcands), drawPFCands,    ["l1","l1out"]))
-    physobj.append(PhysObjList("L1C_Puppi", read(event, "InfoOut:Puppi", pfcands), drawPuppiCands, ["l1","l1out"]))
+    #physobj.append(PhysObjList("L1C_Puppi", read(event, "InfoOut:Puppi", pfcands), drawPuppiCands, ["l1","l1out","l1in+puppi"]))
+    physobj.append(PhysObjList("L1C_Puppi", read(event, "InfoOut:Puppi", pfcands), drawPFCands,    ["l1in+puppi","l1puppi"], printer = lambda p : "pdgId %+4d" % p.pdgId()))
 
     evname = "r%d_ls%d_ev%d"  % (event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
     zoomRadius = 0.4
-    for view in "l1", "l1in", "l1out":
+    #for view in "l1", "l1in", "l1out","l1in+puppi":
+    for view in "l1", "l1in+puppi", "l1puppi":
         cMaker.clear()
         vlog = open(out+"/%s_%s.txt" % (evname, view), "w")
+        theLegend = ROOT.TLegend(0.01, 0.15, 0.11, 0.75);
+        theLegend.SetLineColor(0)
         for p in physobj + phystruth: 
             p.draw(view)
             p.write(view,vlog)
+            p.addToLegend(view,theLegend)
+        theLegend.Draw()
         cMaker.write(event, out+"/%s_%s.png" % (evname, view))
         vlog.close()
         os.system("mkdir -p "+out+"/%s_%s.dir" % (evname, view))

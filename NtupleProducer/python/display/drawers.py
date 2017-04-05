@@ -1,8 +1,9 @@
 import ROOT, copy, string
 
 class AbsCollectionDrawer(object):
-    def __init__(self,filter=None):
+    def __init__(self,label="",filter=None):
         self.filter = filter
+        self.label = label
     def drawOne(self,index,object):
         pass
     def draw(self,objs):
@@ -11,12 +12,14 @@ class AbsCollectionDrawer(object):
                 continue
             self.drawOne(i+1,o)
         return True
+    def tobjForLegend(self):
+        return None
     def clone(self, name):
         raise RuntimeError, "Not implemented"
 
 class MultiGraphMarkerDrawerVsPt(AbsCollectionDrawer):
-    def __init__(self,markerStyle=20,markerColor=1,markerSizes=[2],ptEdges=[0,9e9],maxItems=99999,filter=None):
-        AbsCollectionDrawer.__init__(self,filter)
+    def __init__(self,markerStyle=20,markerColor=1,markerSizes=[2],ptEdges=[0,9e9],maxItems=99999,filter=None,label=""):
+        AbsCollectionDrawer.__init__(self,filter=filter,label=label)
         self._markers = [ ]
         for i,markerSize in enumerate(markerSizes):
             marker = ROOT.TGraph()
@@ -43,6 +46,8 @@ class MultiGraphMarkerDrawerVsPt(AbsCollectionDrawer):
                 m.SetPoint(i, o.eta(), o.phi()) 
             m.Draw("P")
         return True
+    def tobjForLegend(self):
+        return self._markers[-1];
     def clone(self, name):
         ret = copy.copy(self)
         ret._markers = [ g.Clone() for g in self._markers ]
@@ -116,31 +121,34 @@ class CanvasMaker(object):
 
 
 cMaker  = CanvasMaker(maxEta=5, vlines=[-4,-3,-1.5,1.5,3,4])
-drawGenJets = [ CircleDrawer(0.4, lineColor=ROOT.kAzure+1,  lineStyle=1) ]
+drawGenJets = [ CircleDrawer(0.4, lineColor=ROOT.kBlue+2,  lineStyle=1, lineWidth=3) ]
 
-ptEdges = [0.3,1.0,2.5,9e9]
+ptEdges = [1.0,2.5,7,9e9]
 drawGenCands = [
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=34, markerSizes=[1.1,1.4,1.7], ptEdges=ptEdges, markerColor=ROOT.kRed+2 ),
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=34, markerSizes=[1.1,1.4,1.7], ptEdges=ptEdges, markerColor=ROOT.kGreen+3 ),
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=34, markerSizes=[1.1,1.4,1.7], ptEdges=ptEdges, markerColor=ROOT.kBlue+2 ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=34, markerSizes=[0.8,1.0,1.2], ptEdges=ptEdges, markerColor=ROOT.kRed+2 , label="gen h^{#pm}"),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=34, markerSizes=[0.8,1.0,1.2], ptEdges=ptEdges, markerColor=ROOT.kGreen+3 , label="gen #gamma" ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=34, markerSizes=[0.8,1.0,1.2], ptEdges=ptEdges, markerColor=ROOT.kBlue+2 , label="gen h^{0}" ),
 ]
-drawTracks   = [ MultiGraphMarkerDrawerVsPt( markerStyle=20, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kViolet+1 ), ]
-drawHcal     = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kAzure+1 ), ]
-drawEcal     = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kGreen+1 ), ]
-drawHGCalE   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kOrange-3 ), ]
-drawHGCalH   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kAzure+1 ), ]
-drawHGCalB   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kMagenta ), ]
+drawTracks   = [ MultiGraphMarkerDrawerVsPt( markerStyle=20, markerSizes=[0.8,1.2,1.5], ptEdges=[2,3,10,9e9], markerColor=ROOT.kMagenta+0, label="track" ), ]
+drawHcal     = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kAzure+10, label="had cal" ), ]
+drawEcal     = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kGreen-9, label="em cal" ), ]
+drawHGCalE   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kGreen-9 ), ]
+drawHGCalH   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kAzure+10 ), ]
+drawHGCalB   = [ MultiGraphMarkerDrawerVsPt( markerStyle=21, markerSizes=[0.8,1.2,1.5], ptEdges=ptEdges, markerColor=ROOT.kAzure+1 ), ]
 
 drawCaloCands = [
     MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=25, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kRed-9 ),
     MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=25, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kGreen+0 ),
     MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=25, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kBlue+0 ),
 ]
-drawTkCands   = [ MultiGraphMarkerDrawerVsPt( markerStyle=27, markerSizes=[1.1,1.4,1.6], ptEdges=ptEdges, markerColor=ROOT.kViolet+1 ), ]
+drawTkCands   = [ MultiGraphMarkerDrawerVsPt( markerStyle=27, markerSizes=[1.1,1.4,1.7], ptEdges=[2,3,10,9e9], markerColor=ROOT.kViolet+1 ), ]
 drawPFCands = [
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=24, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kRed-9 ),
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=24, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kGreen+0 ),
-    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=24, markerSizes=[1.2,1.5,1.8], ptEdges=ptEdges, markerColor=ROOT.kBlue+0 ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=24, markerSizes=[1.4,1.8,2.3], ptEdges=ptEdges, markerColor=ROOT.kRed+1, label="rec h^{#pm}" ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=24, markerSizes=[1.3,1.7,2.2], ptEdges=ptEdges, markerColor=ROOT.kRed+1 ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=24, markerSizes=[1.4,1.8,2.3], ptEdges=ptEdges, markerColor=ROOT.kGreen+2 , label="rec #gamma" ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) == 22, markerStyle=24, markerSizes=[1.3,1.7,2.2], ptEdges=ptEdges, markerColor=ROOT.kGreen+2 ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=24, markerSizes=[1.4,1.8,2.3], ptEdges=ptEdges, markerColor=ROOT.kBlue+1 , label="rec h^{0}" ),
+    MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() == 0 and abs(d.pdgId()) != 22, markerStyle=24, markerSizes=[1.3,1.7,2.2], ptEdges=ptEdges, markerColor=ROOT.kBlue+1 ),
 ]
 drawPuppiCands = [
     MultiGraphMarkerDrawerVsPt( filter = lambda d : d.charge() != 0,                          markerStyle=20, markerSizes=[1.1,1.4,1.7], ptEdges=ptEdges, markerColor=ROOT.kRed-9 ),

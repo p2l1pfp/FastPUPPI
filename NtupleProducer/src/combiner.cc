@@ -11,7 +11,7 @@
 #include "Math/SpecFuncMathCore.h"
 #include "Math/ProbFunc.h"
 
-combiner::combiner(const std::string iPionFile,const std::string iElectronFile,const std::string iTrackFile,std::string iFile,double iEtaCharged,double iPuppiPt,double iVtxRes) {
+combiner::combiner(const std::string & iPionFile,const std::string & iElectronFile,const std::string & iTrackFile,const std::string & iFile,double iEtaCharged,double iPuppiPt,double iVtxRes) {
   fEta     = iEtaCharged;
   fPuppiPt = iPuppiPt;
   fDRMatch = 0.15;
@@ -21,20 +21,25 @@ combiner::combiner(const std::string iPionFile,const std::string iElectronFile,c
   loadFile(fElectronRes,iElectronFile);
   loadFile(fTrackRes   ,iTrackFile);
 
-  fFile = new TFile(iFile.c_str(),"RECREATE");
-  fTree = new TTree("puppi","puppi");
-  fTree->Branch("pt",&b_pt);
-  fTree->Branch("alphaF",&b_alphaF);
-  fTree->Branch("alphaC",&b_alphaC);
-  fTree->Branch("eta",&b_Eta);
-  fTree->Branch("phi",&b_Phi);
-  fTree->Branch("et",&b_Et);
-  fTree->Branch("puppiWeight",&b_PuppiWeight);
-  fTree->Branch("alphaFMed",&b_alphaFMed);
-  fTree->Branch("alphaCMed",&b_alphaCMed);
-  fTree->Branch("alphaFRms",&b_alphaFRms);
-  fTree->Branch("alphaCRms",&b_alphaCRms);
-  fTree->Branch("nPars",&b_nParticles,"nPars/I");
+  if (iFile != "") {
+      fFile = new TFile(iFile.c_str(),"RECREATE");
+      fTree = new TTree("puppi","puppi");
+      fTree->Branch("pt",&b_pt);
+      fTree->Branch("alphaF",&b_alphaF);
+      fTree->Branch("alphaC",&b_alphaC);
+      fTree->Branch("eta",&b_Eta);
+      fTree->Branch("phi",&b_Phi);
+      fTree->Branch("et",&b_Et);
+      fTree->Branch("puppiWeight",&b_PuppiWeight);
+      fTree->Branch("alphaFMed",&b_alphaFMed);
+      fTree->Branch("alphaCMed",&b_alphaCMed);
+      fTree->Branch("alphaFRms",&b_alphaFRms);
+      fTree->Branch("alphaCRms",&b_alphaCRms);
+      fTree->Branch("nPars",&b_nParticles,"nPars/I");
+  } else {
+      fFile = nullptr;
+      fTree = nullptr;
+  }
 }
 
 void combiner::loadFile(TGraph** &iF1, std::string iFile) { 
@@ -58,7 +63,7 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   if(iCalo < 1.1*iEcal) lPhi = iEcalPhi;
   double lSigma = lEt;
   iCalo < 1.1*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
-  int lId = 2; if(iCalo < 1.1*iEcal) lId = 3;
+  int lId = NH; if(iCalo < 1.1*iEcal) lId = GAMMA;
   if(lEt < 0.01) return;
   Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
   insert(lParticle,fParticles);
@@ -77,7 +82,7 @@ void combiner::addMuon(double iPt, double iEta, double iPhi, double charge, doub
   float curPhi = iPhi;
   if (iPhi > TMath::Pi()) curPhi = iPhi - 2*TMath::Pi();
   double lSigma = getTrkRes(iPt,iEta,curPhi); // this needs to be updated with the muon resolutions!
-  Particle lParticle(iPt,iEta,curPhi,0.105,4,lSigma,0.,0,0,charge,quality); // id is 4 for muons
+  Particle lParticle(iPt,iEta,curPhi,0.105,MU,lSigma,0.,0,0,charge,quality); // id is 4 for muons
   // insert(lParticle,fMuParticles); // this does something weird to muons
   fMuParticles.push_back(lParticle);
 }
@@ -95,7 +100,7 @@ void combiner::link(bool iMetRate) {
         curDPT = 1/tmptmp;
       }
       if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
-        fTkParticles[i1].setPdgId(4);
+        fTkParticles[i1].setPdgId(MU);
         fTkParticles[i1].setMass(0.105);
         minPtDiff = fabs(curDPT);
       }
@@ -103,13 +108,13 @@ void combiner::link(bool iMetRate) {
   }
   // then do track + calo linking
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-    if(fTkParticles[i0].pdgId() == 4) continue; // skip muons for now, add them at the end
+    if(fTkParticles[i0].pdgId() == MU) continue; // skip muons for now, add them at the end
     bool pFill = false;
     int pIMatch = -1; double pPtMatch = -1;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
-      if(fParticles[i1].pdgId() == 0 || fParticles[i1].pdgId() == 1)   continue;
+      if(fParticles[i1].pdgId() == CH || fParticles[i1].pdgId() == EL)   continue;
       if(fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) < pPtMatch || fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) continue;
       pIMatch = i1; pPtMatch = fabs(fParticles[i1].pt()-fTkParticles[i0].pt());
     }
@@ -124,7 +129,7 @@ void combiner::link(bool iMetRate) {
   // now do muons... when not using muon gun+PU as a neutrino gun
   if(!iMetRate) { 
     for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-      if (fTkParticles[i0].pdgId() == 4) fParticles.push_back(fTkParticles[i0]);
+      if (fTkParticles[i0].pdgId() == MU) fParticles.push_back(fTkParticles[i0]);
     }
   }
 }
@@ -147,9 +152,8 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     double pTkSigma = iTkParticle.sigma();
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
     double pAvgEt   = (iParticle1.pt()/pSigma/pSigma + iTkParticle.pt()/pTkSigma/pTkSigma)/pSigTot;
-    iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), iParticle1.pdgId() == 3 ? 0.137 : iParticle1.mass());
-    iParticle1.setPdgId(iParticle1.pdgId() - 2); //FIXME: this line doesn't make sense to me (GP) => PH it is to move neutral had to charged had
-    iParticle1.setMass (0.137);
+    iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), 0.137);
+    iParticle1.setPdgId(iParticle1.pdgId() == GAMMA ? EL : CH); 
     return;
   }
   //Case 3 MIP
@@ -220,6 +224,7 @@ void combiner::doVertexing(){
       if(fParticles[i0].charge() != 0) fParticles[i0].setIsPV(1);
    }
   }
+  delete h_dz;
 }
 
 
@@ -359,7 +364,7 @@ void combiner::computeWeights(){
     if (fParticles[i0].pdgId() == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
     if (fParticles[i0].puppiWeight() <= 0.01) continue;
     if (fParticles[i0].pdgId() != 4 && fParticles[i0].puppiWeight() > 0.01){
-      if (fabs(fParticles[i0].eta() < fEta)){
+      if (fabs(fParticles[i0].eta()) < fEta){
         if (fParticles[i0].pt()*fParticles[i0].puppiWeight() > ptcutC || (fParticles[i0].pdgId() != 3 &&  fParticles[i0].pdgId() != 2) ){
 	  //if (fParticles[i0].pt()*fParticles[i0].puppiWeight() > ptcutC) { 
           fParticlesPuppi.push_back(fParticles[i0]);
@@ -380,6 +385,7 @@ void combiner::computeWeights(){
 }
 
 void combiner::fill(){
+  if (!fFile) return;
 
   fFile->cd();
 
