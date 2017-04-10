@@ -92,6 +92,7 @@ void combiner::link(bool iMetRate) {
   // first do the muon/tracking matching
   for(unsigned int i0   = 0; i0 < fMuParticles.size(); i0++) { 
     float minPtDiff = 9999; // find the track that best matches the muon in pT
+    int imatch = -1;
     for(unsigned int i1 = 0; i1 < fTkParticles.size(); i1++) { 
       float curDR = deltaRraw(fTkParticles[i1],fMuParticles[i0]);
       float curDPT = (fMuParticles[i0].pt()/fTkParticles[i1].pt());
@@ -100,31 +101,37 @@ void combiner::link(bool iMetRate) {
         curDPT = 1/tmptmp;
       }
       if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
+        if (imatch > -1) { // we've found a new match, the previous one should be unmatched
+            fTkParticles[i1].setPdgId(CH);
+            fTkParticles[i1].setMass(0.135);
+        }
         fTkParticles[i1].setPdgId(MU);
         fTkParticles[i1].setMass(0.105);
         minPtDiff = fabs(curDPT);
+        imatch = i1;
       }
     } 
   }
   // then do track + calo linking
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].pdgId() == MU) continue; // skip muons for now, add them at the end
-    bool pFill = false;
+    bool pFilled = false; // if true, the track has already been added in the PF candidates; if false, it's still to be added
     int pIMatch = -1; double pPtMatch = -1;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
       if(fParticles[i1].pdgId() == CH || fParticles[i1].pdgId() == EL)   continue;
-      if(fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) < pPtMatch || fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) continue;
+      if(fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) continue; 
+      if(pIMatch != -1 && fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) > pPtMatch) continue;
       pIMatch = i1; pPtMatch = fabs(fParticles[i1].pt()-fTkParticles[i0].pt());
     }
     if(pIMatch != -1) { 
       merge(fTkParticles[i0],fParticles[pIMatch],fParticles);
-      pFill = true;
+      pFilled = true;
     }
     //Remove high pT fakes
-    if(fTkParticles[i0].pt() > 20.) pFill = true;
-    if(!pFill) fParticles.push_back(fTkParticles[i0]);
+    if(fTkParticles[i0].pt() > 20.) pFilled = true; // mark it as used so it's not turned into a PF candidate
+    if(!pFilled) fParticles.push_back(fTkParticles[i0]);
   }
   // now do muons... when not using muon gun+PU as a neutrino gun
   if(!iMetRate) { 
