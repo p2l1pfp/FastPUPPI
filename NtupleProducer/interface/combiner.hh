@@ -36,6 +36,8 @@ public:
   inline std::vector<Particle> mucandidates() { return fMuParticles;}
   inline std::vector<Particle> puppiFetch() { return fParticlesPuppi; }
   inline double dZ() { return fDZ;} 
+  inline std::pair<float,float> alphaCMedRms() { return std::make_pair(alphaCMed,alphaCRms); } 
+  inline std::pair<float,float> alphaFMedRms() { return std::make_pair(alphaFMed,alphaFRms); } 
 private:
   void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
   inline double  getTrkRes (double iPt,double iEta,double iPhi) {return fTrackRes   [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}

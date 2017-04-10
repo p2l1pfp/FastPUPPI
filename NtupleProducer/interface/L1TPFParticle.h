@@ -64,6 +64,10 @@ namespace l1tpf {
             }
             void setPtEtaPhiM(float pt, float eta, float phi, float mass) { setP4(PolarLorentzVector(pt,eta,phi,mass)); }
             void setPt(float pt) { setP4(PolarLorentzVector(pt,eta(),phi(),mass())); }
+    
+            void addToP4(const l1tpf::Particle &other) {
+                setP4(p4() + other.p4());
+            }
 
         protected:
             float dZ_;
