@@ -38,6 +38,7 @@
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
+#include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
 
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
@@ -124,6 +125,9 @@ private:
   combiner * rawconnector_;
   metanalyzer* metanalyzer_;
   jetanalyzer* jetanalyzer_;
+  // discretized version
+  l1tpf_int::RegionMapper l1regions_;
+  l1tpf_int::PFAlgo       l1pfalgo_;
   // debug flag
   int fDebug;
      
@@ -186,6 +190,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
+  l1regions_            (iConfig),
+  l1pfalgo_             (iConfig),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
@@ -207,6 +213,10 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
   produces<PFOutputCollection>("Puppi");
+  produces<PFOutputCollection>("L1TK");
+  produces<PFOutputCollection>("L1Calo");
+  produces<PFOutputCollection>("L1PF");
+  produces<PFOutputCollection>("L1Puppi");
   TokGenPar_       = consumesCollector().mayConsume<reco::GenParticleCollection>( GenParTag_    );
   TokL1TrackTPTag_ = consumesCollector().mayConsume<L1PFCollection>( L1TrackTag_  );
   TokEcalTPTag_    = consumesCollector().mayConsume<L1PFCollection>( EcalTPTag_   );
@@ -242,6 +252,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   connector_->clear();
   rawconnector_->clear();
+  l1regions_.clear(); 
   /// ----------------TRACK INFO-------------------
   edm::Handle<std::vector<l1tpf::Particle>> l1tks;
   iEvent.getByLabel(L1TrackTag_, l1tks);
@@ -249,6 +260,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   for (l1tpf::Particle tk : *l1tks) { // no const & since we modify it to set the sigma
       tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); // the combiner knows the sigma, the track producer doesn't
       // adding objects to PF
+      if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
       if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
       /// filling the tree    
@@ -293,6 +305,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       mu.setSigma(connector_->getTrkRes(mu.pt(),mu.eta(),mu.phi())); // this needs to be updated with the muon resolutions!
 
       connector_->addMuon(mu);
+      l1regions_.addMuon(mu); 
     }
     // std::cout << "exc->size() = " << exc.size() << "," << connector_->mucandidates().size() << std::endl;
 
@@ -452,6 +465,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if (hcal_corr_et >= 1 || hcal_ecal_etcorr >= 1) {
           l1tpf::Particle calo = connector_->makeCalo(double(hcal_corr_et) ,double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
           connector_->addCalo(calo);
+          l1regions_.addCalo(calo); 
       }
       if (hcal_clust_et >= 1 || hcal_ecal_et >= 1) {
           rawconnector_->addCalo(connector_->makeCalo(double(hcal_clust_et),double(hcal_ecal_et),    double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi)));
@@ -471,6 +485,21 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   connector_->fetchPuppi();
   connector_->fill();
   std::vector<combiner::Particle> lPupCands     = connector_->puppiFetch();
+
+  // Now we run the discretized version
+  // First, get a copy of the discretized inputs (for reference later)
+  std::vector<combiner::Particle> ll1CaloCands = l1regions_.fetchCalo();
+  std::vector<combiner::Particle> ll1TkCands   = l1regions_.fetchTracks();
+  // then get global inputs
+  float z0 = connector_->dZ();
+  std::pair<float,float> alphaC = connector_->alphaCMedRms(), alphaF = connector_->alphaFMedRms();
+  std::cout << " z0 = " << z0 << "\t alphaC = " << alphaC.first << " +/- " << alphaC.second << "\t alphaF = " << alphaF.first << " +/- " << alphaF.second << std::endl;
+
+  // run PF in each region
+  for (auto & l1region : l1regions_.regions()) {
+      l1pfalgo_.runPF(l1region);
+      l1pfalgo_.runPuppi(l1region, z0, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
+  }
   /*
   unsigned int lBase = lCands.size(); 
   bool *lFound = new bool[lBase]; for(unsigned int i0 = 0; i0 < lBase; i0++) lFound[i0] = false;  
@@ -496,6 +525,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(lTKCands ,"TK"      ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
   addPF(lPupCands,"Puppi"   ,iEvent);
+
+  std::vector<combiner::Particle> ll1PFCands   = l1regions_.fetch(false);
+  std::vector<combiner::Particle> ll1PupCands  = l1regions_.fetch(true);
+  addPF(ll1CaloCands,"L1Calo" ,iEvent);
+  addPF(ll1TkCands,  "L1TK"   ,iEvent);
+  addPF(ll1PFCands,  "L1PF"   ,iEvent);
+  addPF(ll1PupCands, "L1Puppi",iEvent);
   
   metanalyzer_->clear();
   metanalyzer_->setZ(lTKCands,connector_->dZ());
