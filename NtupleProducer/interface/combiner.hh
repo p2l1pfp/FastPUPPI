@@ -17,7 +17,7 @@ public:
   enum MyParticleId { CH=0, EL=1, NH=2, GAMMA=3, MU=4 };
   typedef l1tpf::Particle Particle;
 
-  combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes);
+  combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes,int debug=0);
   l1tpf::Particle makeCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) const ;
   void addCalo(const l1tpf::Particle & particle);
   void addMuon(const l1tpf::Particle & particle); 
@@ -46,6 +46,7 @@ public:
     double lPt   = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);
     return lPt*0.5;}//(sqrt(lPt*lPt+lPt30*lPt30));}
 private:
+  int fDebug;
   void insert(const Particle &iPartcle,std::vector<Particle> &iParticles);
   inline int     translateIEtaOld(double iEta) { return int(10*std::max(std::min(iEta,3.0),-3.0))+30;}  
   double deltaR(Particle &iParticle1,Particle &iParticle2);

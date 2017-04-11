@@ -10,8 +10,10 @@
 #include "Math/QuantFuncMathCore.h"
 #include "Math/SpecFuncMathCore.h"
 #include "Math/ProbFunc.h"
+#include "DataFormats/Math/interface/deltaPhi.h"
 
-combiner::combiner(const std::string & iPionFile,const std::string & iElectronFile,const std::string & iTrackFile,const std::string & iFile,double iEtaCharged,double iPuppiPt,double iVtxRes) {
+combiner::combiner(const std::string & iPionFile,const std::string & iElectronFile,const std::string & iTrackFile,const std::string & iFile,double iEtaCharged,double iPuppiPt,double iVtxRes,int debug) {
+  fDebug = debug; // 0 = nothing; 1 = something; 2 = lots; ...
   fEta     = iEtaCharged;
   fPuppiPt = iPuppiPt;
   fDRMatch = 0.15;
@@ -107,19 +109,35 @@ void combiner::link(bool iMetRate) {
     } 
   }
   // then do track + calo linking
+  if (fDebug) printf("Trying to link. I have %d tracks, %d calo\n", int(fTkParticles.size()), int(fParticles.size()));
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].pdgId() == MU) continue; // skip muons for now, add them at the end
+    if (fDebug>1) printf("\t track %d (pt %7.2f)\n", i0, fTkParticles[i0].pt());
     bool pFilled = false; // if true, the track has already been added in the PF candidates; if false, it's still to be added
     int pIMatch = -1; double pPtMatch = -1;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
+      if (fDebug>1) printf("\t\t calo %d (pt %7.2f): ", i1, fParticles[i1].pt());
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
-      if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) continue;
-      if(fParticles[i1].pdgId() == CH || fParticles[i1].pdgId() == EL)   continue;
-      if(fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) continue; 
-      if(pIMatch != -1 && fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) > pPtMatch) continue;
+      if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
+            if (fDebug>1) printf("outside dR (%.3f).\n",deltaR(fTkParticles[i0],fParticles[i1])); 
+            continue; }
+      if(fParticles[i1].pdgId() == CH || fParticles[i1].pdgId() == EL)  { 
+            if (fDebug>1) printf("already linked.\n");  
+            continue; }
+      if(fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) { 
+            if (fDebug>1) printf("calo pt is too low.\n"); 
+            continue; }
+      if(pIMatch != -1 && fabs(fParticles[i1].pt()-fTkParticles[i0].pt()) > pPtMatch) { 
+            if (fDebug>1) printf("new match, but worse than %d.\n", pIMatch); 
+            continue; }
       pIMatch = i1; pPtMatch = fabs(fParticles[i1].pt()-fTkParticles[i0].pt());
+      if (fDebug>1) printf("new best match.\n");
     }
     if(pIMatch != -1) { 
+      if (fDebug) printf("Linking track of pt %7.2f eta %+5.2f phi %+5.2f (calo eta %+5.2f phi %+5.2f) to calo of pt %7.2f eta %+5.2f phi %+5.2f (dR = %.3f, deta = %.3f, dphi = %.3f)\n",
+                    fTkParticles[i0].pt(), fTkParticles[i0].eta(), fTkParticles[i0].phi(), fTkParticles[i0].caloEta(), fTkParticles[i0].caloPhi(),
+                    fParticles[pIMatch].pt(), fParticles[pIMatch].eta(), fParticles[pIMatch].phi(),
+                    deltaR(fTkParticles[i0],fParticles[pIMatch]), (fTkParticles[i0].caloEta()-fParticles[pIMatch].eta()), ::deltaPhi(fTkParticles[i0].caloPhi(),fTkParticles[i0].phi()));
       merge(fTkParticles[i0],fParticles[pIMatch],fParticles);
       pFilled = true;
     }
@@ -145,6 +163,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     pVec0 -= pVec1;
     iParticle1.setPtEtaPhiM(pVec0.Pt(),pVec0.Eta(),pVec0.Phi(),0);
     iCollection.push_back(iTkParticle);
+    if (fDebug) printf("   case 1: add track, reduce calo pt to %7.2f\n", iParticle1.pt());
     return;
   }
   //Case 2 combined 
@@ -155,6 +174,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     double pAvgEt   = (iParticle1.pt()/pSigma/pSigma + iTkParticle.pt()/pTkSigma/pTkSigma)/pSigTot;
     iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), 0.137);
     iParticle1.setPdgId(iParticle1.pdgId() == GAMMA ? EL : CH); 
+    if (fDebug) printf("   case 2: merge, avg pt %7.2f\n", iParticle1.pt());
     return;
   }
   //Case 3 MIP
@@ -163,6 +183,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     iCollection.push_back(iTkParticle);
     double pVal = 2; if(iParticle1.pt() < 2.) pVal = iParticle1.pt()-0.1;
     iParticle1.setPt(iParticle1.pt() - pVal); //2 is a bullshit guess at the MIP energy lost
+    if (fDebug) printf("   case 3: add track, reduce calo pt to %7.2f\n", iParticle1.pt());
   }
   return;
 }
