@@ -9,7 +9,7 @@ namespace l1tpf {
     class Particle : public reco::LeafCandidate {
         public:
             Particle() {}
-            Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma,double iDZ,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999, double iIsPV = 0, float alphaF = -999, float alphaC = -999, float puppiWeight = -99) :
+            Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma=0,double iDZ=0,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999, double iIsPV = 0, float alphaF = -999, float alphaC = -999, float puppiWeight = -99) :
                 LeafCandidate(iCharge, reco::LeafCandidate::PolarLorentzVector(iEt,iEta,iPhi,iM), reco::LeafCandidate::Point(), iId),
                 dZ_(iDZ),
                 sigma_(iSigma),

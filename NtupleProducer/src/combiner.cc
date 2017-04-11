@@ -53,8 +53,7 @@ void combiner::loadFile(TGraph** &iF1, std::string iFile) {
 }
 
 //Add Calo deposit
-void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) { 
-  if(iCalo+iEcal < 1.0) return;
+l1tpf::Particle combiner::makeCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) const { 
   double lEt  = iCalo;
   double lEta = iCaloEta;
   double lPhi = iCaloPhi;
@@ -64,26 +63,21 @@ void combiner::addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi
   double lSigma = lEt;
   iCalo < 1.1*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
   int lId = NH; if(iCalo < 1.1*iEcal) lId = GAMMA;
-  if(lEt < 0.01) return;
-  Particle lParticle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
-  insert(lParticle,fParticles);
+  return Particle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
+}
+void combiner::addCalo(const l1tpf::Particle & particle) { 
+  if(particle.pt() < 0.01) return;
+  insert(particle,fParticles);
 }
 
 //Add Tracks
-void combiner::addTrack(l1tpf::Particle particle) { 
+void combiner::addTrack(const l1tpf::Particle &particle) { 
   if(particle.pt() < 0.1) return; //Just to avoid calling things that will crash later
-  particle.setSigma(getTrkRes(particle.pt(), particle.eta(), particle.phi())); // the combiner knows the sigma, the track producer doesn't
   insert(particle,fTkParticles);
 }
 
 //Add muons
-void combiner::addMuon(double iPt, double iEta, double iPhi, double charge, double quality){
-  // for now don't worry about the HCAL MIP matching for muons, just the track matching, so that means that the Calorimeter iEta,iPhi don't matter
-  float curPhi = iPhi;
-  if (iPhi > TMath::Pi()) curPhi = iPhi - 2*TMath::Pi();
-  double lSigma = getTrkRes(iPt,iEta,curPhi); // this needs to be updated with the muon resolutions!
-  Particle lParticle(iPt,iEta,curPhi,0.105,MU,lSigma,0.,0,0,charge,quality); // id is 4 for muons
-  // insert(lParticle,fMuParticles); // this does something weird to muons
+void combiner::addMuon(const l1tpf::Particle &lParticle) {
   fMuParticles.push_back(lParticle);
 }
 
@@ -175,7 +169,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
 
 //Order by pt // FIXME: GP: why do you need to do this? => PH: the ordering affects the choice of what gets linked first if there are multiple links present. This changes what happens downstream.
 // Perhaps there is a better way :)
-void combiner::insert(Particle &iParticle,std::vector<Particle> &iParticles) { 
+void combiner::insert(const Particle &iParticle,std::vector<Particle> &iParticles) { 
   if(iParticles.size() == 0) {iParticles.push_back(iParticle); return;}
   bool lFill = false;
   for(std::vector<Particle>::iterator pParticle = iParticles.begin(); pParticle != iParticles.end(); pParticle++) { 

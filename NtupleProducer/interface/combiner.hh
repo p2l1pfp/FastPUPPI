@@ -18,11 +18,12 @@ public:
   typedef l1tpf::Particle Particle;
 
   combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes);
-  void addCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi);
+  l1tpf::Particle makeCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) const ;
+  void addCalo(const l1tpf::Particle & particle);
+  void addMuon(const l1tpf::Particle & particle); 
   void loadFile(TGraph** &iF1, std::string iFile);
   double correct(double iHcal,double iEcal,int iEta);
-  void addTrack(l1tpf::Particle particle); //double iPt,double iEta,double iPhi,double idZ,double iCaloEta,double iCaloPhi, double iCharge,int iQuality);
-  void addMuon(double iPt, double iEta, double iPhi, double charge, double quality);
+  void addTrack(const l1tpf::Particle & particle); 
   void link(bool iMetRate);
   void doVertexing();  
   void fetchPuppi();
@@ -38,14 +39,14 @@ public:
   inline double dZ() { return fDZ;} 
   inline std::pair<float,float> alphaCMedRms() { return std::make_pair(alphaCMed,alphaCRms); } 
   inline std::pair<float,float> alphaFMedRms() { return std::make_pair(alphaFMed,alphaFRms); } 
-private:
-  void insert(Particle &iPartcle,std::vector<Particle> &iParticles);
-  inline double  getTrkRes (double iPt,double iEta,double iPhi) {return fTrackRes   [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
-  inline double  getEleRes (double iPt,double iEta,double iPhi) {return fElectronRes[l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
-  inline double  getPionRes(double iPt,double iEta,double iPhi) {
+  inline double  getTrkRes (double iPt,double iEta,double iPhi) const { return fTrackRes   [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
+  inline double  getEleRes (double iPt,double iEta,double iPhi) const { return fElectronRes[l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);}
+  inline double  getPionRes(double iPt,double iEta,double iPhi) const { 
     //double lPt30 = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(30.);
     double lPt   = fPionRes    [l1tpf::translateAEta(l1tpf::translateIEta(iEta))]->Eval(iPt);
     return lPt*0.5;}//(sqrt(lPt*lPt+lPt30*lPt30));}
+private:
+  void insert(const Particle &iPartcle,std::vector<Particle> &iParticles);
   inline int     translateIEtaOld(double iEta) { return int(10*std::max(std::min(iEta,3.0),-3.0))+30;}  
   double deltaR(Particle &iParticle1,Particle &iParticle2);
   double deltaRraw(Particle &iParticle1,Particle &iParticle2);

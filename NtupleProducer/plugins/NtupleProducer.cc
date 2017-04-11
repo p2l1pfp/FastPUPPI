@@ -97,7 +97,6 @@ private:
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
-  void propagate(int iOption,std::vector<double> &iVars,const math::XYZTLorentzVector& iMom,const math::XYZTLorentzVector& iVtx,double iCharge,double iBField);
   void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
   TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.2);
   void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.2);
@@ -243,7 +242,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   edm::Handle<std::vector<l1tpf::Particle>> l1tks;
   iEvent.getByLabel(L1TrackTag_, l1tks);
   trkNum = 0;
-  for (const l1tpf::Particle & tk : *l1tks) {
+  for (l1tpf::Particle tk : *l1tks) { // no const & since we modify it to set the sigma
+      tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); // the combiner knows the sigma, the track producer doesn't
       // adding objects to PF
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
       if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
@@ -283,28 +283,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     std::vector<L1MuGMTExtendedCand> exc = igmtrr->getGMTCands();
     for(gmt_iter=exc.begin(); gmt_iter!=exc.end(); gmt_iter++) {
 
-      // float mu_Bx = (*gmt_iter).bx();
-      float mu_Eta = (*gmt_iter).etaValue();
-      float mu_Phi = (*gmt_iter).phiValue();
-      float mu_Pt  = (*gmt_iter).ptValue();
-      float mu_Cha = (*gmt_iter).charge();
-      float mu_Qua = (*gmt_iter).quality();
-      // std::cout << mu_Pt << "," << mu_Phi << "," << mu_Eta << "," << mu_Cha << "," << mu_Qua << std::endl;
-      connector_->addMuon(mu_Pt, mu_Eta, mu_Phi, mu_Cha, mu_Qua);
-      
-      /// Quality codes:
-      ///
-      /// 0 .. no muon 
-      /// 1 .. beam halo muon (CSC)
-      /// 2 .. very low quality level 1 (e.g. ignore in single and di-muon trigger)
-      /// 3 .. very low quality level 2 (e.g. ignore in single muon trigger use in di-muon trigger)
-      /// 4 .. very low quality level 3 (e.g. ignore in di-muon trigger, use in single-muon trigger)
-      /// 5 .. unmatched RPC 
-      /// 6 .. unmatched DT or CSC
-      /// 7 .. matched DT-RPC or CSC-RPC
-      ///
-      /// attention: try not to rely on quality codes in analysis: they may change again
+      l1tpf::Particle mu( gmt_iter->ptValue(), gmt_iter->etaValue(), ::deltaPhi(gmt_iter->phiValue(), 0.), 0.105, combiner::MU ); // the deltaPhi is to get the wrapping correct
+      mu.setCharge(gmt_iter->charge());
+      mu.setQuality(gmt_iter->quality());
+      mu.setSigma(connector_->getTrkRes(mu.pt(),mu.eta(),mu.phi())); // this needs to be updated with the muon resolutions!
 
+      connector_->addMuon(mu);
     }
     // std::cout << "exc->size() = " << exc.size() << "," << connector_->mucandidates().size() << std::endl;
 
@@ -461,8 +445,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
       if(hcal_corr_et  < 0) hcal_corr_et   = 0;
       if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
-      connector_   ->addCalo(double(hcal_corr_et) ,double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
-      rawconnector_->addCalo(double(hcal_clust_et),double(hcal_ecal_et),    double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
+      if (hcal_corr_et >= 1 || hcal_ecal_etcorr >= 1) {
+          l1tpf::Particle calo = connector_->makeCalo(double(hcal_corr_et) ,double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
+          connector_->addCalo(calo);
+      }
+      if (hcal_clust_et >= 1 || hcal_ecal_et >= 1) {
+          rawconnector_->addCalo(connector_->makeCalo(double(hcal_clust_et),double(hcal_ecal_et),    double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi)));
+      }
       if(hcal_genPt > 1. && zeroSuppress_) fHcalInfoTree->Fill();      
       if(!zeroSuppress_ && hcal_et > 1.)   fHcalInfoTree->Fill();
       nh++;
@@ -547,10 +536,6 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
 //////////////////////////// ------------------------------------------------------
 //////////////////////////// ------------------------------------------------------
 
-// -- propagator 
-void NtupleProducer::propagate(int iOption,std::vector<double> &iVars,const math::XYZTLorentzVector& iMom,const math::XYZTLorentzVector& iVtx,double iCharge,double iBField) { 
-  l1tpf::propagate(iOption,iVars,iMom,iVtx,iCharge,iBField);
-}
 //--- Gen Matching
 void NtupleProducer::genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles) { 
   int lId = -999;
