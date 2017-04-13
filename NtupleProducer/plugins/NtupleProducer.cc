@@ -28,6 +28,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Framework/interface/ConsumesCollector.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
@@ -43,6 +44,7 @@
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
+#include "DataFormats/L1Trigger/interface/Muon.h"
 
 #include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "DataFormats/Math/interface/deltaR.h"
@@ -112,7 +114,7 @@ private:
   edm::EDGetTokenT<L1PFCollection>                TokHGHcalTPTag_;
   edm::EDGetTokenT<L1PFCollection>                TokBHHcalTPTag_;
   edm::EDGetTokenT<L1PFCollection>                TokHFTPTag_;
-  edm::EDGetTokenT<L1MuGMTReadoutCollection>      TokMuonTPTag_;
+  edm::EDGetTokenT<l1t::MuonBxCollection>         TokMuonTPTag_;
   double trkPt_;
   bool   metRate_;
   double etaCharged_;
@@ -225,7 +227,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   TokHGHcalTPTag_  = consumesCollector().mayConsume<L1PFCollection>( HGHcalTPTag_ );
   TokBHHcalTPTag_  = consumesCollector().mayConsume<L1PFCollection>( BHHcalTPTag_ );
   TokHFTPTag_      = consumesCollector().mayConsume<L1PFCollection>( HFTPTag_     );
-  TokMuonTPTag_    = consumesCollector().mayConsume<L1MuGMTReadoutCollection>( MuonTPTag_  );
+  TokMuonTPTag_    = consumesCollector().mayConsume<l1t::MuonBxCollection>( MuonTPTag_  );
 }
 
 NtupleProducer::~NtupleProducer()
@@ -287,29 +289,30 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       fTrkInfoTree->Fill();   
       trkNum++;
   }
-  /// ----------------Muon INFO-------------------
-  edm::Handle< L1MuGMTReadoutCollection > gmtrc;
-  iEvent.getByToken(TokMuonTPTag_, gmtrc);
   
-  std::vector<L1MuGMTReadoutRecord> gmt_records = gmtrc->getRecords();
-  std::vector<L1MuGMTReadoutRecord>::const_iterator igmtrr;
-  for(igmtrr=gmt_records.begin(); igmtrr!=gmt_records.end(); igmtrr++) {
- 
-    std::vector<L1MuGMTExtendedCand>::const_iterator gmt_iter;
-    std::vector<L1MuGMTExtendedCand> exc = igmtrr->getGMTCands();
-    for(gmt_iter=exc.begin(); gmt_iter!=exc.end(); gmt_iter++) {
+  /// ----------------Muon INFO-------------------
+  // new muon getting in 91x
+  edm::Handle<l1t::MuonBxCollection> muon;    
+  iEvent.getByToken(TokMuonTPTag_, muon);
+  if (muon.isValid()){ 
+    for (int ibx = muon->getFirstBX(); ibx <= muon->getLastBX(); ++ibx) {
+      if (ibx != 0) continue; // only the first bunch crossing
+      for (auto it=muon->begin(ibx); it!=muon->end(ibx); it++){      
+        if (it->et() == 0) continue; // if you don't care about L1T candidates with zero ET.
+        l1tpf::Particle mu( it->pt(), it->eta(), ::deltaPhi(it->phi(), 0.), 0.105, combiner::MU ); // the deltaPhi is to get the wrapping correct
+        mu.setCharge(it->charge());
+        mu.setQuality(it->hwQual());
+        mu.setSigma(connector_->getTrkRes(mu.pt(),mu.eta(),mu.phi())); // this needs to be updated with the muon resolutions!      
 
-      l1tpf::Particle mu( gmt_iter->ptValue(), gmt_iter->etaValue(), ::deltaPhi(gmt_iter->phiValue(), 0.), 0.105, combiner::MU ); // the deltaPhi is to get the wrapping correct
-      mu.setCharge(gmt_iter->charge());
-      mu.setQuality(gmt_iter->quality());
-      mu.setSigma(connector_->getTrkRes(mu.pt(),mu.eta(),mu.phi())); // this needs to be updated with the muon resolutions!
-
-      connector_->addMuon(mu);
-      l1regions_.addMuon(mu); 
+        connector_->addMuon(mu);
+        l1regions_.addMuon(mu);
+      }
     }
-    // std::cout << "exc->size() = " << exc.size() << "," << connector_->mucandidates().size() << std::endl;
+  } 
+  else {
+    edm::LogWarning("MissingProduct") << "L1Upgrade muon bx collection not found." << std::endl;
+  }
 
-  }   
   /// ----------------ECAL INFO-------------------
   std::vector<MyEcalCluster> lEcals;  
   double lEEt[l1tpf::towerNEta()][73];
