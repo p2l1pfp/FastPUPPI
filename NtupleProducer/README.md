@@ -4,6 +4,7 @@ Basic Instructions
 cmsrel CMSSW_9_1_0_pre2
 cd CMSSW_9_1_0_pre2/src
 cmsenv
+git clone git@github.com:nhanvtran/FastPUPPI.git -b 91X
 scram b -j8
 ```
 
