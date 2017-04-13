@@ -55,11 +55,6 @@ for iev,event in enumerate(events):
     genps = read(event, "genParticles", genp, filter = lambda g : g.status() == 1 and abs(g.pdgId()) not in (12,14,16))
     phystruth.append(PhysObjList("genParticles", genps, drawGenCands, ["all"], printer = lambda p : "charge %+1d pdgId %+4d" % (p.charge(), p.pdgId())))
 
-    vzs = [ g.vz() for g in genps ]; vzs.sort()
-    Z0 = vzs[len(vzs)/2]
-    event.getByLabel("offlinePrimaryVertices", vertices)
-    PVbest = min(vertices.product(), key = lambda pv : abs(pv.z()-Z0))
-
     genjs = read(event, "ak4GenJetsNoNu", genj, filter = lambda g : g.pt() > 20)
     phystruth.append(PhysObjList("genJets", genjs, drawGenJets, ["all"]))
 
@@ -79,10 +74,16 @@ for iev,event in enumerate(events):
     #physobj.append(PhysObjList("L1C_Puppi", read(event, "InfoOut:Puppi", pfcands), drawPuppiCands, ["l1","l1out","l1in+puppi"]))
     physobj.append(PhysObjList("L1C_Puppi", read(event, "InfoOut:Puppi", pfcands), drawPFCands,    ["l1in+puppi","l1puppi"], printer = lambda p : "pdgId %+4d" % p.pdgId()))
 
+    ## === CORRELATOR OUTPUTS (INTEGER MATH) ===
+    physobj.append(PhysObjList("L1IC_Calo",  read(event, "InfoOut:L1Calo",  pfcands), drawCaloCands,  ["l1out-int"]))
+    physobj.append(PhysObjList("L1IC_TK",    read(event, "InfoOut:L1TK",    pfcands), drawTkCands,    ["l1out-int"]))
+    physobj.append(PhysObjList("L1IC_PF",    read(event, "InfoOut:L1PF",    pfcands), drawPFCands,    ["l1out-int"]))
+    physobj.append(PhysObjList("L1IC_Puppi", read(event, "InfoOut:L1Puppi", pfcands), drawPFCands,    ["l1puppi-int"], printer = lambda p : "pdgId %+4d" % p.pdgId()))
+
     evname = "r%d_ls%d_ev%d"  % (event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
     zoomRadius = 0.4
     #for view in "l1", "l1in", "l1out","l1in+puppi":
-    for view in "l1", "l1in+puppi", "l1puppi":
+    for view in "l1", "l1out", "l1in+puppi", "l1puppi", "l1out-int", "l1puppi-int":
         cMaker.clear()
         vlog = open(out+"/%s_%s.txt" % (evname, view), "w")
         theLegend = ROOT.TLegend(0.01, 0.15, 0.11, 0.75);

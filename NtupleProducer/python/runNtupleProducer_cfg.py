@@ -49,7 +49,8 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  metRate     = cms.bool(True),
                                  etaCharged  = cms.double(2.5),
                                  puppiPtCut  = cms.double(4.0),
-                                 vtxRes      = cms.double(0.333)
+                                 vtxRes      = cms.double(0.333),
+                                 debug       = cms.untracked.int32(1),
                                  )
 
 
