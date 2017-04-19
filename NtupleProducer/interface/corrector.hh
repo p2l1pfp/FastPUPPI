@@ -4,7 +4,7 @@
 
 class corrector { 
 public:
-  corrector(const std::string iFile,int iNFrac=11);
+  corrector(const std::string iFile,int iNFrac=11,int debug=0);
   double correct(double iHcal,double iEcal,int iEta,int iPhi);
   double correct(double iCorr,double iHcal,double iEcal,int iEta,int iPhi);
   double ecalFrac();

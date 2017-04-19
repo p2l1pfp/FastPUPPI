@@ -209,9 +209,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fHcalInfoTree         (0)
 {
   //now do what ever other initialization is needed
-  corrector_  = new corrector(CorrectorTag_);
-  corrector2_ = new corrector(Corrector2Tag_);
-  ecorrector_ = new corrector(ECorrectorTag_,1);
+  corrector_  = new corrector(CorrectorTag_,11,fDebug);
+  corrector2_ = new corrector(Corrector2Tag_,11,fDebug);
+  ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
   connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppi.root",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
   rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppiraw.root",etaCharged_,puppiPtCut_,vtxRes_);
   metanalyzer_   = new metanalyzer("MetFile.root");
@@ -502,7 +502,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // then get global inputs
   float z0 = connector_->dZ();
   std::pair<float,float> alphaC = connector_->alphaCMedRms(), alphaF = connector_->alphaFMedRms();
-  std::cout << " z0 = " << z0 << "\t alphaC = " << alphaC.first << " +/- " << alphaC.second << "\t alphaF = " << alphaF.first << " +/- " << alphaF.second << std::endl;
+  if (fDebug) std::cout << " z0 = " << z0 << "\t alphaC = " << alphaC.first << " +/- " << alphaC.second << "\t alphaF = " << alphaF.first << " +/- " << alphaF.second << std::endl;
 
   // run PF in each region
   for (auto & l1region : l1regions_.regions()) {

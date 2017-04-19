@@ -266,7 +266,7 @@ void combiner::fetchPuppi(){
     if (fParticles[i0].charge() != 0 && fParticles[i0].isPV() != 0 && fParticles[i0].pdgId() < 2) puppi_chargedPV.push_back(fParticles[i0]);
     if (fParticles[i0].charge() != 0 && fParticles[i0].isPV() == 0) puppi_chargedPU.push_back(fParticles[i0]);
   }
-  std::cout << fParticles.size() << ", " << puppi_neutrals.size() << ", " << puppi_chargedPU.size() << ", " << puppi_chargedPV.size() << std::endl;
+  if (fDebug) std::cout << fParticles.size() << ", " << puppi_neutrals.size() << ", " << puppi_chargedPU.size() << ", " << puppi_chargedPV.size() << std::endl;
 
   // compute alphas (not efficient, but we don't have that many particles)
   computeAlphas(fParticles,0);
