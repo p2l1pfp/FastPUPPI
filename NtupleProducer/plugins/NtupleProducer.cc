@@ -28,7 +28,7 @@
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "FWCore/Framework/interface/ConsumesCollector.h"
+#include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
@@ -82,15 +82,21 @@ public:
   const edm::InputTag HFTPTag_;
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
-  const edm::InputTag CorrectorTag_;
-  const edm::InputTag Corrector2Tag_;
-  const edm::InputTag ECorrectorTag_;
-  const edm::InputTag TrackResTag_;
-  const edm::InputTag EleResTag_;
-  const edm::InputTag PionResTag_;
+  const std::string CorrectorTag_;
+  const std::string Corrector2Tag_;
+  const std::string ECorrectorTag_;
+  const std::string TrackResTag_;
+  const std::string EleResTag_;
+  const std::string PionResTag_;
   std::unique_ptr<PFOutputCollection > corrCandidates_;
  
 private:
+  inline std::string getFilePath(const edm::ParameterSet & pset, const std::string & name) const {
+    std::string ret = pset.getParameter<std::string>(name);
+    if (ret[0] != '/') ret = edm::FileInPath(ret).fullPath();
+    return ret;
+  }
+
   struct MyEcalCluster { 
     int ieta, iphi; float et, corr_et, eta, phi; 
     MyEcalCluster(int iIeta, int iIphi, float iEt, float iCorr_et, float iEta, float iPhi) :
@@ -181,12 +187,12 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   HFTPTag_              (iConfig.getParameter<edm::InputTag>("HFTPTag")),
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
-  CorrectorTag_         (iConfig.getParameter<edm::InputTag>("corrector")),
-  Corrector2Tag_        (iConfig.getParameter<edm::InputTag>("corrector2")),
-  ECorrectorTag_        (iConfig.getParameter<edm::InputTag>("ecorrector")),
-  TrackResTag_          (iConfig.getParameter<edm::InputTag>("trackres")),
-  EleResTag_            (iConfig.getParameter<edm::InputTag>("eleres")),
-  PionResTag_           (iConfig.getParameter<edm::InputTag>("pionres")),
+  CorrectorTag_         (getFilePath(iConfig,"corrector")),
+  Corrector2Tag_        (getFilePath(iConfig,"corrector2")),
+  ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
+  TrackResTag_          (getFilePath(iConfig,"trackres")),
+  EleResTag_            (getFilePath(iConfig,"eleres")),
+  PionResTag_           (getFilePath(iConfig,"pionres")),
   trkPt_                (iConfig.getParameter<double>       ("trkPtCut")),
   metRate_              (iConfig.getParameter<bool>         ("metRate")),
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
@@ -203,11 +209,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fHcalInfoTree         (0)
 {
   //now do what ever other initialization is needed
-  corrector_  = new corrector(CorrectorTag_.label());
-  corrector2_ = new corrector(Corrector2Tag_.label());
-  ecorrector_ = new corrector(ECorrectorTag_.label(),1);
-  connector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppi.root",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
-  rawconnector_  = new combiner (PionResTag_.label(),EleResTag_.label(),TrackResTag_.label(),"puppiraw.root",etaCharged_,puppiPtCut_,vtxRes_);
+  corrector_  = new corrector(CorrectorTag_);
+  corrector2_ = new corrector(Corrector2Tag_);
+  ecorrector_ = new corrector(ECorrectorTag_,1);
+  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppi.root",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
+  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppiraw.root",etaCharged_,puppiPtCut_,vtxRes_);
   metanalyzer_   = new metanalyzer("MetFile.root");
   jetanalyzer_   = new jetanalyzer("JetFile.root");
   produces<PFOutputCollection>("TK");
@@ -219,15 +225,15 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("L1Calo");
   produces<PFOutputCollection>("L1PF");
   produces<PFOutputCollection>("L1Puppi");
-  TokGenPar_       = consumesCollector().mayConsume<reco::GenParticleCollection>( GenParTag_    );
-  TokL1TrackTPTag_ = consumesCollector().mayConsume<L1PFCollection>( L1TrackTag_  );
-  TokEcalTPTag_    = consumesCollector().mayConsume<L1PFCollection>( EcalTPTag_   );
-  TokHGEcalTPTag_  = consumesCollector().mayConsume<L1PFCollection>( HGEcalTPTag_ );
-  TokHcalTPTag_    = consumesCollector().mayConsume<L1PFCollection>( HcalTPTag_   );
-  TokHGHcalTPTag_  = consumesCollector().mayConsume<L1PFCollection>( HGHcalTPTag_ );
-  TokBHHcalTPTag_  = consumesCollector().mayConsume<L1PFCollection>( BHHcalTPTag_ );
-  TokHFTPTag_      = consumesCollector().mayConsume<L1PFCollection>( HFTPTag_     );
-  TokMuonTPTag_    = consumesCollector().mayConsume<l1t::MuonBxCollection>( MuonTPTag_  );
+  TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
+  TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
+  TokEcalTPTag_    = consumes<L1PFCollection>( EcalTPTag_   );
+  TokHGEcalTPTag_  = consumes<L1PFCollection>( HGEcalTPTag_ );
+  TokHcalTPTag_    = consumes<L1PFCollection>( HcalTPTag_   );
+  TokHGHcalTPTag_  = consumes<L1PFCollection>( HGHcalTPTag_ );
+  TokBHHcalTPTag_  = consumes<L1PFCollection>( BHHcalTPTag_ );
+  TokHFTPTag_      = consumes<L1PFCollection>( HFTPTag_     );
+  TokMuonTPTag_    = consumes<l1t::MuonBxCollection>( MuonTPTag_  );
 }
 
 NtupleProducer::~NtupleProducer()
