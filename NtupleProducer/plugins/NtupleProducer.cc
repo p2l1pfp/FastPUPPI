@@ -212,10 +212,15 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   corrector_  = new corrector(CorrectorTag_,11,fDebug);
   corrector2_ = new corrector(Corrector2Tag_,11,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
-  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppi.root",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
-  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,"puppiraw.root",etaCharged_,puppiPtCut_,vtxRes_);
-  metanalyzer_   = new metanalyzer("MetFile.root");
-  jetanalyzer_   = new jetanalyzer("JetFile.root");
+  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
+  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,vtxRes_);
+  if (fOutputName.empty()) {
+      metanalyzer_ = nullptr;
+      jetanalyzer_ = nullptr;
+  } else {
+      metanalyzer_ = new metanalyzer("MetFile.root");
+      jetanalyzer_ = new jetanalyzer("JetFile.root");
+  }
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
@@ -251,7 +256,7 @@ NtupleProducer::~NtupleProducer()
 void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //fOutputFile->cd();
-  fTotalEvents->Fill(1);  
+  if (!fOutputName.empty()) fTotalEvents->Fill(1);  
   using namespace edm;
 
   edm::Handle<reco::GenParticleCollection> hGenParProduct;
@@ -272,6 +277,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
       if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
       /// filling the tree    
+      if (fOutputName.empty()) continue;
       trkPx  = tk.px();
       trkPz  = tk.py();
       trkPy  = tk.pz();
@@ -359,6 +365,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if(ecal_clust_et > 0)  { 
 	lEcals.push_back(MyEcalCluster(it.iEta(), it.iPhi(), ecal_clust_et, ecal_corr_et, ecal_clust_eta, ecal_clust_phi));
       }
+      // fill tree
+      if (fOutputName.empty()) continue;
       std::vector<double> lGenVars;
       genMatch(lGenVars,1,double(it.caloEta()),double(it.caloPhi()),double(et),genParticles);
       ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0; ecal_dr = 0;
@@ -479,6 +487,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if (hcal_clust_et >= 1 || hcal_ecal_et >= 1) {
           rawconnector_->addCalo(connector_->makeCalo(double(hcal_clust_et),double(hcal_ecal_et),    double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi)));
       }
+      // fill tree
+      if (fOutputName.empty()) continue;
       if(hcal_genPt > 1. && zeroSuppress_) fHcalInfoTree->Fill();      
       if(!zeroSuppress_ && hcal_et > 1.)   fHcalInfoTree->Fill();
       nh++;
@@ -542,27 +552,31 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(ll1PFCands,  "L1PF"   ,iEvent);
   addPF(ll1PupCands, "L1Puppi",iEvent);
   
-  metanalyzer_->clear();
-  metanalyzer_->setZ(lTKCands,connector_->dZ());
-  metanalyzer_->setMETRecoil(2,lTKCands ,false);
-  metanalyzer_->setMETRecoil(0,lCands,false);
-  metanalyzer_->setMETRecoil(3,lRawCalo ,true);
-  metanalyzer_->setMETRecoil(1,lCorrCalo,true);
-  metanalyzer_->setMETRecoil(5,lPupCands,false);
-  metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
-  metanalyzer_->setGenMET(genParticles);
-  metanalyzer_->fill();
+  if (metanalyzer_) {
+      metanalyzer_->clear();
+      metanalyzer_->setZ(lTKCands,connector_->dZ());
+      metanalyzer_->setMETRecoil(2,lTKCands ,false);
+      metanalyzer_->setMETRecoil(0,lCands,false);
+      metanalyzer_->setMETRecoil(3,lRawCalo ,true);
+      metanalyzer_->setMETRecoil(1,lCorrCalo,true);
+      metanalyzer_->setMETRecoil(5,lPupCands,false);
+      metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
+      metanalyzer_->setGenMET(genParticles);
+      metanalyzer_->fill();
+  }
 
-  jetanalyzer_->clear();
-  jetanalyzer_->setZ(lTKCands,connector_->dZ());
-  jetanalyzer_->setGenJets(genParticles,1);
-  jetanalyzer_->setJets(lCands,0);
-  jetanalyzer_->setJets(lTKCands,2);
-  jetanalyzer_->setJets(lTKVtxCands,3);
-  jetanalyzer_->setJets(lRawCalo ,4);
-  jetanalyzer_->setJets(lCorrCalo,5);
-  jetanalyzer_->setJets(lPupCands,6);
-  jetanalyzer_->fill();
+  if (jetanalyzer_) {
+      jetanalyzer_->clear();
+      jetanalyzer_->setZ(lTKCands,connector_->dZ());
+      jetanalyzer_->setGenJets(genParticles,1);
+      jetanalyzer_->setJets(lCands,0);
+      jetanalyzer_->setJets(lTKCands,2);
+      jetanalyzer_->setJets(lTKVtxCands,3);
+      jetanalyzer_->setJets(lRawCalo ,4);
+      jetanalyzer_->setJets(lCorrCalo,5);
+      jetanalyzer_->setJets(lPupCands,6);
+      jetanalyzer_->fill();
+  }
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
@@ -675,6 +689,7 @@ void NtupleProducer::simpleCluster(std::vector<TLorentzVector> &iClusters,double
 void 
 NtupleProducer::beginJob()
 {
+  if (fOutputName.empty()) return;
   //
   // Create output file, trees, and histograms
   //
@@ -747,6 +762,7 @@ NtupleProducer::beginJob()
 // ------------ method called once each job just after ending the event loop  ------------
 void 
 NtupleProducer::endJob() {
+  if (fOutputName.empty()) return;
   //
   // Save to ROOT file
   //

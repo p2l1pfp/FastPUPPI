@@ -51,12 +51,13 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  trackres    = cms.string("FastPUPPI/NtupleProducer/data/tkres.root"),
                                  eleres      = cms.string("FastPUPPI/NtupleProducer/data/eres.root"),
                                  pionres     = cms.string("FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(4.0),
+                                 trkPtCut    = cms.double(2.0),
                                  metRate     = cms.bool(False),
                                  etaCharged  = cms.double(2.5),
                                  puppiPtCut  = cms.double(4.0),
                                  vtxRes      = cms.double(0.333),
                                  debug       = cms.untracked.int32(1),
+                                 outputName  = cms.untracked.string("ntuple.root"),
                                  )
 
 
@@ -65,6 +66,8 @@ process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+proc
 process.p = cms.Path(process.l1Puppi * process.InfoOut )
 
 if False: # turn on CMSSW downstream processing and output
+    process.InfoOut.outputName = ""; # turn off Ntuples
+
     from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
     process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')
     process.ak4L1Calo    = ak4PFJets.clone(src = 'InfoOut:Calo')
