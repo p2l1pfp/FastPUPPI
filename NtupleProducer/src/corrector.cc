@@ -2,31 +2,45 @@
 #include "../interface/L1TPFUtils.h"
 #include <iostream>
 #include <sstream>
+#include <cstdio>
+#include <cstdlib>
 #include <TFile.h>
+#include <TKey.h>
+#include "FWCore/Utilities/interface/CPUTimer.h"
+#include <unordered_map>
 
-corrector::corrector(const std::string iFile,int iNFrac) {
+corrector::corrector(const std::string iFile, int iNFrac, int debug) {
   TFile *lFile = new TFile(iFile.c_str());
   fNEta  = l1tpf::towerNEta();
   fNPhi  = l1tpf::towerNPhi(1);
   fNFrac = iNFrac;
   fGraph = new TGraph***[fNEta];
-  lFile->Print();
+  if (debug) lFile->Print();
+  edm::CPUTimer timer;
+  timer.start();
+  char buff[1023];
+  std::unordered_map<std::string,TGraph *> graphs;
+  TKey *key;
+  TIter nextkey(lFile->GetListOfKeys());
+  while ((key = (TKey *) nextkey())) {
+      if (strncmp(key->GetName(), "eta_", 4) == 0) {
+          graphs[key->GetName()] = (TGraph*) key->ReadObj();
+      }
+  }
+  unsigned int ngraphs = 0;
   for(int i0 = 0; i0 < fNEta; i0++) { 
     fGraph[i0] = new TGraph**[fNPhi];
     for(int i1 = 0; i1 < fNPhi; i1++) { 
       fGraph[i0][i1] = new TGraph*[fNFrac];
       for(int i2 = 0; i2 < fNFrac; i2++) { 
-	std::stringstream pSS; 
-	pSS << "eta_";
-	int pEta = i0;
-	if(iNFrac > 1) pEta = i0-fNEta/2;
-	pSS << pEta;
-	if(iNFrac > 1) pSS << "phi_" << (i1+1);
-	pSS << "_frac_" << i2;
-	fGraph[i0][i1][i2] = (TGraph*) lFile->FindObjectAny(pSS.str().c_str());
+        if (iNFrac > 1) snprintf(buff, 1022, "eta_%dphi_%d_frac_%d", i0-fNEta/2, i1+1, i2);
+        else            snprintf(buff, 1022, "eta_%d_frac_%d", i0, i2);
+        fGraph[i0][i1][i2] = graphs[buff]; 
       }
     }
   }
+  timer.stop();
+  if (debug) std::cout << "Read " << ngraphs << " graphs from " << iFile << " in " << timer.realTime() << " s"  << std::endl; 
 }
 double corrector::correct(double iHcal,double iEcal,int iEta,int iPhi) { 
   if(fNFrac == 1  && iEcal       < 0.5 ) return 0;

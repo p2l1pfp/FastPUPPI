@@ -11,7 +11,7 @@
 
 class jetanalyzer { 
 public:
-  jetanalyzer(std::string iFile);
+  jetanalyzer(std::string iFile, int debug=0);
   void setZ(std::vector<combiner::Particle> &iParticle,double iDZ);
   void setJets(std::vector<combiner::Particle> &iParticles,int iIndex);
   void setGenJets(const reco::GenParticleCollection &iGenParticles,int iIndex);
@@ -29,5 +29,6 @@ private:
   int     fNVars;
   double  *fVar;
   std::vector<fastjet::PseudoJet> fGenJets;
+  int     fDebug;
 };
 #endif

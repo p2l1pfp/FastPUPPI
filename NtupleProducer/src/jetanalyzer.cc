@@ -7,7 +7,7 @@
 #include <fastjet/ClusterSequenceArea.hh>
 #include <fastjet/JetDefinition.hh>
 
-jetanalyzer::jetanalyzer(std::string iFile) {
+jetanalyzer::jetanalyzer(std::string iFile, int debug) {
   fFile = new TFile(iFile.c_str(),"RECREATE");
   fTree = new TTree("jet","jet");
   //Reco
@@ -53,6 +53,8 @@ jetanalyzer::jetanalyzer(std::string iFile) {
   for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("calo"+lVec[i0]).c_str(),&fVar[i0+lIndex],("calo"+lVec[i0]+"/D").c_str());
   lIndex += lVec.size();
   for(unsigned int i0 = 0; i0 < lVec.size(); i0++) fTree->Branch(("pup"+lVec[i0]).c_str(),&fVar[i0+lIndex],("pup"+lVec[i0]+"/D").c_str());
+  // debug
+  fDebug = debug;
 }
 void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
@@ -77,7 +79,7 @@ void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
 }
 void jetanalyzer::setJets(std::vector<combiner::Particle> &iParticles,int iIndex) {
   int lIndex = fBase+iIndex*fSize;
-  std::cout << "---> " << iIndex << " -- " << fSize << " -- " << lIndex << std::endl;
+  if (fDebug) std::cout << "---> " << iIndex << " -- " << fSize << " -- " << lIndex << std::endl;
   std::vector < fastjet::PseudoJet > particles;
   for(unsigned   int i0 = 0; i0 < iParticles.size(); i0++) {
     if(iParticles[i0].pt() < 0.1 || iParticles[i0].pdgId() == 4) continue;
