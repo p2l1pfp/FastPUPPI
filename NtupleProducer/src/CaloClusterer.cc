@@ -40,52 +40,17 @@ l1pf_calo::Stage1Grid::Stage1Grid() :
             }
         }
     } 
-    // consistency check 1: check that find_cell works
-    for (float teta = 0; teta <= 5.0; teta += 0.02) {
-        for (float tphi = -M_PI; tphi <= M_PI; tphi += 0.02) {
-            find_cell(+teta, tphi);
-            find_cell(-teta, tphi);
-        }
-    }
-    // consistency check: neighbours for cells at small abs(ieta)
-    for (int aie = 1; aie < ietaCoarse_-1; ++aie) {
-        for (int is = -1; is <= +1; is += 2) {
-            int ie = aie*is;
-            for (int iph = 1; iph <= nPhi_; ++iph) {
-                int icell = ifind_cell(ie,iph);
-                int nvalid = 0;
-                for (int in = 0; in < 8; ++in) {
-                    int ineigh = neighbour(icell, in);
-                    if (ineigh != -1) {
-                        if ((eta(icell) == eta(ineigh)) ||
-                                (std::abs(std::abs(eta(icell)-eta(ineigh)) - 0.5*(etaWidth(icell)+etaWidth(ineigh))) < 0.01)) {
-                            if ((phi(icell) == phi(ineigh)) ||
-                                    (std::abs(std::abs(deltaPhi(phi(icell),phi(ineigh))) - 0.5*(phiWidth(icell)+phiWidth(ineigh))) < 0.01)) {
-                                nvalid++;
-                            } else {    
-                                printf("Error in neighbour cell for ieta %+3d iphi %2d  eta %+7.4f +- %.4f phi %+7.4f +- %.4f, got neigh ieta = %+3d iphi %2d which has eta %+7.4f +- %.4f phi %+7.4f +- %.4f\n",
-                                        ie, iph, eta(icell), etaWidth(icell), phi(icell), phiWidth(icell), 
-                                        ieta(ineigh), iphi(ineigh), eta(ineigh), etaWidth(ineigh), phi(ineigh), phiWidth(ineigh));
-                            }
-                        } else {    
-                            printf("Error in neighbour cell for ieta %+3d iphi %2d  eta %+7.4f +- %.4f phi %+7.4f +- %.4f, got neigh ieta = %+3d iphi %2d which has eta %+7.4f +- %.4f phi %+7.4f +- %.4f\n",
-                                    ie, iph, eta(icell), etaWidth(icell), phi(icell), phiWidth(icell), 
-                                    ieta(ineigh), iphi(ineigh), eta(ineigh), etaWidth(ineigh), phi(ineigh), phiWidth(ineigh));
-                        }
-                    } else {
-                        printf("Mismatch cell ieta %+3d iphi %2d neigh %d is null\n", ie,iph,in);
-                    }
-                }
-            }
-        }
-    }
+    //// consistency check 1: check that find_cell works
+    //for (float teta = 0; teta <= 5.0; teta += 0.02) {
+    //    for (float tphi = -M_PI; tphi <= M_PI; tphi += 0.02) {
+    //        find_cell(+teta, tphi);
+    //        find_cell(-teta, tphi);
+    //    }
+    //}
 }
 
 int l1pf_calo::Stage1Grid::find_cell(float eta, float phi) const {
     int ieta = (eta != 0) ? std::distance(towerEtas_, std::lower_bound(towerEtas_, towerEtas_+nEta_, std::abs(eta))) : 1;
-    if (!(ieta > 0 && ieta < nEta_)) {
-        printf("Error in finding cell for eta %+7.4f phi %+7.4f, got ieta = %+3d which is not valid\n", eta, phi, ieta);
-    }
     assert(ieta > 0 && ieta < nEta_);
     if (ieta > nEta_) ieta = nEta_;
     if (eta < 0) ieta = -ieta;
@@ -97,18 +62,18 @@ int l1pf_calo::Stage1Grid::find_cell(float eta, float phi) const {
     if      (std::abs(ieta) >= ietaVeryCoarse_) iphi -= (iphi%4);
     else if (std::abs(ieta) >= ietaCoarse_)     iphi -= (iphi%2);
     iphi += 1;
-    if (!valid_ieta_iphi(ieta,iphi)) {
-        printf("Error in finding cell for eta %+7.4f phi %+7.4f, got ieta = %+3d iphi %2d which is not valid\n",
-            eta, phi, ieta, iphi);
-    }
+    //if (!valid_ieta_iphi(ieta,iphi)) {
+    //    printf("Error in finding cell for eta %+7.4f phi %+7.4f, got ieta = %+3d iphi %2d which is not valid\n",
+    //        eta, phi, ieta, iphi);
+    //}
     assert(valid_ieta_iphi(ieta,iphi));
     int icell = ifind_cell(ieta,iphi);
     assert(icell != -1);
 
-    if (std::abs(eta - eta_[icell]) > 0.501*etaWidth_[icell] || std::abs(deltaPhi(phi, phi_[icell])) > 0.501*phiWidth_[icell]) {
-        printf("Mismatch in finding cell for eta %+7.4f phi %+7.4f, got ieta = %+3d iphi %2d which has eta %+7.4f +- %.4f phi %+7.4f +- %.4f ; deta = %+7.4f dphi = %+7.4f\n",
-            eta, phi, ieta, iphi, eta_[icell], etaWidth_[icell], phi_[icell], phiWidth_[icell], eta - eta_[icell], deltaPhi(phi, phi_[icell]));
-    }
+    //if (std::abs(eta - eta_[icell]) > 0.501*etaWidth_[icell] || std::abs(deltaPhi(phi, phi_[icell])) > 0.501*phiWidth_[icell]) {
+    //    printf("Mismatch in finding cell for eta %+7.4f phi %+7.4f, got ieta = %+3d iphi %2d which has eta %+7.4f +- %.4f phi %+7.4f +- %.4f ; deta = %+7.4f dphi = %+7.4f\n",
+    //        eta, phi, ieta, iphi, eta_[icell], etaWidth_[icell], phi_[icell], phiWidth_[icell], eta - eta_[icell], deltaPhi(phi, phi_[icell]));
+    //}
     //assert(std::abs(eta - eta_[icell]) <= 0.5*etaWidth_[icell]);  
     //assert(std::abs(deltaPhi(phi, phi_[icell])) <= 0.5*phiWidth_[icell]);  
     return icell;
@@ -131,9 +96,6 @@ int l1pf_calo::Stage1Grid::imove(int ieta, int iphi, int deta, int dphi) {
     };
     if (!valid_ieta_iphi(ie,iph)) return -1;
     int icell = ifind_cell(ie,iph);
-    if ((ie == ieta && iph == iphi)) {
-        printf("Error bogus move %+3d %2d + (%+1d %+1d) =  %+3d %2d \n", ieta, iphi, deta, dphi, ie, iph);
-    }
     assert(!(ie == ieta && iph == iphi));
     assert(icell != -1);
     assert(icell != ifind_cell(ieta,iphi));
