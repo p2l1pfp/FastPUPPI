@@ -40,6 +40,7 @@
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
+#include "FastPUPPI/NtupleProducer/interface/CaloClusterer.h"
 
 #include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
 #include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
@@ -101,14 +102,13 @@ private:
     int ieta, iphi; float et, corr_et, eta, phi; 
     MyEcalCluster(int iIeta, int iIphi, float iEt, float iCorr_et, float iEta, float iPhi) :
         ieta(iIeta), iphi(iIphi), et(iEt), corr_et(iCorr_et), eta(iEta), phi(iPhi) {}
+    bool operator<(const MyEcalCluster &other) const { return eta < other.eta; }
   };
 
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
   void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
-  TLorentzVector getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma=2,double iENoise=0.2);
-  void simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma=2,double iENoise=0.2);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
   void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
 
@@ -136,6 +136,9 @@ private:
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
+  // new calo clusterer (float)
+  l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
+  l1pf_calo::SimpleCaloLinker caloLinker_;
   // debug flag
   int fDebug;
      
@@ -156,7 +159,7 @@ private:
   float ecal_subdet, ecal_ieta, ecal_iphi, ecal_curTwrEta, ecal_curTwrPhi, ecal_et, ecal_num,ecal_dr;
   float hcal_subdet, hcal_ieta, hcal_iphi, hcal_TwrR, hcal_et, hcal_num, hcal_ecal_et,hcal_ecal_etcorr,hcal_ecal_eta,hcal_ecal_phi,hcal_dr;
   float ecal_clust_et,ecal_clust_eta,ecal_clust_phi,ecal_corr_et;
-  float hcal_clust_et,hcal_clust_eta,hcal_clust_phi,hcal_corr_et,hcal_corr_emf;
+  float hcal_clust_et,hcal_clust_eta,hcal_clust_phi,hcal_clust_emf,hcal_corr_et,hcal_corr_emf;
   float ecal_genPt, ecal_genEta, ecal_genPhi, ecal_genId;
   float hcal_genPt, hcal_genEta, hcal_genPhi, hcal_genId;
   //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
@@ -200,6 +203,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
+  ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
+  hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
+  caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
@@ -226,6 +232,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
   produces<PFOutputCollection>("Puppi");
+  produces<PFOutputCollection>("NewCalo");
   produces<PFOutputCollection>("L1TK");
   produces<PFOutputCollection>("L1Calo");
   produces<PFOutputCollection>("L1PF");
@@ -266,6 +273,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   connector_->clear();
   rawconnector_->clear();
   l1regions_.clear(); 
+  ecalClusterer_.clear();
+  hcalClusterer_.clear();
   /// ----------------TRACK INFO-------------------
   edm::Handle<std::vector<l1tpf::Particle>> l1tks;
   iEvent.getByLabel(L1TrackTag_, l1tks);
@@ -326,69 +335,58 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
 
   /// ----------------ECAL INFO-------------------
-  std::vector<MyEcalCluster> lEcals;  
-  double lEEt[l1tpf::towerNEta()][73];
-  double lHEt[l1tpf::towerNEta()][73];
-  for(int i0 = 0; i0 < l1tpf::towerNEta(); i0++) { for(int i1 = 0; i1 <l1tpf::towerNPhi(1)+1; i1++) {lEEt[i0][i1]=0; lHEt[i0][i1] = 0;}}
   edm::Handle<L1PFCollection> classicecals;
   iEvent.getByToken(TokEcalTPTag_, classicecals);
   edm::Handle<L1PFCollection> hgecals;
   iEvent.getByToken(TokHGEcalTPTag_, hgecals);
-  L1PFCollection ecals;
-  for (const l1tpf::Particle & it : *classicecals) ecals.push_back(it); 
-  for (const l1tpf::Particle & it : *hgecals     ) ecals.push_back(it); 
-  for (const l1tpf::Particle & it : ecals) {
-     lEEt[it.aEta()][it.aPhi()] = it.pt();
-  }
-  std::vector<TLorentzVector> pClust;
-  int ne = 0;
-  
-  for (const l1tpf::Particle & it : ecals) {
-      double et = it.pt();
-      ecal_subdet = 0;// it->id().subDet(); // FIXME: missing in Particle class
-      ecal_ieta = it.iEta();
-      ecal_iphi = it.iPhi();
-      ecal_et = et;
-      ecal_curTwrEta = it.caloEta();
-      ecal_curTwrPhi = it.caloPhi();
-      ecal_num = ne;
-      simpleCluster(pClust,it.aEta(),it.aPhi(),lEEt);
-      // FIXME Gio: shouldn't we continue to the next TP here if we don't find a cluster?
-      // Phil : Yes, except this ntuple also contains debug info so we can look at energy lost from the cluster (You are right we don't use it)
-      ecal_clust_et=0,ecal_clust_eta=0,ecal_clust_phi =0;
-      if(pClust.size() > 0) ecal_clust_et =pClust[0].Pt();
-      if(pClust.size() > 0) ecal_clust_eta=pClust[0].Eta();
-      if(pClust.size() > 0) ecal_clust_phi=pClust[0].Phi();
-      pClust.clear();
-      ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta,ecal_iphi);
-      //if(ecal_clust_et > 0) std::cout << "=ECalo=> " << ecal_clust_et << "---> " << ecal_corr_et << " ---> " << ecal_et << " -- " << ecal_clust_eta << " -- " << ecal_clust_phi << std::endl;
-      if(ecal_clust_et > 0)  { 
-	lEcals.push_back(MyEcalCluster(it.iEta(), it.iPhi(), ecal_clust_et, ecal_corr_et, ecal_clust_eta, ecal_clust_phi));
+  for (const l1tpf::Particle & it : *classicecals) ecalClusterer_.add(it); 
+  for (const l1tpf::Particle & it : *hgecals     ) ecalClusterer_.add(it); 
+
+  ecalClusterer_.run();
+  ///=== FIXME calibration goes here ====
+  //ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta,ecal_iphi);
+  // very naive calibration here
+  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
+  //ecalClusteter_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+  //      return c.et/(1+0.20*(std::abs(c.eta)<3)-0.15*(std::abs(c.eta)<1.5)); } );
+
+  // write debug output tree
+  if (!fOutputName.empty()) {
+      unsigned int ne = 0;
+      const auto & ecraw = ecalClusterer_.raw();
+      const auto & ecals = ecalClusterer_.clusters();
+      for (unsigned int i = 0, ncells = ecals.size(); i < ncells; ++i) {
+          if (ecals[i].et == 0) continue; 
+          ecal_num = ne++;
+          ecal_et = ecraw[i];
+          ecal_ieta = ecals.ieta(i);
+          ecal_iphi = ecals.iphi(i);
+          ecal_curTwrEta = ecals.eta(i);
+          ecal_curTwrPhi = ecals.phi(i);
+          ecal_clust_et = ecals[i].et;
+          ecal_clust_eta = ecals[i].eta;
+          ecal_clust_phi = ecals[i].phi;
+          ecal_corr_et = ecals[i].et_corr;
+
+          std::vector<double> lGenVars;
+          genMatch(lGenVars,1,ecal_clust_eta,ecal_clust_phi,ecal_clust_et,genParticles);
+          ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0; ecal_dr = 0;
+          if(lGenVars.size() > 3) { 
+              ecal_genPt   = float(lGenVars[0]);
+              ecal_genEta  = float(lGenVars[1]);
+              ecal_genPhi  = float(lGenVars[2]);
+              ecal_genId   = float(lGenVars[3]);
+              ecal_dr = reco::deltaR( ecal_genEta, ecal_genPhi, ecal_clust_eta,ecal_clust_phi );
+          }
+          if (zeroSuppress_) {
+              if(ecal_genPt > 1.) fEcalInfoTree->Fill();      
+          } else {
+              if(ecal_et > 1.) fEcalInfoTree->Fill();      
+          }
       }
-      // fill tree
-      if (fOutputName.empty()) continue;
-      std::vector<double> lGenVars;
-      genMatch(lGenVars,1,double(it.caloEta()),double(it.caloPhi()),double(et),genParticles);
-      ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0; ecal_dr = 0;
-      if(lGenVars.size() > 3) { 
-      	ecal_genPt   = float(lGenVars[0]);
-      	ecal_genEta  = float(lGenVars[1]);
-      	ecal_genPhi  = float(lGenVars[2]);
-      	ecal_genId   = float(lGenVars[3]);
-	ecal_dr = reco::deltaR( ecal_genEta, ecal_genPhi, ecal_clust_eta,ecal_clust_phi );
-      }
-      if(ecal_genPt > 1. && zeroSuppress_) fEcalInfoTree->Fill();      
-      //if(!zeroSuppress_) fEcalInfoTree->Fill();
-      if(!zeroSuppress_ && ecal_et > 1.) fEcalInfoTree->Fill();
-      ne++;
-      // if (ne > 20) break;
   }
+
   // / ----------------HCAL INFO-------------------
-  // / Stealing some other code!
-  // / https://github.com/cms-sw/cmssw/blob/0397259dd747cee94b68928f17976224c037057a/L1Trigger/L1TNtuples/src/L1AnalysisCaloTP.cc#L40
-  // / 72 in phi and 56 in eta = 4032
-  // / 144 TP is HF: 4 (in eta) * 18 (in phi) * 2 (sides)
-  // / Hcal TPs
   edm::Handle<L1PFCollection> classichcals;
   iEvent.getByToken(TokHcalTPTag_, classichcals);
   edm::Handle<L1PFCollection> hghcals;
@@ -397,104 +395,70 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByToken(TokBHHcalTPTag_, bhhcals);
   edm::Handle<L1PFCollection> hfhcals;
   iEvent.getByToken(TokHFTPTag_, hfhcals);
-  L1PFCollection hcals;
-  for (const l1tpf::Particle & it : *classichcals) hcals.push_back(it); 
-  for (const l1tpf::Particle & it : *hfhcals     ) hcals.push_back(it); 
-  for (const l1tpf::Particle & it : *hghcals     ) {
-    //combine duplicates for towers we use
-    bool lFound = false;
-    for (l1tpf::Particle & it2 : hcals     ) {
-      if(it2.eta() == it.eta() && it2.phi() == it.phi() && it2.pt() == it.pt()) {std::cout << "copied!!!!!!!!!!!!!!!!!" << std::endl; break;}
-      if(it2.iEta() != it.iEta() || it2.iPhi() != it.iPhi()) continue;
-      TLorentzVector lVec = it.tp4();
-      lVec += it2.tp4();
-      it2.setPtEtaPhiM(lVec.Pt(),lVec.Eta(),lVec.Phi(),lVec.M());
-      lFound = true; 
-      break;
-      }
-    if(!lFound) hcals.push_back(it);
-  } 
-  for (const l1tpf::Particle & it : *bhhcals     ) { 
-    //Flatten the BH to the HG
-    bool lFound = false;
-    for (l1tpf::Particle & it2 : hcals) { 
-      if(it2.iPhi() == it.iPhi() && it2.iEta() == it.iEta()) { 
-	TLorentzVector lVec = it.tp4();
-	lVec += it2.tp4();
-	it2.setPtEtaPhiM(lVec.Pt(),lVec.Eta(),lVec.Phi(),lVec.M());
-	lFound = true; 
-	break;
-      }
-    }
-    if(!lFound) hcals.push_back(it);
-  }
-  for (const l1tpf::Particle & it : hcals) lHEt[it.aEta()][it.aPhi()] += it.pt();
+  for (const l1tpf::Particle & it : *classichcals) hcalClusterer_.add(it); 
+  for (const l1tpf::Particle & it : *hfhcals     ) hcalClusterer_.add(it); 
+  for (const l1tpf::Particle & it : *hghcals     ) hcalClusterer_.add(it);
+  for (const l1tpf::Particle & it : *bhhcals     ) hcalClusterer_.add(it); 
+  hcalClusterer_.run();
 
-  unsigned nh = 0;
-  for (const l1tpf::Particle & it : hcals) {
-      hcal_subdet = 0; // it->id().subdet(); // FIXME: missing in Particle class
-      hcal_ieta   = it.iEta();
-      hcal_iphi   = it.iPhi();
-      hcal_TwrR   = 0; // towerR; // FIXME: missing in Particle class
-      hcal_num    = nh;
-      hcal_et     = it.pt();
-      simpleCluster(pClust,it.aEta(),it.aPhi(),lHEt); 
-      // FIXME GP: shouldn't there be a iEta < 31 as for ECAL, since lHEt is not fixed outside it?   
-      //PH : If I recall by construction it should be limited, but let me follow up. 
-      // FIXME Gio: shouldn't we continue to the next TP here if we don't find a cluster?
-      // PH : Unfortunately the code is written such that ecal is dealt with here, so a continue will ignore H/E = 0 clusters. I agree its confusing.
-      hcal_clust_et=0,hcal_clust_eta=0,hcal_clust_phi=0;
-      if(pClust.size() > 0) hcal_clust_et =pClust[0].Pt();
-      if(pClust.size() > 0) hcal_clust_eta=pClust[0].Eta();
-      if(pClust.size() > 0) hcal_clust_phi=pClust[0].Phi();
-      pClust.clear();
-      std::vector<double> lGenVars;
-      genMatch(lGenVars,1,double(hcal_clust_eta),double(hcal_clust_phi),double(it.pt()),genParticles);
-      hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0; hcal_dr=0;
-      if(lGenVars.size() > 3) { 
-      	hcal_genPt   = float(lGenVars[0]);
-      	hcal_genEta  = float(lGenVars[1]);
-      	hcal_genPhi  = float(lGenVars[2]);
-      	hcal_genId   = float(lGenVars[3]);
-	hcal_dr = reco::deltaR( hcal_genEta, hcal_genPhi, hcal_clust_eta,hcal_clust_phi );
+  // Calorimeter linking
+  caloLinker_.run();
+  ///=== FIXME calibration goes here ====
+  /// if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+  /// if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
+  /// if(hcal_corr_et  < 0) hcal_corr_et   = 0;
+  /// if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
+  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
+
+  // write debug output tree
+  if (!fOutputName.empty()) {
+      const auto & hcraw = hcalClusterer_.raw();
+      const auto & clusters = caloLinker_.clusters();
+      unsigned int nh = 0;
+      for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
+          if (clusters[i].et == 0) continue; 
+          hcal_num = nh++;
+          hcal_et = clusters[i].hcal_et;
+          hcal_ecal_et = clusters[i].ecal_et;
+          hcal_ecal_eta = -999; // FIXME missing
+          hcal_ecal_phi = -999; // FIXME missing
+          hcal_ieta = clusters.ieta(i);
+          hcal_iphi = clusters.iphi(i);
+          hcal_clust_et  = clusters[i].et;  // all these are of the combined
+          hcal_clust_eta = clusters[i].eta; // cluster (ecal+hcal)
+          hcal_clust_phi = clusters[i].phi;
+          hcal_clust_emf = clusters[i].ecal_et / clusters[i].et; // note: this is raw EMF
+          hcal_corr_et  = clusters[i].et_corr;
+          hcal_corr_emf = -999; // FIXME
+          std::vector<double> lGenVars;
+          genMatch(lGenVars,1,hcal_clust_eta,hcal_clust_phi,hcal_clust_et,genParticles);
+          hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0; hcal_dr = 0;
+          if(lGenVars.size() > 3) { 
+              hcal_genPt   = float(lGenVars[0]);
+              hcal_genEta  = float(lGenVars[1]);
+              hcal_genPhi  = float(lGenVars[2]);
+              hcal_genId   = float(lGenVars[3]);
+              hcal_dr = reco::deltaR( hcal_genEta, hcal_genPhi, hcal_clust_eta,hcal_clust_phi );
+          }
+          if (zeroSuppress_) {
+              if(hcal_genPt > 1.) fHcalInfoTree->Fill();      
+          } else {
+              if(hcal_et > 1.) fHcalInfoTree->Fill();      
+          }
       }
-      //Linking Ecal and Hcal by Delta 1 in iEta iPhi
-      bool isZero = true;  if(it.pt() > 2. * 0.5) isZero = false;
-      bool link   = false; if(!isZero && hcal_clust_et > 0) link  = true;
-      hcal_ecal_et   = 0; hcal_ecal_etcorr = 0; hcal_ecal_eta = 0; hcal_ecal_phi = 0; 
-      for(unsigned int i1 = 0; i1 < lEcals.size(); i1++) { 
-	if(!isZero && !link) continue; //Avoid double counting ecal
-	if( isZero && (it.iEta() != lEcals[i1].eta || it.iPhi() != lEcals[i1].phi)) continue;
-      	if(abs(it.iEta()-lEcals[i1].ieta) > 1) continue;
-	int pDPhi = abs(it.iPhi()-lEcals[i1].iphi); if(pDPhi > l1tpf::towerNPhi(it.iEta())-pDPhi) pDPhi =   l1tpf::towerNPhi(it.iEta())-pDPhi;
-      	if(abs(pDPhi) > 1) continue;
-	if(lEcals[i1].et < 0.2) continue;
-      	hcal_ecal_et     = lEcals[i1].et;
-      	hcal_ecal_etcorr = lEcals[i1].corr_et;
-      	hcal_ecal_eta    = lEcals[i1].eta;
-      	hcal_ecal_phi    = lEcals[i1].phi;
-      	break;
-      }
-      hcal_corr_et = 0;
-      if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
-      if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
-      if(hcal_corr_et  < 0) hcal_corr_et   = 0;
-      if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
-      if (hcal_corr_et >= 1 || hcal_ecal_etcorr >= 1) {
-          l1tpf::Particle calo = connector_->makeCalo(double(hcal_corr_et) ,double(hcal_ecal_etcorr),double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi));
-          connector_->addCalo(calo);
-          l1regions_.addCalo(calo); 
-      }
-      if (hcal_clust_et >= 1 || hcal_ecal_et >= 1) {
-          rawconnector_->addCalo(connector_->makeCalo(double(hcal_clust_et),double(hcal_ecal_et),    double(hcal_clust_eta),double(hcal_clust_phi),double(hcal_ecal_eta),double(hcal_ecal_phi)));
-      }
-      // fill tree
-      if (fOutputName.empty()) continue;
-      if(hcal_genPt > 1. && zeroSuppress_) fHcalInfoTree->Fill();      
-      if(!zeroSuppress_ && hcal_et > 1.)   fHcalInfoTree->Fill();
-      nh++;
-      if (nh > 99999) break;
   }
+
+  // Now feed calo into PF
+  std::vector<l1tpf::Particle> RawCaloCands = caloLinker_.fetch(false);
+  std::vector<l1tpf::Particle> CaloCands    = caloLinker_.fetch(true);
+  for (const l1tpf::Particle & calo : caloLinker_.fetch()) {
+      connector_->addCalo(calo);
+      l1regions_.addCalo(calo); 
+  }
+  for (const l1tpf::Particle & calo : RawCaloCands) {
+      rawconnector_->addCalo(calo);
+  }
+
   std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
   std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
   connector_->link(metRate_);
@@ -628,64 +592,7 @@ void NtupleProducer::genMatch(std::vector<double> &iGenVars,int iType,double iEt
   if(lVec.Pt() > 0) iGenVars.push_back(lVec.Phi());
   if(lVec.Pt() > 0) iGenVars.push_back(lId);
 }
-//3x3 clusterizer with potential to grow clusters commented out
-TLorentzVector NtupleProducer::getVector(double iPt[][73],int iEta,int iPhi,int iEta0,int iPhi0,double iNSigma,double iENoise) { //iEtaC,iPhiC
-  double lPtTot = 0;
-  std::vector<std::pair<int,int> > lGrow;
-  for(int i0=-1; i0 < 2; i0++) {
-    for(int i1=-1; i1 < 2; i1++) {
-      if(i0 == 0 && i1 == 0) continue;
-      if(iEta+i0 < 0 || iEta+i0 > l1tpf::towerNEta()) continue; 
-      int pPhi = iPhi+i1;
-      if(pPhi < 0)  pPhi=l1tpf::towerNPhi(iEta+i0)+pPhi;
-      if(pPhi > l1tpf::towerNPhi(iEta+i0)) pPhi=pPhi-l1tpf::towerNPhi(iEta+i0);
-      if(( i1+i0 > -1 && i1 > -1) && iPt[iEta][iPhi] <  iPt[iEta+i0][pPhi]) lPtTot += iPt[iEta+i0][pPhi];
-      if(!(i1+i0 > -1 && i1 > -1) && iPt[iEta][iPhi] <= iPt[iEta+i0][pPhi]) lPtTot += iPt[iEta+i0][pPhi];
-      /*
-      if(( i1+i0 > -1 && i1 > -1) && iPt[iEta][iPhi] <  iPt[iEta+i0][iPhi+i1]) continue;
-      if(!(i1+i0 > -1 && i1 > -1) && iPt[iEta][iPhi] <= iPt[iEta+i0][iPhi+i1]) continue;
-      double lDEta0 = fabs(iEtaC-iEta);
-      double lDPhi0 = fabs(iPhiC-iPhi);
-      double lDEta1 = fabs(iEtaC-iEta-i0);
-      double lDPhi1 = fabs(iPhiC-iPhi-i1);
-      if(sqrt(lDEta0*lEta0+lDPhi0*lDPhi0) > sqrt(lDEta1*lEta1+lDPhi1*lDPhi1)) continue;
-      if(sqrt(lDEta1*lEta1+lDPhi1*lDPhi1) > fDistance) continue;
-      lGrow.push_back(std::pair<int,int>(iEta+i0,iPhi+i1));
-      */
-    }
-  }      
-  double lPt = iPt[iEta][iPhi];
-  if(lPtTot >  iNSigma * iENoise && !(iEta0 == iEta && iPhi0 == iPhi)) lPt = iPt[iEta0][iPhi0]/lPtTot * lPt;
-  if(lPtTot >  iNSigma * iENoise &&  iEta0 == iEta && iPhi0 == iPhi  ) lPt = 0;
-  TLorentzVector lVec;
-  lVec.SetPtEtaPhiM(lPt,l1tpf::towerEta(l1tpf::translateAEta(iEta,true)),l1tpf::towerPhi(l1tpf::translateAEta(iEta,true),l1tpf::translateAPhi(iPhi,true)),0);
-  //if(lPt > 0) for(unsigned int i0 = 0; i0 < lGrow.size(); i0++) { lVec += getVector(iPt,lGrow[i0].first,lGrow[i0].second,iEta,iPhi,iEta,iPhiC);}
-  return lVec;
-}
 
-//--- Simple Clustering Start with Local maxima (in 3x3) keep adding neighbors 2sigma above threshold require bottom left to be equal or greater (to avoid points with the same value)
-void NtupleProducer::simpleCluster(std::vector<TLorentzVector> &iClusters,double  iEta,double iPhi,double iPt[][73],double iNSigma,double iENoise) { 
-  for(int i0 = 0; i0 < l1tpf::towerNEta()-1; i0++) { 
-    for(int i1 = 0; i1 < l1tpf::towerNPhi(iEta); i1++) { 
-      if(i0 != iEta || i1 != iPhi) continue;
-      if (iPt[i0][i1] < iNSigma * iENoise)        continue;
-      //Max requirement
-      TLorentzVector pVec = getVector(iPt,i0,i1,i0,i1,iNSigma,iENoise);
-      if(pVec.Pt() == 0) continue;
-      for(int i2=-1; i2 < 2; i2++) {
-	for(int i3=-1; i3 < 2; i3++) {
-	  if(i2 == 0 && i3 == 0) continue;
-	  if(i0+i2 < 0 || i0+i2 > l1tpf::towerNEta()-1) continue; 
-	  int pPhi = i1+i3;
-	  if(pPhi < 0)  pPhi=l1tpf::towerNPhi(iEta)+pPhi;
-	  if(pPhi > l1tpf::towerNPhi(i0+i2)) pPhi=pPhi-l1tpf::towerNPhi(i0+i2);
-	  pVec += getVector(iPt,i0+i2,pPhi,i0,i1,iNSigma,iENoise);
-	}
-      }
-      iClusters.push_back(pVec);
-    }
-  }
-}
 // ------------ method called once each job just before starting event loop  ------------
 void 
 NtupleProducer::beginJob()
@@ -720,7 +627,6 @@ NtupleProducer::beginJob()
   fTrkInfoTree->Branch("genPhi",      &genPhi,  "genPhi/F");
   fTrkInfoTree->Branch("genid",       &genId,   "genid/F");
   
-  fEcalInfoTree->Branch("ecal_subdet", &ecal_subdet, "ecal_subdet/F");
   fEcalInfoTree->Branch("ecal_ieta", &ecal_ieta, "ecal_ieta/F");
   fEcalInfoTree->Branch("ecal_iphi", &ecal_iphi, "ecal_iphi/F");
   fEcalInfoTree->Branch("ecal_curTwrEta", &ecal_curTwrEta, "ecal_curTwrEta/F");
@@ -738,21 +644,22 @@ NtupleProducer::beginJob()
   fEcalInfoTree->Branch("gendr",   &ecal_dr, "ecal_dr/F");
 
 
-  fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
+  //fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
   fHcalInfoTree->Branch("hcal_ieta", &hcal_ieta, "hcal_ieta/F");
   fHcalInfoTree->Branch("hcal_iphi", &hcal_iphi, "hcal_iphi/F");
-  fHcalInfoTree->Branch("hcal_TwrR", &hcal_TwrR, "hcal_TwrR/F");
+  //fHcalInfoTree->Branch("hcal_TwrR", &hcal_TwrR, "hcal_TwrR/F");
   fHcalInfoTree->Branch("hcal_num", &hcal_num, "hcal_num/F");
   fHcalInfoTree->Branch("hcal_et", &hcal_et, "hcal_et/F");
   fHcalInfoTree->Branch("hcal_clust_et",  &hcal_clust_et , "hcal_clust_et/F");
   fHcalInfoTree->Branch("hcal_clust_eta", &hcal_clust_eta, "hcal_clust_eta/F");
   fHcalInfoTree->Branch("hcal_clust_phi", &hcal_clust_phi, "hcal_clust_phi/F");
+  fHcalInfoTree->Branch("hcal_clust_emf" , &hcal_clust_emf , "hcal_clust_emf/F");
   fHcalInfoTree->Branch("hcal_corr_et"  , &hcal_corr_et  , "hcal_corr_et/F");
   fHcalInfoTree->Branch("hcal_corr_emf" , &hcal_corr_emf , "hcal_corr_emf/F");
   fHcalInfoTree->Branch("ecal_et",      &hcal_ecal_et,     "hcal_ecal_et/F");
   fHcalInfoTree->Branch("ecal_etcorr",  &hcal_ecal_etcorr, "hcal_ecal_etcorr/F");
-  fHcalInfoTree->Branch("ecal_eta", &hcal_ecal_eta, "hcal_ecal_eta/F");
-  fHcalInfoTree->Branch("ecal_phi", &hcal_ecal_phi, "hcal_ecal_phi/F");
+  //fHcalInfoTree->Branch("ecal_eta", &hcal_ecal_eta, "hcal_ecal_eta/F"); // FIXME
+  //fHcalInfoTree->Branch("ecal_phi", &hcal_ecal_phi, "hcal_ecal_phi/F"); // FIXME
   fHcalInfoTree->Branch("genPt",   &hcal_genPt ,"hcal_genPt/F");
   fHcalInfoTree->Branch("genEta",  &hcal_genEta,"hcal_genEta/F");
   fHcalInfoTree->Branch("genPhi",  &hcal_genPhi,"hcal_genPhi/F");
