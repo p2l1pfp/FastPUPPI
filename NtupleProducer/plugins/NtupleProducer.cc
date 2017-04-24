@@ -38,6 +38,7 @@
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
+#include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
 
@@ -133,6 +134,7 @@ private:
   combiner * rawconnector_;
   metanalyzer* metanalyzer_;
   jetanalyzer* jetanalyzer_;
+  isoanalyzer* isoanalyzer_;
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
@@ -217,9 +219,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;
       jetanalyzer_ = nullptr;
+      isoanalyzer_ = nullptr;
   } else {
       metanalyzer_ = new metanalyzer("MetFile.root");
       jetanalyzer_ = new jetanalyzer("JetFile.root");
+      isoanalyzer_ = new isoanalyzer("IsoFile.root");
   }
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("RawCalo");
@@ -577,6 +581,18 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       jetanalyzer_->setJets(lPupCands,6);
       jetanalyzer_->fill();
   }
+  
+  if (isoanalyzer_) {
+      isoanalyzer_->clear();
+      isoanalyzer_->setGenMuons(genParticles,1);
+      isoanalyzer_->matchMuons(lCands);
+      isoanalyzer_->computeIso(lCands     , 0.3, "pf");
+      isoanalyzer_->computeIso(lTKCands   , 0.3, "tk");
+      isoanalyzer_->computeIso(lTKVtxCands, 0.3, "tkvtx");
+      isoanalyzer_->computeIso(lPupCands  , 0.3, "pup");
+      isoanalyzer_->fill();
+  }
+
 }
 void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
   corrCandidates_.reset( new PFOutputCollection );
@@ -770,6 +786,7 @@ NtupleProducer::endJob() {
   connector_->write();
   metanalyzer_->write();
   jetanalyzer_->write();
+  isoanalyzer_->write();
   fOutputFile->cd();
   fTotalEvents->Write();
   fOutputFile->Write();
