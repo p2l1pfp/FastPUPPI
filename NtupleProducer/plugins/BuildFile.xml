@@ -21,4 +21,5 @@
 <use name="DataFormats/Math"/>
 <use name="FastPUPPI/NtupleProducer"/>
 <use name="L1Trigger/L1TCalorimeter"/>
+<flags CXXFLAGS="-ggdb"/>
 <flags EDM_PLUGIN="1"/>
