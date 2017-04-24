@@ -334,16 +334,16 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByToken(TokEcalTPTag_, classicecals);
   edm::Handle<L1PFCollection> hgecals;
   iEvent.getByToken(TokHGEcalTPTag_, hgecals);
-  L1PFCollection * ecals = new L1PFCollection;
-  for (const l1tpf::Particle & it : *classicecals) ecals->push_back(it); 
-  for (const l1tpf::Particle & it : *hgecals     ) ecals->push_back(it); 
-  for (const l1tpf::Particle & it : *ecals) {
+  L1PFCollection ecals;
+  for (const l1tpf::Particle & it : *classicecals) ecals.push_back(it); 
+  for (const l1tpf::Particle & it : *hgecals     ) ecals.push_back(it); 
+  for (const l1tpf::Particle & it : ecals) {
      lEEt[it.aEta()][it.aPhi()] = it.pt();
   }
   std::vector<TLorentzVector> pClust;
   int ne = 0;
   
-  for (const l1tpf::Particle & it : *ecals) {
+  for (const l1tpf::Particle & it : ecals) {
       double et = it.pt();
       ecal_subdet = 0;// it->id().subDet(); // FIXME: missing in Particle class
       ecal_ieta = it.iEta();
@@ -397,13 +397,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByToken(TokBHHcalTPTag_, bhhcals);
   edm::Handle<L1PFCollection> hfhcals;
   iEvent.getByToken(TokHFTPTag_, hfhcals);
-  L1PFCollection * hcals = new L1PFCollection;
-  for (const l1tpf::Particle & it : *classichcals) hcals->push_back(it); 
-  for (const l1tpf::Particle & it : *hfhcals     ) hcals->push_back(it); 
+  L1PFCollection hcals;
+  for (const l1tpf::Particle & it : *classichcals) hcals.push_back(it); 
+  for (const l1tpf::Particle & it : *hfhcals     ) hcals.push_back(it); 
   for (const l1tpf::Particle & it : *hghcals     ) {
     //combine duplicates for towers we use
     bool lFound = false;
-    for (l1tpf::Particle & it2 : *hcals     ) {
+    for (l1tpf::Particle & it2 : hcals     ) {
       if(it2.eta() == it.eta() && it2.phi() == it.phi() && it2.pt() == it.pt()) {std::cout << "copied!!!!!!!!!!!!!!!!!" << std::endl; break;}
       if(it2.iEta() != it.iEta() || it2.iPhi() != it.iPhi()) continue;
       TLorentzVector lVec = it.tp4();
@@ -412,12 +412,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       lFound = true; 
       break;
       }
-    if(!lFound) hcals->push_back(it);
+    if(!lFound) hcals.push_back(it);
   } 
   for (const l1tpf::Particle & it : *bhhcals     ) { 
     //Flatten the BH to the HG
     bool lFound = false;
-    for (l1tpf::Particle & it2 : *hcals) { 
+    for (l1tpf::Particle & it2 : hcals) { 
       if(it2.iPhi() == it.iPhi() && it2.iEta() == it.iEta()) { 
 	TLorentzVector lVec = it.tp4();
 	lVec += it2.tp4();
@@ -426,11 +426,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 	break;
       }
     }
-    if(!lFound) hcals->push_back(it);
+    if(!lFound) hcals.push_back(it);
   }
-  for (const l1tpf::Particle & it : *hcals) lHEt[it.aEta()][it.aPhi()] += it.pt();
+  for (const l1tpf::Particle & it : hcals) lHEt[it.aEta()][it.aPhi()] += it.pt();
+
   unsigned nh = 0;
-  for (const l1tpf::Particle & it : *hcals) {
+  for (const l1tpf::Particle & it : hcals) {
       hcal_subdet = 0; // it->id().subdet(); // FIXME: missing in Particle class
       hcal_ieta   = it.iEta();
       hcal_iphi   = it.iPhi();
