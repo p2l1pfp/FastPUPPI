@@ -55,10 +55,10 @@ if False:
     process.MessageLogger.cerr.FwkReport.reportEvery = 1
     process.maxEvents.input = 3
     process.InfoOut.debug = 2
-    if True:
+    if False:
         process.filter = cms.EDFilter("CandViewSelector",
             src = cms.InputTag("genParticles"),
             cut = cms.string("pt > 10 && abs(eta) < 1.5"),
             filter = cms.bool(True),
         )
-    process.p = cms.Path(process.filter + process.InfoOut)
+        process.p = cms.Path(process.filter + process.InfoOut)
