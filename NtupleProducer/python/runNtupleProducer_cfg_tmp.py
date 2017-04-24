@@ -21,13 +21,13 @@ process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
                             fileNames = cms.untracked.vstring(
-        '/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/GEN-SIM-RECO/90X_upgrade2023_realistic_v9_D12-v1/00000/0A8B6505-A215-E711-B25B-0CC47A4C8F26.root'
+        'XXXX'
         )
 )
 
@@ -45,14 +45,14 @@ process.InfoOut = cms.EDProducer('NtupleProducer',
                                  MuonTPTag   = cms.InputTag('gmtStage2Digis','Muon'), 
                                  genParTag   = cms.InputTag('genParticles'),
                                  zeroSuppress = cms.bool(False),
-                                 corrector   = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
-                                 ecorrector  = cms.string("FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.string("FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.string("FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.string("FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(2.0),
-                                 metRate     = cms.bool(False),
+                                 corrector   = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
+                                 corrector2  = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
+                                 ecorrector  = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
+                                 trackres    = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/tkres.root"),
+                                 eleres      = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/eres.root"),
+                                 pionres     = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pionres.root"),
+                                 trkPtCut    = cms.double(YYYY),
+                                 metRate     = cms.bool(ZZZZ),
                                  etaCharged  = cms.double(2.5),
                                  puppiPtCut  = cms.double(4.0),
                                  vtxRes      = cms.double(0.333),
