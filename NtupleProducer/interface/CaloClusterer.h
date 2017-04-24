@@ -177,6 +177,7 @@ namespace l1pf_calo {
             PreClusterGrid ecalToHCal_;
             CombinedClusterGrid cluster_;
             float hoeCut_, minPhotonEt_, minHadronEt_;
+            bool useCorrectedEcal_;
     };
 
 } // namespace 

@@ -30,6 +30,7 @@ process.source = cms.Source("PoolSource",
         '/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/GEN-SIM-RECO/90X_upgrade2023_realistic_v9_D12-v1/00000/0A8B6505-A215-E711-B25B-0CC47A4C8F26.root'
         )
 )
+process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
 process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
@@ -41,6 +42,7 @@ process.p = cms.Path(process.l1Puppi * process.InfoOut )
 
 if False: # turn on CMSSW downstream processing and output
     process.InfoOut.outputName = ""; # turn off Ntuples
+    process.InfoOut.debug = 0;
 
     from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
     process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')

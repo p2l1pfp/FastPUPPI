@@ -37,6 +37,7 @@ InfoOut = cms.EDProducer('NtupleProducer',
                 hoeCut = cms.double(0.1),
                 minPhotonEt = cms.double(1.0),
                 minHadronEt = cms.double(1.0),
+                useCorrectedEcal = cms.bool(True), # use corrected ecal enery in linking
             ),
          ),
          outputName  = cms.untracked.string("ntuple.root"),

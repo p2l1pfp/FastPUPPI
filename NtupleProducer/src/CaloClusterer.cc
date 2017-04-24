@@ -234,7 +234,8 @@ l1pf_calo::SimpleCaloLinker::SimpleCaloLinker(const edm::ParameterSet &pset, con
     cluster_(*grid_),
     hoeCut_(pset.getParameter<double>("hoeCut")),
     minPhotonEt_(pset.getParameter<double>("minPhotonEt")),
-    minHadronEt_(pset.getParameter<double>("minHadronEt"))
+    minHadronEt_(pset.getParameter<double>("minHadronEt")),
+    useCorrectedEcal_(pset.getParameter<bool>("useCorrectedEcal"))
 {
     assert(grid_->size() == ecal.raw().grid().size());
     assert(grid_->size() == hcal.raw().grid().size());
@@ -263,7 +264,7 @@ void l1pf_calo::SimpleCaloLinker::run()
                 for (int ineigh = 0; ineigh < 8; ++ineigh) {
                     tot += hcals.neigh(i,ineigh).et;
                 }
-                ecalToHCal_[i].ptOverNeighLocalMaxSum = tot ? ecals[i].et/tot : 0;
+                ecalToHCal_[i].ptOverNeighLocalMaxSum = tot ? (useCorrectedEcal_ ? ecals[i].et_corr : ecals[i].et)/tot : 0;
             }
         }
     }
@@ -274,10 +275,10 @@ void l1pf_calo::SimpleCaloLinker::run()
         if (hcals[i].et > 0) {
             if (ecalToHCal_[i].ptLocalMax > 0) {
                 // direct linking is easy
-                cluster_[i].ecal_et = ecals[i].et;
+                cluster_[i].ecal_et = (useCorrectedEcal_ ? ecals[i].et_corr : ecals[i].et);
                 cluster_[i].hcal_et = hcals[i].et;
-                cluster_[i].et = hcals[i].et + ecals[i].et;
-                float wecal = ecals[i].et/cluster_[i].et, whcal = 1.0 - wecal;
+                cluster_[i].et = cluster_[i].ecal_et + cluster_[i].hcal_et;
+                float wecal = cluster_[i].ecal_et/cluster_[i].et, whcal = 1.0 - wecal;
                 cluster_[i].eta = ecals[i].eta * wecal + hcals[i].eta * whcal;
                 cluster_[i].phi = ecals[i].phi * wecal + hcals[i].phi * whcal;
                 // wrap around phi
@@ -313,9 +314,9 @@ void l1pf_calo::SimpleCaloLinker::run()
     for (i = 0; i < ncells; ++i) {
         if (ecals[i].et > 0 && ecalToHCal_[i].ptLocalMax == 0 && ecalToHCal_[i].ptOverNeighLocalMaxSum == 0) {
             // direct linking is easy
-            cluster_[i].ecal_et = ecals[i].et;
+            cluster_[i].ecal_et = (useCorrectedEcal_ ? ecals[i].et_corr : ecals[i].et);
             cluster_[i].hcal_et = hraw[i];
-            cluster_[i].et = hraw[i] + ecals[i].et;
+            cluster_[i].et = cluster_[i].ecal_et + cluster_[i].hcal_et;
             cluster_[i].eta = ecals[i].eta;
             cluster_[i].phi = ecals[i].phi;
             // no need to wrap around phi
@@ -333,6 +334,7 @@ std::vector<l1tpf::Particle> l1pf_calo::SimpleCaloLinker::fetch(bool corrected) 
             bool photon = (cluster_[i].hcal_et < hoeCut_* cluster_[i].ecal_et);
             if (cluster_[i].et > (photon ? minPhotonEt_ : minHadronEt_)) {
                 ret.emplace_back(corrected ? cluster_[i].et_corr : cluster_[i].et, cluster_[i].eta, cluster_[i].phi, 0.0, photon ? 3 : 2);  
+                ret.back().setCaloEtaPhi(cluster_[i].eta, cluster_[i].phi);
             }
         }
     }

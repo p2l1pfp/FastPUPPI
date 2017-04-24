@@ -40,6 +40,7 @@
 //#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 //#include "CommonTools/Utils/interface/StringObjectFunction.h"
 
+#include <cstdint>
 #include <TTree.h>
 
 
@@ -131,7 +132,9 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
 
       edm::EDGetTokenT<std::vector<reco::GenJet>> genjets_;
       edm::EDGetTokenT<std::vector<reco::GenParticle>> genparticles_;
+      bool isParticleGun_;
       TTree *tree_;
+      uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
          float pt, pt02, eta, phi, iso02, iso04;
          int   id;
@@ -169,11 +172,16 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
 
 ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     genjets_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
-    genparticles_(consumes<std::vector<reco::GenParticle>>(iConfig.getParameter<edm::InputTag>("genParticles")))
+    genparticles_(consumes<std::vector<reco::GenParticle>>(iConfig.getParameter<edm::InputTag>("genParticles"))),
+    isParticleGun_(iConfig.getParameter<bool>("isParticleGun")),
+    random_(new TRandom3())
 {
     usesResource("TFileService");
     edm::Service<TFileService> fs;
     tree_ = fs->make<TTree>("tree","tree");
+    tree_->Branch("run",  &run_,  "run/i");
+    tree_->Branch("lumi", &lumi_, "lumi/i");
+    tree_->Branch("event", &event_, "event/l");
 
     auto reconames = iConfig.getParameterNamesForType<std::vector<edm::InputTag>>();
     for (const std::string & name : reconames) {
@@ -198,6 +206,10 @@ ResponseNTuplizer::beginJob()
 void
 ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+    run_  = iEvent.id().run();
+    lumi_ = iEvent.id().luminosityBlock();
+    event_ = iEvent.id().event();
+
     edm::Handle<std::vector<reco::GenJet>> genjets;
     edm::Handle<std::vector<reco::GenParticle>> genparticles;
     iEvent.getByToken(genjets_, genjets);
@@ -205,6 +217,10 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
 
     std::vector<const reco::GenParticle *> prompts, taus;
     for (const reco::GenParticle &gen : *genparticles) {
+        if (isParticleGun_) {
+            if (gen.statusFlags().isPrompt() == 1) prompts.push_back(&gen);
+            continue;
+        }
         if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && (std::abs(gen.pdgId()) == 11 || std::abs(gen.pdgId()) == 13) && gen.pt() > 5) {
             prompts.push_back(&gen);
         } else if (gen.isPromptFinalState() && std::abs(gen.pdgId()) == 22 && gen.pt() > 10) {

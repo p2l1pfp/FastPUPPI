@@ -8,14 +8,20 @@ ROOT.FWLiteEnabler.enable()
 
 import os
 from sys import argv
+
 from math import *
 
 from DataFormats.FWLite import Handle, Events
-from PhysicsTools.HeppyCore.statistics.tree import Tree
 from PhysicsTools.HeppyCore.utils.deltar import *
 
-tree = Tree("t","t",defaultFloatType="F") 
-events = Events(argv[1])
+from optparse import OptionParser
+parser = OptionParser("%(prog) infile [ src [ dst ] ]")
+parser.add_option("-n", "--events", type=int, nargs=1, default=3, help="Number of events to consider")
+parser.add_option("-E", "--select-events", type=str, nargs=1, action="append", default=[], help="Specific event to select (run:lumi:event)")
+options, args = parser.parse_args()
+while len(args) < 3: args.append("")
+
+events = Events(args[0])
 
 pf1   = Handle("std::vector<reco::PFCandidate>")
 pf2   = Handle("std::vector<reco::PFCandidate>")
@@ -23,18 +29,19 @@ genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 
 for iev,event in enumerate(events):
-    print "\nEvent %1d %5d %12d" % (
-        event.eventAuxiliary().run(),
-        event.eventAuxiliary().luminosityBlock(),
-        event.eventAuxiliary().event())
+    if iev >= options.events: break
+    idev = "%d:%d:%d" % ( event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
+    if options.select_events:
+       if idev not in options.select_events: continue
+    print "Event %s" % idev
  
-    if len(argv) == 2:
+    if not args[1] or ("gen:" in args[2]):
         event.getByLabel("ak4GenJetsNoNu", genj)
         allGenJ = [ g for g in genj.product() ]
         event.getByLabel("genParticles", genp)
-        genLeptons = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) in (11,13) and (p.isPromptFinalState() or p.isDirectPromptTauDecayProductFinalState()) and p.pt() > 5 ]
+        genLeptons = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) in (11,13,211) and (p.isPromptFinalState() or p.isDirectPromptTauDecayProductFinalState()) and p.pt() > 5 ]
         genTau     = [ p for p in genp.product() if abs(p.pdgId()) == 15 and p.isLastCopy() and p.isPromptDecayed() and p.pt() > 5 ]
-        genGamma   = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) == 22 and p.isPromptFinalState() and p.pt() > 10 ]
+        genGamma   = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) == 22 and p.isPromptFinalState() and p.pt() > 5 ]
         genItems = genLeptons + genTau + genGamma
         for j in allGenJ:
             incone = [ i for i in genItems if deltaR(i,j) < 0.4 ]
@@ -45,18 +52,33 @@ for iev,event in enumerate(events):
             else:
                 j.mcId = 99
         allGenJ.sort(key = lambda j : - j.pt())
+    if not args[1]:
         print "Gen jets in the event:"
         for j in allGenJ:
             if abs(j.eta()) > 5: continue
             if j.mcId in (0, 1, 99) and j.pt() < 5: continue
             print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
         print ""
-    else:
-        print "Comparing %s to %s" % (argv[2], argv[3])
-        event.getByLabel(argv[2], pf1)
-        event.getByLabel(argv[3], pf2)
+    elif not args[2]:
+        event.getByLabel(args[1], pf1)
         o1 = [ o for o in sorted(pf1.product(), key = lambda p : -p.pt()) ]
-        o2 = [ o for o in sorted(pf2.product(), key = lambda p : -p.pt()) ]
+        for p1 in o1:
+            print "pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f \n" % (p1.pdgId(), p1.pt(), p1.eta(), p1.phi()),
+        print ""
+    else:
+        print "Comparing %s to %s" % (args[1], args[2])
+        event.getByLabel(args[1], pf1)
+        o1 = [ o for o in sorted(pf1.product(), key = lambda p : -p.pt()) ]
+        if "gen:" in args[2]:
+            (g,gwhat) = args[2].split(":")
+            if   gwhat == "e" :    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 11 ]
+            elif gwhat == "mu":    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 13 ]
+            elif gwhat == "pi":    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 211 ]
+            elif gwhat == "gamma": o2 = genGamma
+            else: raise RuntimeError, "Not yet supported"
+        else:
+            event.getByLabel(args[2], pf2)
+            o2 = [ o for o in sorted(pf2.product(), key = lambda p : -p.pt()) ]
         match = matchObjectCollection3(o1, o2, deltaRMax=0.3)
         for p2 in o2: p2.seen = False
         for p1 in o1:
@@ -76,6 +98,4 @@ for iev,event in enumerate(events):
         for p2 in o2:
             if p2.seen: continue
             print "                                        ... -> pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (p2.pdgId(), p2.pt(), p2.eta(), p2.phi()) 
-    if len(argv) > 4 and iev < int(argv[4]):
-        print "\n\n"; continue
-    exit()
+        print ""

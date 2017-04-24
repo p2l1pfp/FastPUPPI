@@ -232,7 +232,6 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
   produces<PFOutputCollection>("Puppi");
-  produces<PFOutputCollection>("NewCalo");
   produces<PFOutputCollection>("L1TK");
   produces<PFOutputCollection>("L1Calo");
   produces<PFOutputCollection>("L1PF");
@@ -343,12 +342,23 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   for (const l1tpf::Particle & it : *hgecals     ) ecalClusterer_.add(it); 
 
   ecalClusterer_.run();
-  ///=== FIXME calibration goes here ====
-  //ecal_corr_et = ecorrector_->correct(0.,double(ecal_clust_et),ecal_ieta,ecal_iphi);
-  // very naive calibration here
-  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
-  //ecalClusteter_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-  //      return c.et/(1+0.20*(std::abs(c.eta)<3)-0.15*(std::abs(c.eta)<1.5)); } );
+  //// ---- Dummy calibration == no calibration
+  // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
+  //    
+  //// ---- Trivial calibration by hand
+  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+        if (std::abs(c.eta)<1.5) {
+            return c.et - (3.0 - std::abs(c.eta)); // it looks like otherwise there's an offset
+        } else if (std::abs(c.eta)<3) {
+            return c.et/1.2; // HGCal scale is off by ~1.2%
+        } else {
+            return c.et; 
+        }
+  } );
+  //// ---- Calibration from Phil's workflow
+  //ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+  //      return ecorrector_->correct(0., c.et, ieta, iphi); // FIXME is ieta or abs(ieta) ?
+  //} );
 
   // write debug output tree
   if (!fOutputName.empty()) {
@@ -408,11 +418,22 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   /// if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
   /// if(hcal_corr_et  < 0) hcal_corr_et   = 0;
   /// if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
-  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
+  //
+  //// ---- Trivial calibration by hand
+  //
+  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
+        if (std::abs(c.eta)<3.0) {
+            return c.ecal_et + c.hcal_et * 1.25;
+        } else {
+            return c.et;
+        }
+  } );
+  //
+  //// ---- Dummy calibration (no calibration at all)
+  // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
 
   // write debug output tree
   if (!fOutputName.empty()) {
-      const auto & hcraw = hcalClusterer_.raw();
       const auto & clusters = caloLinker_.clusters();
       unsigned int nh = 0;
       for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
@@ -448,10 +469,18 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       }
   }
 
-  // Now feed calo into PF
+  // Get particles from the clusterer
   std::vector<l1tpf::Particle> RawCaloCands = caloLinker_.fetch(false);
   std::vector<l1tpf::Particle> CaloCands    = caloLinker_.fetch(true);
-  for (const l1tpf::Particle & calo : caloLinker_.fetch()) {
+  // FIXME the sigma is known to the combiner, not the calo clusterer, at the moment
+  for (l1tpf::Particle & calo : CaloCands) {
+    calo.setSigma(calo.pdgId() == combiner::GAMMA ?
+        connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
+        connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
+  }
+
+  // pass to the PF algo
+  for (const l1tpf::Particle & calo : CaloCands) {
       connector_->addCalo(calo);
       l1regions_.addCalo(calo); 
   }

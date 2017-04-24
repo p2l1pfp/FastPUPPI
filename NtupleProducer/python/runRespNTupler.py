@@ -11,10 +11,12 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:l1pf_out.root')
 )
+process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
     genParticles = cms.InputTag("genParticles"),
+    isParticleGun = cms.bool(False),
     # -- inputs --
     Ecal = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
     Hcal = cms.VInputTag('l1tPFHcalProducerFromOfflineRechits:towers','l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
@@ -22,7 +24,6 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     TK   = cms.VInputTag('l1tPFTkProducersFromOfflineTracksStrips'),
     # -- processed --
     L1RawCalo = cms.VInputTag("InfoOut:RawCalo",),
-    L1NewCalo = cms.VInputTag("InfoOut:NewCalo",),
     L1Calo = cms.VInputTag("InfoOut:Calo",),
     L1TK = cms.VInputTag("InfoOut:TK",),
     L1PF = cms.VInputTag("InfoOut:PF",),
@@ -40,4 +41,24 @@ if True:
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
     process.InfoOut.outputName = ""; # turn off Ntuples
     process.p = cms.Path(process.InfoOut + process.ntuple)
-    
+if False:
+    process.out = cms.OutputModule("PoolOutputModule",
+            fileName = cms.untracked.string("l1pf_remade.root"),
+            outputCommands = cms.untracked.vstring("drop *",
+                "keep *_genParticles_*_*",
+                "keep *_ak4GenJetsNoNu_*_*",
+                "keep *_InfoOut_*_*",
+            )
+    )
+    process.e = cms.EndPath(process.out)
+if False:
+    process.MessageLogger.cerr.FwkReport.reportEvery = 1
+    process.maxEvents.input = 3
+    process.InfoOut.debug = 2
+    if True:
+        process.filter = cms.EDFilter("CandViewSelector",
+            src = cms.InputTag("genParticles"),
+            cut = cms.string("pt > 10 && abs(eta) < 1.5"),
+            filter = cms.bool(True),
+        )
+    process.p = cms.Path(process.filter + process.InfoOut)
