@@ -289,7 +289,7 @@ if __name__ == "__main__":
     if args.build:
         lPar0,lPar1=loadCorrector(args.input,args.etarange)
         lCorr=buildTables(args.fracrange,lPar0,lPar1,args.ptrange,args.etarange)
-        lCorr1=buildFitTables(lPar1,1,82,args.ptrange,args.etarange)
+        lCorr1=buildFitTables(lPar1,0,82,args.ptrange,args.etarange)
         lCorr.extend(lCorr1)
         writeCorr(lCorr)
         exit()

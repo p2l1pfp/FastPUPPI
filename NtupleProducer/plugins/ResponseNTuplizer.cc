@@ -135,7 +135,6 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
       bool isParticleGun_;
       TRandom3 * random_;
       TTree *tree_;
-      TRandom3 *random_;
       uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
          float pt, pt02, eta, phi, iso02, iso04;

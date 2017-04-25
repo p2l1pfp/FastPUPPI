@@ -49,6 +49,7 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   fTotal = 0; if(iTotal > 0) fTotal = iTotal; 
   if(iEcal < 0) fEcal = 0;
   if(abs(iEta) > fNEta/2-1 || iPhi < 1 || iPhi > fNPhi-1) return fTotal; //overflow
+  if(fEcal > fTotal) fTotal = fEcal;
   double lFrac = fEcal/(fTotal); 
   int    lIFrac=int(lFrac*10.);
   fIEta = iEta+fNEta/2;
