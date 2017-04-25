@@ -20,6 +20,7 @@
 
 // system include files
 #include <memory>
+#include <iostream>
 
 // user include files
 #include "FWCore/Framework/interface/Frameworkfwd.h"
@@ -30,8 +31,10 @@
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
+#ifdef HASL1TK
 #include "DataFormats/L1TrackTrigger/interface/TTTrack.h"
 #include "DataFormats/L1TrackTrigger/interface/TTTypes.h"     
+#endif
 #include "DataFormats/EcalDigi/interface/EcalDigiCollections.h"
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
 #include "CondFormats/L1TObjects/interface/L1CaloEcalScale.h"
@@ -109,6 +112,7 @@ void
 InputBuilder::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
   using namespace edm;
+#ifdef HASL1TK
   typedef std::vector<TTTrack<Ref_PixelDigi_> >         vec_track;
 
   /// ----------------TRACK INFO-------------------
@@ -133,7 +137,7 @@ InputBuilder::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
       if (n > 10) break; // just for testing so cut it off for now
     }  
   }
-
+#endif
   /// ----------------ECAL INFO-------------------
   /// Stealing Jia Fu's code!
   /// https://github.com/jiafulow/SLHCL1TrackTriggerSimulations/blob/master/NTupleTools/src/NTupleTTTracks.cc
