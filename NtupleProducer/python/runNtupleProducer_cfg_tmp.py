@@ -33,33 +33,9 @@ process.source = cms.Source("PoolSource",
 
 process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
-
-process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
-                                 EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
-                                 HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
-                                 HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
-                                 HGHcalTPTag = cms.InputTag('l1tPFHGCalFHProducerFromOfflineRechits','towers'),
-                                 BHHcalTPTag = cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers'),
-                                 HFTPTag     = cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers'),
-                                 MuonTPTag   = cms.InputTag('gmtStage2Digis','Muon'), 
-                                 genParTag   = cms.InputTag('genParticles'),
-                                 zeroSuppress = cms.bool(False),
-                                 corrector   = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
-                                 ecorrector  = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.string("/afs/cern.ch/work/n/ntran/private/Correlator/analysis/go15-gpetruc/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(YYYY),
-                                 metRate     = cms.bool(ZZZZ),
-                                 etaCharged  = cms.double(2.5),
-                                 puppiPtCut  = cms.double(4.0),
-                                 vtxRes      = cms.double(0.333),
-                                 debug       = cms.untracked.int32(1),
-                                 outputName  = cms.untracked.string("ntuple.root"),
-                                 )
-
+process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
+process.InfoOut.trkPtCut    = cms.double(YYYY)
+process.InfoOut.metRate     = cms.bool(ZZZZ)
 
 process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
 

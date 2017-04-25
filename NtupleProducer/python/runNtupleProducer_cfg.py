@@ -30,36 +30,11 @@ process.source = cms.Source("PoolSource",
         '/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/GEN-SIM-RECO/90X_upgrade2023_realistic_v9_D12-v1/00000/0A8B6505-A215-E711-B25B-0CC47A4C8F26.root'
         )
 )
+process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
 process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
-
-process.InfoOut = cms.EDProducer('NtupleProducer',
-                                 L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
-                                 EcalTPTag   = cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
-                                 HGEcalTPTag = cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers'),
-                                 HcalTPTag   = cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
-                                 HGHcalTPTag = cms.InputTag('l1tPFHGCalFHProducerFromOfflineRechits','towers'),
-                                 BHHcalTPTag = cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers'),
-                                 HFTPTag     = cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers'),
-                                 MuonTPTag   = cms.InputTag('gmtStage2Digis','Muon'), 
-                                 genParTag   = cms.InputTag('genParticles'),
-                                 zeroSuppress = cms.bool(False),
-                                 corrector   = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
-                                 corrector2  = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi_res_old.root"),
-                                 ecorrector  = cms.string("FastPUPPI/NtupleProducer/data/ecorr.root"),
-                                 trackres    = cms.string("FastPUPPI/NtupleProducer/data/tkres.root"),
-                                 eleres      = cms.string("FastPUPPI/NtupleProducer/data/eres.root"),
-                                 pionres     = cms.string("FastPUPPI/NtupleProducer/data/pionres.root"),
-                                 trkPtCut    = cms.double(2.0),
-                                 metRate     = cms.bool(False),
-                                 etaCharged  = cms.double(2.5),
-                                 puppiPtCut  = cms.double(4.0),
-                                 vtxRes      = cms.double(0.333),
-                                 debug       = cms.untracked.int32(1),
-                                 outputName  = cms.untracked.string("ntuple.root"),
-                                 )
-
+process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 
 process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
 
@@ -67,6 +42,7 @@ process.p = cms.Path(process.l1Puppi * process.InfoOut )
 
 if False: # turn on CMSSW downstream processing and output
     process.InfoOut.outputName = ""; # turn off Ntuples
+    process.InfoOut.debug = 0;
 
     from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
     process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')

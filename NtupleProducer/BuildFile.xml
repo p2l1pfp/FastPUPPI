@@ -1,4 +1,4 @@
-<flags CXXFLAGS="-g -Wall"/>
+<flags CXXFLAGS="-ggdb"/>
 <use name="root"/>
 <use name="DataFormats/Candidate"/>
 <use name="FastSimulation/BaseParticlePropagator"/>
