@@ -37,6 +37,11 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
+#include "FWCore/Framework/interface/ESHandle.h"
+#include "MagneticField/Engine/interface/MagneticField.h"
+#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+
+#include <FastPUPPI/NtupleProducer/interface/L1TPFUtils.h>
 //#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 //#include "CommonTools/Utils/interface/StringObjectFunction.h"
 
@@ -54,12 +59,16 @@ namespace {
     class MultiCollection {
         public:
             MultiCollection(const edm::ParameterSet &iConfig, const std::string &name, edm::ConsumesCollector && coll) :
-                name_(name)
+                name_(name),prop_(false)
             {
+                if      (name.find("Ecal") != std::string::npos) prop_ = true;
+                else if (name.find("Hcal") != std::string::npos) prop_ = true;
+                else if (name.find("Calo") != std::string::npos) prop_ = true;
                 const std::vector<edm::InputTag> & tags = iConfig.getParameter< std::vector<edm::InputTag>>(name);
                 for (const auto & tag : tags) tokens_.push_back(coll.consumes<reco::CandidateView>(tag));
             }
             const std::string & name() const { return name_; }
+            bool  prop() const { return prop_; }
             void get(const edm::Event &iEvent) {
                 edm::Handle<reco::CandidateView> handle;
                 for (const auto & token : tokens_) {
@@ -74,6 +83,7 @@ namespace {
             void clear() { objects_.clear(); }
         private:
             std::string name_;
+            bool prop_;
             std::vector<edm::EDGetTokenT<reco::CandidateView>> tokens_;
             std::vector<SimpleObject> objects_;
     };
@@ -121,7 +131,7 @@ namespace {
     };
 
 }
-class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
+class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,edm::one::WatchRuns>  {
    public:
       explicit ResponseNTuplizer(const edm::ParameterSet&);
       ~ResponseNTuplizer();
@@ -129,6 +139,15 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
    private:
       virtual void beginJob() override;
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
+
+      virtual void beginRun(edm::Run const&, edm::EventSetup const& iSetup) override {
+          //edm::ESHandle<MagneticField> magneticField;
+          //iSetup.get<IdealMagneticFieldRecord>().get(magneticField);
+          //bZ_ = magneticField->inTesla(GlobalPoint(0,0,0)).z();
+          bZ_ = 3.8112; // avoid loading the event setup
+      }
+      virtual void endRun(edm::Run const&, edm::EventSetup const& iSetup) override { } // framework wants this to be implemented
+
 
       edm::EDGetTokenT<std::vector<reco::GenJet>> genjets_;
       edm::EDGetTokenT<std::vector<reco::GenParticle>> genparticles_;
@@ -138,6 +157,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
       uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
          float pt, pt02, eta, phi, iso02, iso04;
+         int charge; float caloeta, calophi;
          int   id;
          void makeBranches(TTree *tree) {
             tree->Branch("mc_pt", &pt, "mc_pt/F");
@@ -147,10 +167,25 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
             tree->Branch("mc_iso02", &iso02, "mc_iso02/F");
             tree->Branch("mc_iso04", &iso04, "mc_iso04/F");
             tree->Branch("mc_id", &id, "mc_id/I");
+            tree->Branch("mc_q", &charge, "mc_q/I");
+            tree->Branch("mc_caloeta", &caloeta, "mc_caloeta/F");
+            tree->Branch("mc_calophi", &calophi, "mc_calophi/F");
          }
          void fillP4(const reco::Candidate &c) {
              pt = c.pt(); eta = c.eta(); phi = c.phi();
+             caloeta = eta; calophi = phi; charge = 0;
          }
+         void fillPropagated(const reco::Candidate &c, float bz) {
+             if (c.charge() != 0) {
+                charge = c.charge();
+                math::XYZTLorentzVector momentum(c.px(),c.py(),c.pz(),c.energy());
+                math::XYZTLorentzVector vertex(c.vx(),c.vy(),c.vz(),0.);
+                std::vector<double> lVars;
+                l1tpf::propagate(1,lVars,momentum,vertex,c.charge(),bz);
+                caloeta = lVars[4]; calophi = lVars[5];
+            }
+         }
+
       } mc_;
       struct RecoVars {
          float pt, pt02, ptbest, pthighest;
@@ -169,6 +204,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
          }
       };
       std::vector<std::pair<::MultiCollection,RecoVars>> reco_;
+      float bZ_;
 };
 
 ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
@@ -273,6 +309,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                 mc_.phi = pvis.Phi();
             } else {
                 mc_.fillP4(*match);
+                mc_.fillPropagated(*match, bZ_);
             }
             mc_.id = std::abs(match->pdgId());
             mc_.iso04 = j.pt()/mc_.pt - 1;
@@ -291,7 +328,9 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             mc_.iso04 = 0;
         }
         for (auto & recopair : reco_) {
-            recopair.second.fill(recopair.first.objects(), mc_.eta, mc_.phi);
+            recopair.second.fill(recopair.first.objects(),
+                recopair.first.prop() ? mc_.caloeta : mc_.eta,
+                recopair.first.prop() ? mc_.calophi : mc_.phi);
         }
         tree_->Fill();
     }
