@@ -6,7 +6,6 @@ const float l1pf_calo::Stage1Grid::towerEtas_[l1pf_calo::Stage1Grid::nEta_] = {0
 
 l1pf_calo::Stage1Grid::Stage1Grid() :
             Grid(2*((ietaCoarse_-1)*nPhi_ + (ietaVeryCoarse_-ietaCoarse_)*(nPhi_/2) + (nEta_-ietaVeryCoarse_+1) * (nPhi_/4))),
-            ieta_(ncells_), iphi_(ncells_),
             cell_map_(2*nEta_*nPhi_, -1)
 {
     int icell = 0;

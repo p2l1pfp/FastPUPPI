@@ -28,26 +28,24 @@ namespace l1pf_calo {
             float phi(int icell) const { return phi_[icell]; }
             float etaWidth(int icell) const { return etaWidth_[icell]; }
             float phiWidth(int icell) const { return phiWidth_[icell]; }
-            virtual int ieta(int icell) const { return 0; }
-            virtual int iphi(int icell) const { return 0; }
+            int ieta(int icell) const { return ieta_[icell]; }
+            int iphi(int icell) const { return iphi_[icell]; }
         protected:
-            Grid(unsigned int size) : ncells_(size), eta_(size), etaWidth_(size), phi_(size), phiWidth_(size), neighbours_(size) {}
+            Grid(unsigned int size) : ncells_(size), eta_(size), etaWidth_(size), phi_(size), phiWidth_(size), ieta_(size), iphi_(size), neighbours_(size) {}
             unsigned int ncells_;
             std::vector<float> eta_, etaWidth_, phi_, phiWidth_;
+            std::vector<int> ieta_, iphi_;
             std::vector<std::array<int,8>> neighbours_; // indices of the neigbours, -1 = none
     };
 
     class Stage1Grid : public Grid {
         public:
             Stage1Grid() ;
-            virtual int ieta(int icell) const override { return ieta_[icell]; }
-            virtual int iphi(int icell) const override { return iphi_[icell]; }
             virtual int find_cell(float eta, float phi) const override ;
             int ifind_cell(int ieta, int iphi) const { return cell_map_[(ieta+nEta_) + 2*nEta_*(iphi-1)]; }
         protected:
             static const int nEta_ = 41, nPhi_ = 72, ietaCoarse_ = 29, ietaVeryCoarse_ = 40;
             static const float towerEtas_[nEta_];
-            std::vector<int> ieta_, iphi_;
             std::vector<int> cell_map_;
             // valid ieta, iphi (does not check for outside bounds, only for non-existence of ieta=0, iphi=0, and coarser towers at high eta
             bool valid_ieta_iphi(int ieta, int iphi) const {
