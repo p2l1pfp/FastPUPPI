@@ -42,7 +42,7 @@
 
 #include <cstdint>
 #include <TTree.h>
-
+#include <TRandom3.h>
 
 namespace {
     struct SimpleObject {
@@ -134,6 +134,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>
       edm::EDGetTokenT<std::vector<reco::GenParticle>> genparticles_;
       bool isParticleGun_;
       TTree *tree_;
+      TRandom3 *random_;
       uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
          float pt, pt02, eta, phi, iso02, iso04;
