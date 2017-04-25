@@ -13,7 +13,8 @@ parser.add_argument('-genvar' ,'--genvar'    ,action='store',dest='genvar' ,defa
 parser.add_argument('-build'  ,'--build'     ,action='store_true',dest='build'  ,default=False      ,help='build')
 parser.add_argument('-eta'    ,'--eta'       ,dest='etarange',nargs='+',type=float,default=[-4.0,-3.5,-3.0,-2.75,-2.5,-2.25,-2.0,-1.75,-1.5,-1.0,-0.5,0.,0.5,1.0,1.5,1.75,2.0,2.25,2.5,2.75,3.0,3.5,4.0],help='eta range')
 #parser.add_argument('-eta'    ,'--eta'       ,dest='etarange',nargs='+',type=float,default=[-3.0,-2.0,-1.5,0.,1.5,2.0,3.0],help='eta range')
-parser.add_argument('-pt'     ,'--pt'        ,dest='ptrange' ,nargs='+',type=float,default=range(0,20,2)+range(25,100,5),help='pt range')
+parser.add_argument('-pt'     ,'--pt'        ,dest='ptrange' ,nargs='+',type=float,default=range(0,20,2)+range(25,100,5)+range(100,500,20),help='pt range')
+#parser.add_argument('-pt'     ,'--pt'        ,dest='ptrange' ,nargs='+',type=float,default=range(0,20,2)+range(25,100,5),help='pt range')
 parser.add_argument('-frac'   ,'--frac'      ,dest='fracrange',nargs='+',type=float,default=[0],help='em fraction range')
 
 args = parser.parse_args()
@@ -81,14 +82,18 @@ def draw(iGraphs,iEta,iName="A",iGaus=False):
     pF1 = r.TF1("f1","[0]+[1]/sqrt(x)+[2]/x",0.1,200);
     if iGaus:
         iGraphs[0].Fit("f1")
+    lColorId=0
     for i0 in range(1,len(iGraphs)):
-        iGraphs[i0].SetLineColor(fColor[i0])
-        iGraphs[i0].SetMarkerColor(fColor[i0])
+        iGraphs[i0].SetLineColor(fColor[lColorId])
+        iGraphs[i0].SetMarkerColor(fColor[lColorId])
         iGraphs[i0].Draw("lpe")
         lLeg.AddEntry(iGraphs[i0],str(iEta[i0])+"< #eta < "+str(iEta[i0+1]),"lpe")
         iGraphs[i0].SetName(str(iEta[i0])+"< #eta < "+str(iEta[i0+1])+iName)
         iGraphs[i0].SetTitle(str(iEta[i0])+"< #eta < "+str(iEta[i0+1])+iName)
         pF1 = r.TF1("f1","[0]+[1]/sqrt(x)+[2]/x",0.1,200);
+        lColorId=lColorId+1
+        if lColorId > len(fColor)-1:
+            lColorId=0
         #if iGaus:
         #    iGraphs[i0].Fit("f1")
     lLeg.Draw()
@@ -237,6 +242,42 @@ def buildTables(iFrac,iPar0,iPar1,iHPt,iHEta):
         lCorr.append(lCorrFrac)
     return lCorr
 
+def buildFitTables(iPar0,iEtaMin,iEtaMax,iHPt,iHEta):
+    lCorr = []
+    for i0 in range(iEtaMin,iEtaMax):
+        pEta0=translateIEta(i0)
+        pEta=-1
+        for pEta1 in range(0,len(iHEta)-1):
+            if pEta0 < iHEta[pEta1] or pEta0 > iHEta[pEta1+1]:
+                continue
+            pEta=pEta1
+        if pEta == -1 and pEta0 < iHEta[0]:
+            pEta = 0
+        if pEta == -1 and pEta0 > iHEta[len(iHEta)-1]:
+            pEta = len(iHEta)-2
+        print pEta0,pEta,i0
+        lCorrFrac=[]
+        lX   = array('d', [])
+        lY   = array('d', [])
+        for i2 in range(0,len(iHPt)-1):
+            pTPt = iHPt[i2]
+            if pTPt > 90:
+                pTPt = 90
+            lA = iPar0[pEta].Eval(pTPt)
+            pRes = iHPt[i2]*lA
+            if pRes > iHPt[i2]:
+                pRes = iHPt[i2]
+            lX.append(iHPt[i2])
+            lY.append(pRes)
+            if pRes < 0:
+                print "!!!!!!!!!!!!!!!!!!!!!!!!!!!! Something is really wrong negative res"
+        pGraph = r.TGraph(len(lX),lX,lY)
+        pGraph.SetTitle("eta_res_"+str(i0))
+        pGraph.SetName ("eta_res_"+str(i0))
+        lCorrFrac.append(pGraph)
+        lCorr.append(lCorrFrac)
+    return lCorr
+
 def writeCorr(iCorr):
     lFile = r.TFile("Output.root","RECREATE")
     for pCorrFrac in lCorr:
@@ -248,6 +289,8 @@ if __name__ == "__main__":
     if args.build:
         lPar0,lPar1=loadCorrector(args.input,args.etarange)
         lCorr=buildTables(args.fracrange,lPar0,lPar1,args.ptrange,args.etarange)
+        lCorr1=buildFitTables(lPar1,1,82,args.ptrange,args.etarange)
+        lCorr.extend(lCorr1)
         writeCorr(lCorr)
         exit()
     lFile = r.TFile(args.input)
