@@ -144,11 +144,17 @@ namespace l1pf_calo {
                 }
             }
         private:
+            enum EnergyShareAlgo { Fractions, /* each local maximum neighbour takes a share proportional to its value */
+                                   None,      /* each local maximum neighbour takes all the value (double counting!) */
+                                   Greedy,    /* assing cell to the highest local maximum neighbour */
+                                   Crude };   /* if there's more than one local maximum neighbour, they all take half of the value (no fp division) */
             std::unique_ptr<Grid> grid_;
             EtGrid         rawet_;
             PreClusterGrid  precluster_;
             ClusterGrid    cluster_;
             float zsEt_, seedEt_, minClusterEt_;
+            EnergyShareAlgo energyShareAlgo_;
+            bool  energyWeightedPosition_; // do the energy-weighted cluster position instead of the cell center
     };
 
     class SimpleCaloLinker {

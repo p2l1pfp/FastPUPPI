@@ -108,8 +108,15 @@ l1pf_calo::SingleCaloClusterer::SingleCaloClusterer(const edm::ParameterSet &pse
     cluster_(*grid_),
     zsEt_(pset.getParameter<double>("zsEt")),
     seedEt_(pset.getParameter<double>("seedEt")),
-    minClusterEt_(pset.getParameter<double>("minClusterEt"))
+    minClusterEt_(pset.getParameter<double>("minClusterEt")),
+    energyWeightedPosition_(pset.getParameter<bool>("energyWeightedPosition"))
 {
+    std::string energyShareAlgo = pset.getParameter<std::string>("energyShareAlgo");
+    if      (energyShareAlgo == "fractions") energyShareAlgo_ = Fractions;
+    else if (energyShareAlgo == "none")      energyShareAlgo_ = None;
+    else if (energyShareAlgo == "greedy")    energyShareAlgo_ = Greedy;
+    else if (energyShareAlgo == "crude")     energyShareAlgo_ = Crude;
+    else throw cms::Exception("Configuration") << "Unsupported energyShareAlgo '" << energyShareAlgo << "'\n";
 }
 
 l1pf_calo::SingleCaloClusterer::~SingleCaloClusterer() 
@@ -146,15 +153,41 @@ void l1pf_calo::SingleCaloClusterer::run()
             }
         }
     }
-    // pre-cluster step 2: at each non-max cell, add up ptLocalMax of neighbours
-    //                     could be done for all cells, but it's not needed for max cells since they can't have ptLocalMax around them
+    // pre-cluster step 2: compute information from neighbouring local max, for energy sharing purposes
     for (i = 0; i < ncells; ++i) {
         if (precluster_[i].ptLocalMax == 0) {
-            float tot = 0;
-            for (int ineigh = 0; ineigh < 8; ++ineigh) {
-                tot += precluster_.neigh(i,ineigh).ptLocalMax;
+            switch (energyShareAlgo_) {
+                case Fractions:
+                    {
+                        float tot = 0;
+                        for (int ineigh = 0; ineigh < 8; ++ineigh) {
+                            tot += precluster_.neigh(i,ineigh).ptLocalMax;
+                        }
+                        precluster_[i].ptOverNeighLocalMaxSum = tot ? rawet_[i]/tot : 0;
+                    }
+                    break;
+                case None:
+                    precluster_[i].ptOverNeighLocalMaxSum = rawet_[i];
+                    break;
+                case Greedy:
+                    {
+                        float maxet = 0;
+                        for (int ineigh = 0; ineigh < 8; ++ineigh) {
+                            maxet = std::max(maxet, precluster_.neigh(i,ineigh).ptLocalMax);
+                        }
+                        precluster_[i].ptOverNeighLocalMaxSum = maxet;
+                    }
+                    break;
+                case Crude:
+                    {
+                        int number = 0;
+                        for (int ineigh = 0; ineigh < 8; ++ineigh) {
+                            number += (precluster_.neigh(i,ineigh).ptLocalMax > 0);
+                        }
+                        precluster_[i].ptOverNeighLocalMaxSum = (number > 1 ? 0.5 : 1.0) * rawet_[i];
+                    }
+                    break;
             }
-            precluster_[i].ptOverNeighLocalMaxSum = tot ? rawet_[i]/tot : 0;
         }
     }
 
@@ -169,18 +202,31 @@ void l1pf_calo::SingleCaloClusterer::run()
             for (int ineigh = 0; ineigh < 8; ++ineigh) {
                 int ineighcell = grid_->neighbour(i, ineigh);
                 if (ineighcell == -1) continue; // skip dummy cells
-                float fracet = myet * precluster_.neigh(i,ineigh).ptOverNeighLocalMaxSum;
+                float fracet = 0;
+                switch (energyShareAlgo_) {
+                    case Fractions: fracet = myet * precluster_.neigh(i,ineigh).ptOverNeighLocalMaxSum; break;
+                    case None:      fracet = precluster_.neigh(i,ineigh).ptOverNeighLocalMaxSum; break;
+                    case Greedy:    fracet = (myet == precluster_.neigh(i,ineigh).ptOverNeighLocalMaxSum ? rawet_.neigh(i,ineigh) : 0); break;
+                    case Crude:     fracet = precluster_.neigh(i,ineigh).ptOverNeighLocalMaxSum; break;
+                }
                 tot  += fracet;
-                avg_eta += fracet * (grid_->eta(ineighcell) - grid_->eta(i));
-                avg_phi += fracet * deltaPhi(grid_->phi(ineighcell), grid_->phi(i));
+                if (energyWeightedPosition_) {
+                    avg_eta += fracet * (grid_->eta(ineighcell) - grid_->eta(i));
+                    avg_phi += fracet * deltaPhi(grid_->phi(ineighcell), grid_->phi(i));
+                }
             }
             if (tot > minClusterEt_) {
                 cluster_[i].et  = tot;
-                cluster_[i].eta = grid_->eta(i) + avg_eta / tot;
-                cluster_[i].phi = grid_->phi(i) + avg_phi / tot;
-                // wrap around phi
-                if (cluster_[i].phi >  M_PI) cluster_[i].phi -= 2*M_PI;
-                if (cluster_[i].phi < -M_PI) cluster_[i].phi += 2*M_PI;
+                if (energyWeightedPosition_) {
+                    cluster_[i].eta = grid_->eta(i) + avg_eta / tot;
+                    cluster_[i].phi = grid_->phi(i) + avg_phi / tot;
+                    // wrap around phi
+                    if (cluster_[i].phi >  M_PI) cluster_[i].phi -= 2*M_PI;
+                    if (cluster_[i].phi < -M_PI) cluster_[i].phi += 2*M_PI;
+                } else {
+                    cluster_[i].eta = grid_->eta(i);
+                    cluster_[i].phi = grid_->phi(i);
+                }
             }
         }
     }
