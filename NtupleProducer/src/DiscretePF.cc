@@ -60,9 +60,9 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin) const 
         for (const PFParticle & p : (puppi ? r.puppi : r.pf)) {
             if (p.floatPt() > ptMin) {
                 if (p.track.hwPt > 0) {
-                    ret.emplace_back( p.floatPt(), p.track.floatVtxEta(), p.track.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ() );
+                    ret.emplace_back( p.floatPt(), p.track.floatVtxEta(), p.track.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
                 } else {
-                    ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.hwId, 0.f, p.floatDZ() );
+                    ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
                 }
             }
         }
@@ -87,7 +87,7 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin) const {
     for (const Region &r : regions_) {
         for (const PropagatedTrack & p : r.track) {
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? PFParticle::MU : PFParticle::CH, 0.f, p.floatDZ() );
+                ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? PFParticle::MU : PFParticle::CH, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge() );
             }
         }
     }
@@ -114,18 +114,26 @@ void PFAlgo::runPF(Region &r) const {
     constexpr int16_t PT_20_GEV = std::round(20 * CaloCluster::PT_SCALE);
     
     // first do the muon/tracking matching
+    if (debug_) printf("INTMU Trying to link. I have %d tracks, %d muons\n", int(r.track.size()), int(r.muon.size()));
     for (int imu = 0, nmu = r.muon.size(); imu < nmu; ++imu) {
+        if (debug_>1) printf("INTMU \t muon %d (pt %7.2f)\n", imu, r.muon[imu].floatPt());
         // FIXME the current pt matching is probably a bit tricky to do in integers
         float minPtDiff = 4; int imatch = -1;
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
-            if (std::abs(r.muon[imu].hwEta - r.track[itk].hwEta) >= BOX_0p20) continue;
-            if (std::abs((r.muon[imu].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= BOX_0p20) continue; // phi wrapping would play nice if we had a power of 2 bins in phi
+            if (debug_>1) printf("INTMU \t\t track %d (pt %7.2f): ", itk, r.track[itk].floatPt());
+            if (std::abs(r.muon[imu].hwEta - r.track[itk].hwEta) >= BOX_0p20) {
+                if (debug_>1) printf("outside deta.\n");
+                continue; }
+            if (std::abs((r.muon[imu].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= BOX_0p20) {
+                if (debug_>1) printf("outside dphi.\n");  // phi wrapping would play nice if we had a power of 2 bins in phi
+                continue; }
             // FIXME for the moment, we do the floating point matching in pt
             float dpt = (r.muon[imu].hwPt > r.track[itk].hwPt ? r.muon[imu].floatPt()/r.track[itk].floatPt() : r.track[itk].floatPt()/r.muon[imu].floatPt());
             if (dpt < minPtDiff) {
+                if (debug_>1) printf("new best match.\n");
                 if (imatch >= 0) r.track[imatch].muonLink = false;
-                r.track[itk].muonLink = false;
-            }
+                r.track[itk].muonLink = true;
+            } else if (debug_>1) printf("new match, but %g worse than %d (%g).\n", dpt, imatch, minPtDiff);
         }
     }
     // then do track + calo linking
