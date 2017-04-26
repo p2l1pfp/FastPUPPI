@@ -74,6 +74,7 @@ for iev,event in enumerate(events):
             if   gwhat == "e" :    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 11 ]
             elif gwhat == "mu":    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 13 ]
             elif gwhat == "pi":    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 211 ]
+            elif gwhat == "jet":   o2 = [ g for g in allGenJ if abs(g.eta()) < 5 and g.pt() > 20 ]
             elif gwhat == "gamma": o2 = genGamma
             else: raise RuntimeError, "Not yet supported"
         else:
