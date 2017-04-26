@@ -18,7 +18,7 @@ private:
   int fIPhi;
   double fFrac;
   double fEcal;
-  double fHcal;
+  double fTotal;
   double fPtCorr;
 };
 #endif

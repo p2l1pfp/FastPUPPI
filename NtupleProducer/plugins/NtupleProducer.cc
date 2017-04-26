@@ -350,6 +350,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
   //    
   //// ---- Trivial calibration by hand
+  /*
   ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
         if (std::abs(c.eta)<1.5) {
             return c.et - (3.0 - std::abs(c.eta)); // it looks like otherwise there's an offset
@@ -359,10 +360,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
             return c.et; 
         }
   } );
+  */
   //// ---- Calibration from Phil's workflow
-  //ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-  //      return ecorrector_->correct(0., c.et, ieta, iphi); // FIXME is ieta or abs(ieta) ?
-  //} );
+  ecalClusterer_.correct( [=](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+      return ecorrector_->correct(0., c.et, ieta, iphi); // FIXME is ieta or abs(ieta) ? => its ieta
+    } );
 
   // write debug output tree
   if (!fOutputName.empty()) {
@@ -425,6 +427,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //
   //// ---- Trivial calibration by hand
   //
+  /*
   caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
         if (std::abs(c.eta)<3.0) {
             return c.ecal_et + c.hcal_et * 1.25;
@@ -432,9 +435,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
             return c.et;
         }
   } );
+  */
   //
   //// ---- Dummy calibration (no calibration at all)
   // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
+
+  //// ---- Calibration from Phil's workflow
+  caloLinker_.correct( [=](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
+      return corrector_->correct(c.et, c.ecal_et, ieta, iphi); // FIXME is ieta or abs(ieta) ? => its ieta
+    } );
 
   // write debug output tree
   if (!fOutputName.empty()) {
