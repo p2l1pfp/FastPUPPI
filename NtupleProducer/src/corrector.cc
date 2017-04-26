@@ -7,7 +7,9 @@
 #include <TFile.h>
 #include <TKey.h>
 #include "FWCore/Utilities/interface/CPUTimer.h"
+#include "FWCore/Utilities/interface/Exception.h"
 #include <unordered_map>
+#include <cassert>
 
 corrector::corrector(const std::string iFile, int iNFrac, int debug) {
   TFile *lFile = new TFile(iFile.c_str());
@@ -36,6 +38,7 @@ corrector::corrector(const std::string iFile, int iNFrac, int debug) {
         if (iNFrac > 1) snprintf(buff, 1022, "eta_%dphi_%d_frac_%d", i0-fNEta/2, i1+1, i2);
         else            snprintf(buff, 1022, "eta_%d_frac_%d", i0, i2);
         fGraph[i0][i1][i2] = graphs[buff]; 
+        if (fGraph[i0][i1][i2] != nullptr) ngraphs++;
       }
     }
   }
@@ -56,11 +59,17 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   fIPhi = iPhi-1;
   fFrac = lFrac;
   if(lIFrac > fNFrac-1) lIFrac = 0; 
+  assert(fIEta >= 0 && fIEta < fNEta);
+  assert(fIPhi >= 0 && fIPhi < fNPhi);
+  assert(lIFrac >= 0 && lIFrac < fNFrac);
+  if (!fGraph[fIEta][fIPhi][lIFrac]) {
+    throw cms::Exception("RuntimeError") << "Error trying to read calibration [" << fIEta << "][" << fIPhi << "][" << lIFrac << "] for iTotal = " << iTotal << " iEcal = " << iEcal << " iEta " << iEta << " iPhi " << iPhi << std::endl;
+  }
   fPtCorr = (fGraph[fIEta][fIPhi][lIFrac])->Eval(fTotal);
   fPtCorr = std::min(3.*(fTotal),fPtCorr); // Just in case there is a bug don't go overboard
   if(fPtCorr < 1.) fPtCorr = 0;
   ///======> Tuned parameters for optimal MET resolution
-  //if(fFrac > 0.8) return fTotal;   //Use just Ecal correction for Hi Ecal composition
+  if(iTotal > 0 && fFrac > 0.8) return fTotal;   //Use just Ecal correction for Hi Ecal composition
   //if(fabs(l1tpf::towerEta(iEta)) > 3.0) fPtCorr *= 0.66;//
   //if(fabs(l1tpf::towerEta(iEta)) > 2.853 && fabs(l1tpf::towerEta(iEta)) < 3.1 && iHcal > 4.) fPtCorr = 0;
   return fPtCorr;

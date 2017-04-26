@@ -128,7 +128,6 @@ private:
   double puppiPtCut_;
   double vtxRes_;
   corrector* corrector_;
-  corrector* corrector2_;
   corrector* ecorrector_;
   combiner * connector_;
   combiner * rawconnector_;
@@ -193,7 +192,6 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
-  Corrector2Tag_        (getFilePath(iConfig,"corrector2")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
   TrackResTag_          (getFilePath(iConfig,"trackres")),
   EleResTag_            (getFilePath(iConfig,"eleres")),
@@ -218,7 +216,6 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
 {
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,11,fDebug);
-  corrector2_ = new corrector(Corrector2Tag_,11,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
   connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
   rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,vtxRes_);
@@ -362,8 +359,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   } );
   */
   //// ---- Calibration from Phil's workflow
-  ecalClusterer_.correct( [=](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-      return ecorrector_->correct(0., c.et, ieta, iphi); // FIXME is ieta or abs(ieta) ? => its ieta
+  ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+      return ecorrector_->correct(0., c.et, ieta, iphi);
     } );
 
   // write debug output tree
@@ -420,13 +417,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Calorimeter linking
   caloLinker_.run();
   ///=== FIXME calibration goes here ====
-  /// if(hcal_clust_et > 0) hcal_corr_et   = corrector_ ->correct(double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
-  /// if(hcal_corr_et  > 0) hcal_corr_et   = corrector2_->correct(double(hcal_corr_et) ,double(hcal_clust_et),double(hcal_ecal_et),hcal_ieta,hcal_iphi);
-  /// if(hcal_corr_et  < 0) hcal_corr_et   = 0;
-  /// if(hcal_corr_et)      hcal_corr_emf  = corrector_->ecalFrac();
-  //
   //// ---- Trivial calibration by hand
-  //
   /*
   caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
         if (std::abs(c.eta)<3.0) {
@@ -436,13 +427,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
         }
   } );
   */
-  //
   //// ---- Dummy calibration (no calibration at all)
   // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
-
+  //
   //// ---- Calibration from Phil's workflow
-  caloLinker_.correct( [=](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
-      return corrector_->correct(c.et, c.ecal_et, ieta, iphi); // FIXME is ieta or abs(ieta) ? => its ieta
+  caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
+      return corrector_->correct(c.et, c.ecal_et, ieta, iphi); 
     } );
 
   // write debug output tree

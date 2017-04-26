@@ -28,6 +28,11 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     L1TK = cms.VInputTag("InfoOut:TK",),
     L1PF = cms.VInputTag("InfoOut:PF",),
     L1Puppi = cms.VInputTag("InfoOut:Puppi",),
+    # -- processed (integer math) --
+    L1ICalo = cms.VInputTag("InfoOut:L1Calo",),
+    L1ITK = cms.VInputTag("InfoOut:L1TK",),
+    L1IPF = cms.VInputTag("InfoOut:L1PF",),
+    L1IPuppi = cms.VInputTag("InfoOut:L1Puppi",),
    ## -- clustered --
    #L1ak4RawCalo = cms.VInputTag("ak4L1RawCalo",),
    #L1ak4Calo = cms.VInputTag("ak4L1Calo",),

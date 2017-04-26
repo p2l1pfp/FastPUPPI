@@ -15,20 +15,26 @@ from DataFormats.FWLite import Handle, Events
 from FastPUPPI.NtupleProducer.display.drawers import *
 from FastPUPPI.NtupleProducer.display.physobjlist import *
 
-if len(argv) <= 1:
+from optparse import OptionParser
+parser = OptionParser("%(prog) file.root output_directory/")
+parser.add_option("-n", "--events", type=int, nargs=1, default=3, help="Number of events to consider")
+parser.add_option("-E", "--select-events", type=str, nargs=1, action="append", default=[], help="Specific event to select (run:lumi:event)")
+parser.add_option("--sec-file", type=str, nargs=1, default=None, help="secondary input file")
+options, args = parser.parse_args()
+
+if len(args) <= 1:
     print """
         usage: python eventDisplay.py file.root output_directory/    [event number]
-           or: python eventDisplay.py file.root secondaryfile.root output_directory/
+           or: python eventDisplay.py file.root --sec-file secondaryfile.root output_directory/
 """
 
-if ".root" in argv[2]:
-    print "Primary: %s, Secondary: %s" % (argv[1], argv[2])
-    events = Events(options=Opts(files=[argv[1]], secFiles=[argv[2]]))
-    del argv[2]
+if options.sec_file:
+    print "Primary: %s, Secondary: %s" % (args[0], options.sec_file)
+    events = Events(options=Opts(files=[args[0]], secFiles=[options.sec_file]))
 else:
-    events = Events(argv[1])
+    events = Events(args[0])
 
-out = argv[2]
+out = args[1]
 if not os.path.isdir(out):
     os.system("mkdir -p "+out)
     os.system("cp index.php "+out+"/")
@@ -43,11 +49,11 @@ l1pfp    = Handle("std::vector<l1tpf::Particle>")
 puppiw   = Handle("edm::ValueMap<float>")
 
 for iev,event in enumerate(events):
-    if len(argv) > 3 and event.eventAuxiliary().event() != int(argv[3]): continue
-    print "\nEvent %1d %5d %12d" % (
-        event.eventAuxiliary().run(),
-        event.eventAuxiliary().luminosityBlock(),
-        event.eventAuxiliary().event())
+    if iev >= options.events: break
+    idev = "%d:%d:%d" % ( event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
+    if options.select_events:
+       if idev not in options.select_events: continue
+    print "Event %s" % idev
  
     phystruth = []
     physobj  = []

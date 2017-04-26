@@ -112,11 +112,11 @@ void combiner::link(bool iMetRate) {
   if (fDebug) printf("Trying to link. I have %d tracks, %d calo\n", int(fTkParticles.size()), int(fParticles.size()));
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
     if(fTkParticles[i0].pdgId() == MU) continue; // skip muons for now, add them at the end
-    if (fDebug>1) printf("\t track %d (pt %7.2f)\n", i0, fTkParticles[i0].pt());
+    if (fDebug>1) printf("\t track %d (pt %7.2f +- %5.2f)\n", i0, fTkParticles[i0].pt(), fTkParticles[i0].sigma());
     bool pFilled = false; // if true, the track has already been added in the PF candidates; if false, it's still to be added
     int pIMatch = -1; double pPtMatch = -1;
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
-      if (fDebug>1) printf("\t\t calo %d (pt %7.2f): ", i1, fParticles[i1].pt());
+      if (fDebug>1) printf("\t\t calo %d (pt %7.2f +- %5.2f): ", i1, fParticles[i1].pt(), fParticles[i1].sigma());
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
             if (fDebug>1) printf("outside dR (%.3f).\n",deltaR(fTkParticles[i0],fParticles[i1])); 
