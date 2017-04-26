@@ -71,6 +71,7 @@ namespace l1tpf_int {
       float floatVtxEta() const { return float(hwVtxEta) / InputTrack::VTX_ETA_SCALE; }
       float floatVtxPhi() const { return float(hwVtxPhi) / InputTrack::VTX_PHI_SCALE; }
       float floatDZ()     const { return float(hwZ0) / InputTrack::Z0_SCALE; }
+      int intCharge()     const { return hwCharge ? +1 : -1; }
   };
 
   struct PropagatedTrack : public InputTrack {
@@ -113,6 +114,7 @@ namespace l1tpf_int {
       float floatPt() const { return float(hwPt) / CaloCluster::PT_SCALE; }
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
+      int intCharge()     const { return hwCharge ? +1 : -1; }
   };
 
   struct PFParticle {
@@ -135,6 +137,7 @@ namespace l1tpf_int {
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
       float floatDZ() const { return float(track.hwZ0) / InputTrack::Z0_SCALE; }
+      int intCharge()     const { return (track.hwPt > 0 ? track.intCharge() : 0); }
       void setPuppiW(float w) {
             hwPuppiWeight = std::round(w * PUPPI_SCALE);
       }
