@@ -1,8 +1,16 @@
-cmsrel CMSSW_6_2_0_SLHC12   #  or SLHC12_patch1, with the merge-topic below, this is equivalent
-cd CMSSW_6_2_0_SLHC12/src
+Basic Instructions
+
+```
+cmsrel CMSSW_9_1_0_pre2
+cd CMSSW_9_1_0_pre2/src
 cmsenv
+git clone git@github.com:nhanvtran/FastPUPPI.git -b 91X
+scram b -j8
+```
 
-git cms-addpkg SLHCUpgradeSimulations/L1TrackTrigger
-git cms-merge-topic EmanuelPerez:TTI_62X_TrackTriggerObjects
+The current basic config is:
+`FastPUPPI/NtupleProducer/python/runNtupleProducer_cfg.py`
 
-scramv1 b -j 8
+Relval samples are located in:
+`/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/`
+n.b. the \_14 samples are for upgrade, and they are not in every pre-release so we are using pre1 instead of pre2

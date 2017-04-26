@@ -4,7 +4,7 @@
 #include "TTree.h"
 
 metanalyzer::metanalyzer(std::string iFile) {
-  fNVars = 30;
+  fNVars = 32;
   for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;
   fFile = new TFile(iFile.c_str(),"RECREATE");
   fTree = new TTree("met","met");
@@ -39,36 +39,36 @@ metanalyzer::metanalyzer(std::string iFile) {
   fTree->Branch("pupu2"      ,&fVar[27],"pupu2/D");
   fTree->Branch("dz"         ,&fVar[28],"dz/D");
   fTree->Branch("dzmu"       ,&fVar[29],"dzmu/D");
+  fTree->Branch("genmet"     ,&fVar[30],"genmet/D");
+  fTree->Branch("genmetphi"  ,&fVar[31],"genmetphi/D");
 }
 void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
-    if (iParticle[i0].id == 4) { nmuons++; }
+    if (iParticle[i0].pdgId() == 4) { nmuons++; }
     for(unsigned int i1 = 0; i1 < iParticle.size(); i1++) {
-      if(iParticle[i0].Et < 20 || iParticle[i1].Et < 20) continue;
-      if(iParticle[i0].id != 4 || iParticle[i1].id != 4) continue;
-      TLorentzVector pVec0; pVec0.SetPtEtaPhiM(iParticle[i0].Et,iParticle[i0].Eta,iParticle[i0].Phi,iParticle[i0].M);
-      TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iParticle[i1].Et,iParticle[i1].Eta,iParticle[i1].Phi,iParticle[i1].M);
+      if(iParticle[i0].pt() < 20 || iParticle[i1].pt() < 20) continue;
+      if(iParticle[i0].pdgId() != 4 || iParticle[i1].pdgId() != 4) continue;
+      auto pVec0 = iParticle[i0].p4(), pVec1 = iParticle[i1].p4();
       if((pVec0+pVec1).M() < 60. && (pVec0+pVec1).M() > 120.) continue;
-      if(iParticle[i0].charge * iParticle[i1].charge == 1.) continue; //oppo charge
+      if(iParticle[i0].charge() * iParticle[i1].charge() == 1.) continue; //oppo charge
       pVec0+=pVec1;
       fVar[0]  = pVec0.M();
       fVar[1]  = pVec0.Pt();
       fVar[2]  = pVec0.Eta();
       fVar[3]  = pVec0.Phi();
       fVar[28] = iDZ;
-      fVar[29] = (iParticle[i0].dZ+iParticle[i1].dZ)/2.;
+      fVar[29] = (iParticle[i0].dz()+iParticle[i1].dz())/2.;
       break;
     }
   }
 }
 void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticle,bool iAdd) {
   int lId = 4+iId*4;
-  TLorentzVector lVec; lVec.SetPtEtaPhiM(0.,0.,0.,0.);
-  TLorentzVector lZ;   lZ  .SetPtEtaPhiM(fVar[1],0.,fVar[3],0.);
+  TLorentzVector lVec(0.,0.,0.,0.);
+  TLorentzVector lZ; lZ.SetPtEtaPhiM(fVar[1],0.,fVar[3],0.);
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
-    TLorentzVector pVec1; pVec1.SetPtEtaPhiM(iParticle[i0].Et,0,iParticle[i0].Phi,0);
-    lVec-=pVec1;
+    lVec-=iParticle[i0].tp4();
   }
   if(iAdd) lVec -= lZ;
   fVar[lId+0] = lVec.Pt();
@@ -77,4 +77,14 @@ void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticl
   lVec.RotateZ(-lZ.Phi());
   fVar[lId+2] = lVec.Px();
   fVar[lId+3] = lVec.Py();
+}
+void metanalyzer::setGenMET(const reco::GenParticleCollection &iGenParticles) { 
+  TLorentzVector lVec(0.,0.,0.,0.);
+  for (reco::GenParticleCollection::const_iterator itGenP = iGenParticles.begin(); itGenP!=iGenParticles.end(); ++itGenP) {
+    if(itGenP->status() != 1 || abs(itGenP->pdgId()) == 12 || abs(itGenP->pdgId()) == 14 || abs(itGenP->pdgId()) == 16) continue;
+    TLorentzVector pVec(0.,0.,0.,0.);  pVec.SetPtEtaPhiM(itGenP->pt(),0.,itGenP->phi(),0.);
+    lVec -= pVec;
+  }
+  fVar[30] = lVec.Pt();
+  fVar[31] = lVec.Phi();
 }
