@@ -7,8 +7,9 @@ tdrstyle.setTDRStyle()
 
 parser = argparse.ArgumentParser(description='Process benchmarks.')
 parser.add_argument('-Tree'   ,'--Tree'      ,action='store',dest='Tree'   ,default='HcalInfo'      ,help='Tree Name')
-parser.add_argument('-input'  ,'--input'     ,action='store'  ,dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_v4.root',help='input file')
-parser.add_argument('-var'    ,'--var'       ,action='store',dest='var'    ,default='hcal_clust_et'  ,help='var') 
+parser.add_argument('-input'  ,'--input'     ,action='store'  ,dest='input'  ,default='/tmp/pharris/ChargedPion_v6.root',help='input file')
+#parser.add_argument('-input'  ,'--input'     ,action='store'  ,dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_v5.root',help='input file')
+parser.add_argument('-var'    ,'--var'       ,action='store',dest='var'    ,default='hcal_corr_et'  ,help='var') 
 parser.add_argument('-genvar' ,'--genvar'    ,action='store',dest='genvar' ,default='genPt'         ,help='mass') 
 parser.add_argument('-build'  ,'--build'     ,action='store_true',dest='build'  ,default=False      ,help='build')
 parser.add_argument('-eta'    ,'--eta'       ,dest='etarange',nargs='+',type=float,default=[-4.0,-3.5,-3.0,-2.75,-2.5,-2.25,-2.0,-1.75,-1.5,-1.0,-0.5,0.,0.5,1.0,1.5,1.75,2.0,2.25,2.5,2.75,3.0,3.5,4.0],help='eta range')
@@ -205,6 +206,10 @@ def clean(iX,iY):
 def translateIEta(eta):
     towerEtas = [0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479,1.566,1.653,1.740,1.830,1.930,2.043,2.172,2.322,2.5,2.650,2.853,3.139,3.314,3.489,3.664,3.839,4.013,4.191,4.363,4.538,4.716,4.889,5.191]
     eta=eta-41
+    if eta == 0: 
+        eta = 1
+    if abs(eta) > 40: 
+        eta = eta/abs(eta) * 40
     outeta = towerEtas[abs(eta)-1]*0.5+towerEtas[abs(eta)]*0.5
     if eta < 0:
         outeta = outeta * -1

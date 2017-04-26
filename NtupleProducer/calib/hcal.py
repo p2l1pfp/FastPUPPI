@@ -190,7 +190,7 @@ def buildTables(iFrac,iFitFrac,iPar0,iPar1,iPar2,iEtaMin,iEtaMax,iPhiMin,iPhiMax
                 lY   = array('d', [])
                 for i2 in range(0,len(iHPt)-1):
                     lA  = fPar0[pId][pFrac].Eval(iHPt[i2])
-                    pPt = iHPt[i2] + lA
+                    pPt = iHPt[i2]*lA + iHPt[i2]
                     lY.append(iHPt[i2])
                     lX.append(pPt)
                 lX,lY=clean(lX,lY)

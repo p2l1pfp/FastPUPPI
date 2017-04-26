@@ -60,7 +60,7 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   fPtCorr = std::min(3.*(fTotal),fPtCorr); // Just in case there is a bug don't go overboard
   if(fPtCorr < 1.) fPtCorr = 0;
   ///======> Tuned parameters for optimal MET resolution
-  if(fFrac > 0.8) return fTotal;   //Use just Ecal correction for Hi Ecal composition
+  //if(fFrac > 0.8) return fTotal;   //Use just Ecal correction for Hi Ecal composition
   //if(fabs(l1tpf::towerEta(iEta)) > 3.0) fPtCorr *= 0.66;//
   //if(fabs(l1tpf::towerEta(iEta)) > 2.853 && fabs(l1tpf::towerEta(iEta)) < 3.1 && iHcal > 4.) fPtCorr = 0;
   return fPtCorr;
