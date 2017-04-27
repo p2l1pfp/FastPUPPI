@@ -204,8 +204,30 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
          }
       };
       std::vector<std::pair<::MultiCollection,RecoVars>> reco_;
+      template<typename T> struct 
+      CopyT {
+            std::string name;
+            edm::EDGetTokenT<T> token;
+            T buffer;
+            CopyT(const edm::InputTag &tag, edm::EDGetTokenT<T> tok) :
+                name(tag.label()+tag.instance()),
+                token(tok),
+                buffer() {}
+            void get(const edm::Event &iEv) {
+                edm::Handle<T> handle;
+                iEv.getByToken(token, handle);
+                buffer = *handle;
+            }
+            void makeBranches(TTree *tree) {
+                tree->Branch((name).c_str(), &buffer, (name+"/"+typecode()).c_str());
+            }
+            static std::string typecode() { assert(false); }
+      };
+      std::vector<CopyT<unsigned>> copyUInts_;
       float bZ_;
 };
+template<> std::string ResponseNTuplizer::CopyT<unsigned>::typecode() { return "i"; }
+template<> std::string ResponseNTuplizer::CopyT<float>::typecode() { return "F"; }
 
 ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     genjets_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
@@ -220,9 +242,13 @@ ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     tree_->Branch("lumi", &lumi_, "lumi/i");
     tree_->Branch("event", &event_, "event/l");
 
-    auto reconames = iConfig.getParameterNamesForType<std::vector<edm::InputTag>>();
+    edm::ParameterSet objs = iConfig.getParameter<edm::ParameterSet>("objects");
+    auto reconames = objs.getParameterNamesForType<std::vector<edm::InputTag>>();
     for (const std::string & name : reconames) {
-        reco_.emplace_back(::MultiCollection(iConfig,name,consumesCollector()),RecoVars());
+        reco_.emplace_back(::MultiCollection(objs,name,consumesCollector()),RecoVars());
+    }
+    for (const edm::InputTag &tag : iConfig.getParameter<std::vector<edm::InputTag>>("copyUInts")) {
+        copyUInts_.emplace_back(tag.instance(), consumes<unsigned>(tag));
     }
 }
 
@@ -236,6 +262,7 @@ ResponseNTuplizer::beginJob()
     for (auto & pair : reco_) {
         pair.second.makeBranches(pair.first.name(), tree_);
     }
+    for (auto & c : copyUInts_) c.makeBranches(tree_);
 }
 
 
@@ -270,6 +297,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     for (auto & recopair : reco_) {
         recopair.first.get(iEvent);
     }
+    for (auto & c : copyUInts_) c.get(iEvent);
     for (const reco::GenJet & j : *genjets) {
         bool ok = true;
         const reco::Candidate * match = nullptr;

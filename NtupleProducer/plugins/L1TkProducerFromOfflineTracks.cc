@@ -11,6 +11,7 @@
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "DataFormats/Math/interface/deltaR.h"
 
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
@@ -24,6 +25,8 @@ namespace l1tpf {
         private:
             edm::EDGetTokenT<reco::TrackCollection> TrackTag_;
             StringCutObjectSelector<reco::Track>    TrackSel_;
+            bool muonGunVeto_;
+            edm::EDGetTokenT<reco::CandidateView> GenTagForVeto_;
             float fBz_;
 
             virtual void produce(edm::Event&, const edm::EventSetup&) override;
@@ -39,8 +42,10 @@ namespace l1tpf {
 
 l1tpf::TkProducerFromOfflineTracks::TkProducerFromOfflineTracks(const edm::ParameterSet&iConfig) :
     TrackTag_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("TrackTag"))),
-    TrackSel_(iConfig.getParameter<std::string>("TrackSel"))
+    TrackSel_(iConfig.getParameter<std::string>("TrackSel")),
+    muonGunVeto_(iConfig.getParameter<bool>("MuonGunVeto"))
 {
+    if (muonGunVeto_) GenTagForVeto_ = consumes<reco::CandidateView>(iConfig.getParameter<edm::InputTag>("GenTagForVeto"));
     produces<std::vector<l1tpf::Particle>>();
 }
 
@@ -49,12 +54,25 @@ void
 l1tpf::TkProducerFromOfflineTracks::produce(edm::Event & iEvent, const edm::EventSetup &) 
 {
   std::unique_ptr<std::vector<l1tpf::Particle>> out(new std::vector<l1tpf::Particle>());
-
+  std::vector<const reco::Candidate *> vetos;
+  if (muonGunVeto_) {
+      edm::Handle<reco::CandidateView> gens;
+      iEvent.getByToken(GenTagForVeto_, gens);
+      for (const reco::Candidate & c : *gens) vetos.push_back(&c);
+  }
      
   edm::Handle<reco::TrackCollection> tracks;
   iEvent.getByToken(TrackTag_, tracks);
   for (const reco::Track &tk : *tracks) {
       if (!TrackSel_(tk)) continue;
+
+      bool passveto = true;
+      for (const reco::Candidate * veto : vetos) {
+        if (::deltaR2(*veto, tk) < 0.01 && tk.pt() > 0.5 * std::min(veto->pt(),100.)) {
+          passveto = false; break;
+        }
+      }
+      if (!passveto) continue;
 
       const reco::Track::Vector & momentum = tk.momentum();
       const reco::Track::Point  & poca     = tk.referencePoint();  // point of closest approach
