@@ -6,11 +6,31 @@
 
 using namespace l1tpf_int;
 
-RegionMapper::RegionMapper( const edm::ParameterSet& ) 
+RegionMapper::RegionMapper( const edm::ParameterSet& iConfig) 
 {
-    // start off with a dummy region
-    regions_.push_back(Region(-5,5,-M_PI,M_PI,
-                             9999,999,9,9999,9999));
+    if (iConfig.existsAs<std::vector<edm::ParameterSet>>("regions")) {
+        for (const edm::ParameterSet & preg : iConfig.getParameter<std::vector<edm::ParameterSet>>("regions")) {
+            std::vector<double> etaBoundaries = preg.getParameter<std::vector<double>>("etaBoundaries");
+            unsigned int phiSlices = preg.getParameter<uint32_t>("phiSlices");
+            float etaExtra = preg.getParameter<double>("etaExtra");
+            float phiExtra = preg.getParameter<double>("phiExtra");
+            float phiWidth = 2*M_PI/phiSlices;
+            for (unsigned int ieta = 0, neta = etaBoundaries.size()-1; ieta < neta; ++ieta) {
+                for (unsigned int iphi = 0; iphi < phiSlices; ++iphi) {
+                    float phiCenter = (iphi+0.5)*phiWidth-M_PI;
+                    regions_.push_back(Region(
+                            etaBoundaries[ieta], etaBoundaries[ieta+1], phiCenter, phiWidth, 
+                            phiExtra, etaExtra,
+                            9999,999,9,9999,9999)); 
+                }
+            }
+        }
+        std::cout << "L1 RegionMapper: made " << regions_.size() << " regions" << std::endl;
+    } else {
+        // start off with a dummy region
+        regions_.push_back(Region(-5.5,5.5, 0,2*M_PI, 0.5, 0.5,
+                                 9999,999,9,9999,9999));
+    }
 }
 
 void RegionMapper::addTrack( const l1tpf::Particle & t ) {
@@ -22,7 +42,7 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
     prop.fillInput(t.pt(), t.eta(), t.phi(), t.charge(), t.dz(), 0);
     prop.fillPropagated(t.pt(), t.sigma(), t.caloEta(), t.caloPhi(), 0);
     for (Region &r : regions_) {
-        if (r.contains(t.eta(), t.phi())) {
+        if (r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi())) {
             r.track.push_back(prop);
         }
     } 
@@ -58,12 +78,11 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin) const 
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
         for (const PFParticle & p : (puppi ? r.puppi : r.pf)) {
+            if (regions_.size() > 1) {
+                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+            }
             if (p.floatPt() > ptMin) {
-                if (p.track.hwPt > 0) {
-                    ret.emplace_back( p.floatPt(), p.track.floatVtxEta(), p.track.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
-                } else {
-                    ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
-                }
+                ret.emplace_back( p.floatPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
             }
         }
     }
@@ -74,6 +93,9 @@ std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin) const {
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
         for (const CaloCluster & p : r.calo) {
+            if (regions_.size() > 1) {
+                if (!r.fiducial(p.floatEta(), p.floatPhi())) continue;
+            }
             if (p.floatPt() > ptMin) {
                 ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.isEM ? PFParticle::GAMMA : PFParticle::NH );
             }
@@ -86,6 +108,9 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin) const {
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
         for (const PropagatedTrack & p : r.track) {
+            if (regions_.size() > 1) {
+                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+            }
             if (p.floatPt() > ptMin) {
                 ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? PFParticle::MU : PFParticle::CH, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge() );
             }

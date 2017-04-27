@@ -17,43 +17,71 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
     genParticles = cms.InputTag("genParticles"),
     isParticleGun = cms.bool(False),
-    # -- inputs --
-    Ecal = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-    Hcal = cms.VInputTag('l1tPFHcalProducerFromOfflineRechits:towers','l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-    Calo = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHcalProducerFromOfflineRechits:towers', 'l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-    TK   = cms.VInputTag('l1tPFTkProducersFromOfflineTracksStrips'),
-    # -- processed --
-    L1RawCalo = cms.VInputTag("InfoOut:RawCalo",),
-    L1Calo = cms.VInputTag("InfoOut:Calo",),
-    L1TK = cms.VInputTag("InfoOut:TK",),
-    L1PF = cms.VInputTag("InfoOut:PF",),
-    L1Puppi = cms.VInputTag("InfoOut:Puppi",),
-    # -- processed (integer math) --
-    L1ICalo = cms.VInputTag("InfoOut:L1Calo",),
-    L1ITK = cms.VInputTag("InfoOut:L1TK",),
-    L1IPF = cms.VInputTag("InfoOut:L1PF",),
-    L1IPuppi = cms.VInputTag("InfoOut:L1Puppi",),
-   ## -- clustered --
-   #L1ak4RawCalo = cms.VInputTag("ak4L1RawCalo",),
-   #L1ak4Calo = cms.VInputTag("ak4L1Calo",),
-   #L1ak4TK = cms.VInputTag("ak4L1TK",),
-   #L1ak4PF = cms.VInputTag("ak4L1PF",),
-   #L1ak4Puppi = cms.VInputTag("ak4L1Puppi",),
+    objects = cms.PSet(
+        # -- inputs --
+        Ecal = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
+        Hcal = cms.VInputTag('l1tPFHcalProducerFromOfflineRechits:towers','l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
+        Calo = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHcalProducerFromOfflineRechits:towers', 'l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
+        TK   = cms.VInputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+        # -- processed --
+        L1RawCalo = cms.VInputTag("InfoOut:RawCalo",),
+        L1Calo = cms.VInputTag("InfoOut:Calo",),
+        L1TK = cms.VInputTag("InfoOut:TK",),
+        L1PF = cms.VInputTag("InfoOut:PF",),
+        L1Puppi = cms.VInputTag("InfoOut:Puppi",),
+        # -- processed (integer math) --
+        L1ICalo = cms.VInputTag("InfoOut:L1Calo",),
+        L1ITK = cms.VInputTag("InfoOut:L1TK",),
+        L1IPF = cms.VInputTag("InfoOut:L1PF",),
+        L1IPuppi = cms.VInputTag("InfoOut:L1Puppi",),
+       ## -- clustered --
+       #L1ak4RawCalo = cms.VInputTag("ak4L1RawCalo",),
+       #L1ak4Calo = cms.VInputTag("ak4L1Calo",),
+       #L1ak4TK = cms.VInputTag("ak4L1TK",),
+       #L1ak4PF = cms.VInputTag("ak4L1PF",),
+       #L1ak4Puppi = cms.VInputTag("ak4L1Puppi",),
+    ),
+    copyUInts = cms.VInputTag(
+        "InfoOut:totNL1Calo", "InfoOut:totNL1TK", "InfoOut:totNL1Mu", "InfoOut:totNL1PF", "InfoOut:totNL1Puppi",
+        "InfoOut:maxNL1Calo", "InfoOut:maxNL1TK", "InfoOut:maxNL1Mu", "InfoOut:maxNL1PF", "InfoOut:maxNL1Puppi",
+    )
 )
 process.p = cms.Path(process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
 if True:
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
+    process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
     process.InfoOut.outputName = ""; # turn off Ntuples
-    process.p = cms.Path(process.InfoOut + process.ntuple)
+    process.p = cms.Path(process.l1tPFMuProducerFromL1Mu + process.InfoOut + process.ntuple)
+if False:
+    regions = cms.VPSet(
+            cms.PSet(
+                etaBoundaries = cms.vdouble(-5.5,-4,-3),
+                phiSlices = cms.uint32(4),
+                etaExtra = cms.double(0.2),
+                phiExtra = cms.double(0.2),
+            ),
+            cms.PSet(
+                etaBoundaries = cms.vdouble(-3,-1.5,0,1.5,3),
+                phiSlices = cms.uint32(6),
+                etaExtra = cms.double(0.2),
+                phiExtra = cms.double(0.2),
+            ),
+            cms.PSet(
+                etaBoundaries = cms.vdouble(3,4,5.5),
+                phiSlices = cms.uint32(4),
+                etaExtra = cms.double(0.2),
+                phiExtra = cms.double(0.2),
+            ),
+    )
+    if True:
+        process.InfoOut.regions = regions
+    else:
+        process.InfoOutReg = process.InfoOut.clone(regions = regions)
+        process.p = cms.Path(process.l1tPFMuProducerFromL1Mu  + process.InfoOut + process.InfoOutReg + process.ntuple)
 if False:
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),
-            outputCommands = cms.untracked.vstring("drop *",
-                "keep *_genParticles_*_*",
-                "keep *_ak4GenJetsNoNu_*_*",
-                "keep *_InfoOut_*_*",
-            )
     )
     process.e = cms.EndPath(process.out)
 if False:

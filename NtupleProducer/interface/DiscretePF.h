@@ -14,6 +14,7 @@ namespace edm { class ParameterSet; }
 #include <vector>
 #include <algorithm>
 #include "L1TPFParticle.h"
+#include "DataFormats/Math/interface/deltaPhi.h"
 
 namespace l1tpf_int { 
 
@@ -136,6 +137,8 @@ namespace l1tpf_int {
       float floatPt() const { return float(hwPt) / CaloCluster::PT_SCALE; }
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
+      float floatVtxEta() const { return (track.hwPt > 0 ? track.floatVtxEta() : float(hwVtxEta) / CaloCluster::ETAPHI_SCALE); }
+      float floatVtxPhi() const { return (track.hwPt > 0 ? track.floatVtxPhi() : float(hwVtxPhi) / CaloCluster::ETAPHI_SCALE); }
       float floatDZ() const { return float(track.hwZ0) / InputTrack::Z0_SCALE; }
       int intCharge()     const { return (track.hwPt > 0 ? track.intCharge() : 0); }
       void setPuppiW(float w) {
@@ -151,14 +154,16 @@ namespace l1tpf_int {
     std::vector<PFParticle>       puppi;
     unsigned int caloOverflow, trackOverflow, muonOverflow, pfOverflow, puppiOverflow;
 
-    const float etaMin, etaMax, phiMin, phiMax;
+    const float etaMin, etaMax, phiCenter, phiHalfWidth;
+    const float etaExtra, phiExtra;
     const unsigned int ncaloMax, ntrackMax, nmuonMax, npfMax, npuppiMax;
-    Region(float etamin, float etamax, float phimin, float phimax,
+    Region(float etamin, float etamax, float phicenter, float phiwidth, float etaextra, float phiextra,
            unsigned int ncalomax, unsigned int ntrackmax, unsigned int nmuonmax, unsigned int npfmax, unsigned int npuppimax) :
-        etaMin(etamin), etaMax(etamax), phiMin(phimin), phiMax(phimax),
+        etaMin(etamin), etaMax(etamax), phiCenter(phicenter), phiHalfWidth(0.5*phiwidth), etaExtra(etaextra), phiExtra(phiextra),
         ncaloMax(ncalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
 
-    bool contains(float eta, float phi) const { return (etaMin <= eta && eta <= etaMax && phiMin <= phi && phi <= phiMax); }
+    bool contains(float eta, float phi) const { return (etaMin-etaExtra <= eta && eta <= etaMax+etaExtra && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth+phiExtra); }
+    bool fiducial(float eta, float phi) const { return (etaMin <= eta && eta <= etaMax && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth); }
 
     void zero() {
         calo.clear(); track.clear(); muon.clear(); pf.clear(); puppi.clear();

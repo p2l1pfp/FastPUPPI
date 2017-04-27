@@ -112,6 +112,7 @@ private:
   void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
   virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
   void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
+  void addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent);
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
@@ -246,6 +247,16 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   TokBHHcalTPTag_  = consumes<L1PFCollection>( BHHcalTPTag_ );
   TokHFTPTag_      = consumes<L1PFCollection>( HFTPTag_     );
   TokMuonTPTag_    = consumes<L1PFCollection>( MuonTPTag_  );
+  produces<unsigned int>("totNL1TK");
+  produces<unsigned int>("totNL1Mu");
+  produces<unsigned int>("totNL1Calo");
+  produces<unsigned int>("totNL1PF");
+  produces<unsigned int>("totNL1Puppi");
+  produces<unsigned int>("maxNL1TK");
+  produces<unsigned int>("maxNL1Mu");
+  produces<unsigned int>("maxNL1Calo");
+  produces<unsigned int>("maxNL1PF");
+  produces<unsigned int>("maxNL1Puppi");
 }
 
 NtupleProducer::~NtupleProducer()
@@ -534,6 +545,25 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(ll1TkCands,  "L1TK"   ,iEvent);
   addPF(ll1PFCands,  "L1PF"   ,iEvent);
   addPF(ll1PupCands, "L1Puppi",iEvent);
+  unsigned int totNL1Calo = 0, totNL1TK = 0, totNL1Mu = 0, totNL1PF = 0, totNL1Puppi = 0;
+  unsigned int maxNL1Calo = 0, maxNL1TK = 0, maxNL1Mu = 0, maxNL1PF = 0, maxNL1Puppi = 0;
+  for (const auto & r : l1regions_.regions()) {
+      totNL1Calo += r.calo.size();
+      totNL1TK += r.track.size();
+      totNL1PF += r.muon.size();
+      totNL1Mu += r.muon.size();
+      totNL1Puppi += r.puppi.size();
+      maxNL1Calo = std::max<unsigned>( maxNL1Calo, r.calo.size() );
+      maxNL1TK = std::max<unsigned>( maxNL1TK, r.track.size() );
+      maxNL1PF = std::max<unsigned>( maxNL1PF, r.muon.size() );
+      maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.pf.size() );
+      maxNL1Puppi = std::max<unsigned>( maxNL1Puppi, r.puppi.size() );
+  }
+  addUInt(totNL1Calo, "totNL1Calo", iEvent); addUInt(maxNL1Calo, "maxNL1Calo", iEvent);
+  addUInt(totNL1TK, "totNL1TK", iEvent); addUInt(maxNL1TK, "maxNL1TK", iEvent);
+  addUInt(totNL1Mu, "totNL1Mu", iEvent); addUInt(maxNL1Mu, "maxNL1Mu", iEvent);
+  addUInt(totNL1PF, "totNL1PF", iEvent); addUInt(maxNL1PF, "maxNL1PF", iEvent);
+  addUInt(totNL1Puppi, "totNL1Puppi", iEvent); addUInt(maxNL1Puppi, "maxNL1Puppi", iEvent);
   
   if (metanalyzer_) {
       metanalyzer_->clear();
@@ -591,6 +621,10 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
   //Fill!
   iEvent.put(std::move(corrCandidates_),iLabel);
 }
+void NtupleProducer::addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent) { 
+  iEvent.put(std::make_unique<unsigned>(value), iLabel);
+}
+
 //////////////////////////// ------------------------------------------------------
 //////////////////////////// ------------------------------------------------------
 
