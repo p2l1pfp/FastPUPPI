@@ -121,7 +121,7 @@ private:
   edm::EDGetTokenT<L1PFCollection>                TokHGHcalTPTag_;
   edm::EDGetTokenT<L1PFCollection>                TokBHHcalTPTag_;
   edm::EDGetTokenT<L1PFCollection>                TokHFTPTag_;
-  edm::EDGetTokenT<l1t::MuonBxCollection>         TokMuonTPTag_;
+  edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
   double trkPt_;
   bool   metRate_;
   double etaCharged_;
@@ -245,7 +245,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   TokHGHcalTPTag_  = consumes<L1PFCollection>( HGHcalTPTag_ );
   TokBHHcalTPTag_  = consumes<L1PFCollection>( BHHcalTPTag_ );
   TokHFTPTag_      = consumes<L1PFCollection>( HFTPTag_     );
-  TokMuonTPTag_    = consumes<l1t::MuonBxCollection>( MuonTPTag_  );
+  TokMuonTPTag_    = consumes<L1PFCollection>( MuonTPTag_  );
 }
 
 NtupleProducer::~NtupleProducer()
@@ -312,26 +312,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
   
   /// ----------------Muon INFO-------------------
-  // new muon getting in 91x
-  edm::Handle<l1t::MuonBxCollection> muon;    
-  iEvent.getByToken(TokMuonTPTag_, muon);
-  if (muon.isValid()){ 
-    for (int ibx = muon->getFirstBX(); ibx <= muon->getLastBX(); ++ibx) {
-      if (ibx != 0) continue; // only the first bunch crossing
-      for (auto it=muon->begin(ibx); it!=muon->end(ibx); it++){      
-        if (it->et() == 0) continue; // if you don't care about L1T candidates with zero ET.
-        l1tpf::Particle mu( it->pt(), it->eta(), ::deltaPhi(it->phi(), 0.), 0.105, combiner::MU ); // the deltaPhi is to get the wrapping correct
-        mu.setCharge(it->charge());
-        mu.setQuality(it->hwQual());
-        mu.setSigma(connector_->getTrkRes(mu.pt(),mu.eta(),mu.phi())); // this needs to be updated with the muon resolutions!      
-
-        connector_->addMuon(mu);
-        l1regions_.addMuon(mu);
-      }
-    }
-  } 
-  else {
-    edm::LogWarning("MissingProduct") << "L1Upgrade muon bx collection not found." << std::endl;
+  edm::Handle<std::vector<l1tpf::Particle>> l1mus;
+  iEvent.getByToken(TokMuonTPTag_, l1mus);
+  for (l1tpf::Particle mu : *l1mus) { // no const & since we modify it to set the sigma
+      mu.setSigma(connector_->getTrkRes(mu.pt(), mu.eta(), mu.phi()));  // this needs to be updated with the muon resolutions!      
+      connector_->addMuon(mu);
+      l1regions_.addMuon(mu);
   }
 
   /// ----------------ECAL INFO-------------------

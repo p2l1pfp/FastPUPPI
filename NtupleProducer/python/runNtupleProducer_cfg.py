@@ -34,12 +34,22 @@ process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
 process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromOfflineTracks_cfi')
+process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
 process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 
-process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips)
+process.l1Puppi = cms.Sequence(process.l1tPFCaloProducersFromOfflineRechits+process.l1tPFTkProducersFromOfflineTracksStrips+process.l1tPFMuProducerFromL1Mu)
 
 process.p = cms.Path(process.l1Puppi * process.InfoOut )
 
+def goMuonGun(process):
+    process.load('FastPUPPI.NtupleProducer.muonGunSelector_cfi')
+    process.l1tPFTkProducersFromOfflineTracksStrips.MuonGunVeto = True 
+    process.l1tPFMuProducerFromL1Mu.MuonGunVeto = True
+    process.l1tPFTkProducersFromOfflineTracksStrips.GenTagForVeto = cms.InputTag("genMuonsFromGun")
+    process.l1tPFMuProducerFromL1Mu.GenTagForVeto = cms.InputTag("genMuonsFromGun")
+    process.p = cms.Path(process.genMuonsFromGun + process.l1Puppi * process.InfoOut )
+    
+    
 if False: # turn on CMSSW downstream processing and output
     process.InfoOut.outputName = ""; # turn off Ntuples
     process.InfoOut.debug = 0;
