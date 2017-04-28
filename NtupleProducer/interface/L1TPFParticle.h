@@ -41,6 +41,10 @@ namespace l1tpf {
             float alphaC() const { return alphaC_; }
             float puppiWeight() const { return puppiWeight_; }
             int isPV() const { return isPV_; }
+            float hOverE() const { return hOverE_; }
+            // for L1Tk
+            float normalizedChi2() const { return chi2n_; }
+
 	    
             void setCaloEta(float caloEta) { caloEta_ = caloEta; }
             void setCaloPhi(float caloPhi) { caloPhi_ = caloPhi; }
@@ -56,6 +60,12 @@ namespace l1tpf {
             void setAlphaC(float alphaC) { alphaC_ = alphaC; }
             void setPuppiWeight(float puppiWeight) { puppiWeight_ = puppiWeight; }
             void setIsPV(int isPV) { isPV_ = isPV; }
+
+            // for HGC 3D clusters, or our own linked ecal+hcal clusters
+            void setHOverE(float hOverE) { hOverE_ = hOverE; }
+
+            // for L1Tk
+            void setNormalizedChi2(float normalizedChi2) { chi2n_ = normalizedChi2; }
 
             TLorentzVector tp4() const { 
                 TLorentzVector ret;
@@ -76,6 +86,7 @@ namespace l1tpf {
 	    float eta_, phi_;
             float quality_;
             int isPV_;
+            float hOverE_, chi2n_;
             float alphaF_, alphaC_, puppiWeight_;
     }; // class
 } // namespace
