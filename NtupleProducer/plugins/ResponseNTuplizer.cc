@@ -298,6 +298,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
         recopair.first.get(iEvent);
     }
     for (auto & c : copyUInts_) c.get(iEvent);
+    mc_.id = 998; tree_->Fill(); // so that we write only one per event
     for (const reco::GenJet & j : *genjets) {
         bool ok = true;
         const reco::Candidate * match = nullptr;

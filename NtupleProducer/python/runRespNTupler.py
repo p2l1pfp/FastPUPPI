@@ -48,12 +48,17 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
 )
 process.p = cms.Path(process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
+
+#process.source.fileNames = [ 'file:l1pf_out_ChargedPion_job1.root', 'file:l1pf_out_ChargedPion_job2.root', 'file:l1pf_out_ChargedPion_job3.root', 'file:l1pf_out_ChargedPion_job4.root', 'file:l1pf_out_ChargedPion_job5.root', 'file:l1pf_out_ChargedPion_job6.root', 'file:l1pf_out_ChargedPion_job7.root', 'file:l1pf_out_ChargedPion_job8.root' ]; process.ntuple.isParticleGun = True
+#process.maxEvents.input = 10000
+
+
 if True:
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
     process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
     process.InfoOut.outputName = ""; # turn off Ntuples
     process.p = cms.Path(process.l1tPFMuProducerFromL1Mu + process.InfoOut + process.ntuple)
-if False:
+def goRegional(inParallel=False):
     regions = cms.VPSet(
             cms.PSet(
                 etaBoundaries = cms.vdouble(-5.5,-4,-3),
@@ -74,11 +79,11 @@ if False:
                 phiExtra = cms.double(0.2),
             ),
     )
-    if True:
-        process.InfoOut.regions = regions
-    else:
+    if inParallel:
         process.InfoOutReg = process.InfoOut.clone(regions = regions)
         process.p = cms.Path(process.l1tPFMuProducerFromL1Mu  + process.InfoOut + process.InfoOutReg + process.ntuple)
+    else:
+        process.InfoOut.regions = regions
 if False:
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),

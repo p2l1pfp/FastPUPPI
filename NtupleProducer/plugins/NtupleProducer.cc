@@ -550,13 +550,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   for (const auto & r : l1regions_.regions()) {
       totNL1Calo += r.calo.size();
       totNL1TK += r.track.size();
-      totNL1PF += r.muon.size();
+      totNL1PF += r.pf.size();
       totNL1Mu += r.muon.size();
       totNL1Puppi += r.puppi.size();
       maxNL1Calo = std::max<unsigned>( maxNL1Calo, r.calo.size() );
       maxNL1TK = std::max<unsigned>( maxNL1TK, r.track.size() );
-      maxNL1PF = std::max<unsigned>( maxNL1PF, r.muon.size() );
-      maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.pf.size() );
+      maxNL1PF = std::max<unsigned>( maxNL1PF, r.pf.size() );
+      maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.muon.size() );
       maxNL1Puppi = std::max<unsigned>( maxNL1Puppi, r.puppi.size() );
   }
   addUInt(totNL1Calo, "totNL1Calo", iEvent); addUInt(maxNL1Calo, "maxNL1Calo", iEvent);
