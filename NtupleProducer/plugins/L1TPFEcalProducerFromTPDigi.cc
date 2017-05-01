@@ -61,9 +61,9 @@ l1tpf::EcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
         //https://github.com/cms-sw/cmssw/blob/master/SimCalorimetry/EcalEBTrigPrimProducers/plugins/EcalEBTrigPrimAnalyzer.cc#L173-L207
         const EBDetId TPid = digi.id();
         float et = digi.encodedEt()/8.; // 8 ADCcounts/GeV
-        if (et < etCut_) continue;
+        if (et <= etCut_) continue;
         const GlobalPoint & pos = caloGeom->getPosition(TPid);
-        out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0, 0, 0, 0, pos.eta(), pos.phi());
+        out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0., 0);
 	towers[std::make_pair(TPid.tower_ieta(),TPid.tower_iphi())].emplace_back(et, pos.eta(), pos.phi());
     }
 
@@ -79,7 +79,7 @@ l1tpf::EcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
 	  etaetsum /= etsum;
 	  phietsum /= etsum;
 	}
-	out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0,etaetsum + reta,reco::deltaPhi(phietsum + rphi, 0.));
+	out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0., 0);
     }
 
     iEvent.put(std::move(out_crystal), "crystals");

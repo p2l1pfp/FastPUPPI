@@ -14,19 +14,19 @@ namespace l1tpf {
                 LeafCandidate(iCharge, reco::LeafCandidate::PolarLorentzVector(iEt,iEta,iPhi,iM), reco::LeafCandidate::Point(), iId),
                 dZ_(iDZ),
                 sigma_(iSigma),
-                caloEta_(iCaloEta),
-                caloPhi_(iCaloPhi),
-                eta_(iEta),phi_(iPhi),
+                caloEta_(-999),
+                caloPhi_(-999),
                 quality_(iQuality),
                 isPV_(iIsPV),
+                hOverE_(0.), chi2n_(0),
                 alphaF_(alphaF),
                 alphaC_(alphaC),
                 puppiWeight_(puppiWeight) {}
 
             float dz() const { return dZ_; }
             float sigma() const { return sigma_; }  
-            float caloEta() const { return caloEta_; }
-            float caloPhi() const { return caloPhi_; }
+            float caloEta() const { return caloEta_ == -999 ? eta() : caloEta_; }
+            float caloPhi() const { return caloPhi_ == -999 ? phi() : caloPhi_; }
 	    //iEta,iPhi (usuals)
 	    int   iEta() const { return l1tpf::translateIEta(eta_);}
 	    int   iPhi() const { return l1tpf::translateIPhi(phi_,eta_);}
@@ -34,8 +34,8 @@ namespace l1tpf {
 	    int   aEta() const { return l1tpf::translateAEta(iEta());}
 	    int   aPhi() const { return l1tpf::translateAPhi(iPhi());}
 	    //Center of the trigger tower
-	    float dEta() const { return l1tpf::towerEta(l1tpf::translateIEta(eta_));}
-	    float dPhi() const { return l1tpf::towerPhi(l1tpf::translateIEta(eta_),l1tpf::translateIPhi(phi_,eta_));}
+	    float dEta() const { return l1tpf::towerEta(l1tpf::translateIEta(eta()));}
+	    float dPhi() const { return l1tpf::towerPhi(l1tpf::translateIEta(eta()),l1tpf::translateIPhi(phi(),eta()));}
             //Other stuff
 	    float quality() const { return quality_; }
             float alphaF() const { return alphaF_; }
@@ -49,8 +49,6 @@ namespace l1tpf {
 	    
             void setCaloEta(float caloEta) { caloEta_ = caloEta; }
             void setCaloPhi(float caloPhi) { caloPhi_ = caloPhi; }
-            void setEta(float iEta) { eta_ = iEta; }
-            void setPhi(float iPhi) { phi_ = iPhi; }
             void setCaloEtaPhi(float caloEta, float caloPhi) { caloEta_ = caloEta; caloPhi_ = caloPhi; }
             //void setIEtaIPhi(int iEta, int iPhi) { iEta_ = iEta; iPhi_ = iPhi; }
 
