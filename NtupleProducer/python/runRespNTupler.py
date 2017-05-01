@@ -18,11 +18,15 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genParticles = cms.InputTag("genParticles"),
     isParticleGun = cms.bool(False),
     objects = cms.PSet(
-        # -- inputs --
+        # -- offline inputs --
         Ecal = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
         Hcal = cms.VInputTag('l1tPFHcalProducerFromOfflineRechits:towers','l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
         Calo = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHcalProducerFromOfflineRechits:towers', 'l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
         TK   = cms.VInputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+        # -- TP inputs --
+        #TPEcal = cms.VInputTag('l1tPFEcalProducerFromTPDigis:towers','l1tPFHGCalProducerFromTriggerCells:towersEE',),
+        #TPHcal = cms.VInputTag('l1tPFHcalProducerFromTPDigis','l1tPFHGCalProducerFromTriggerCells:towersFHBH',),
+        #TPTK   = cms.VInputTag('l1tPFTkProducersFromL1Tracks',),
         # -- processed --
         L1RawCalo = cms.VInputTag("InfoOut:RawCalo",),
         L1Calo = cms.VInputTag("InfoOut:Calo",),
@@ -49,15 +53,24 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
 process.p = cms.Path(process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
 
-#process.source.fileNames = [ 'file:l1pf_out_ChargedPion_job1.root', 'file:l1pf_out_ChargedPion_job2.root', 'file:l1pf_out_ChargedPion_job3.root', 'file:l1pf_out_ChargedPion_job4.root', 'file:l1pf_out_ChargedPion_job5.root', 'file:l1pf_out_ChargedPion_job6.root', 'file:l1pf_out_ChargedPion_job7.root', 'file:l1pf_out_ChargedPion_job8.root' ]; process.ntuple.isParticleGun = True
-#process.maxEvents.input = 10000
-
 
 if True:
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
     process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
     process.InfoOut.outputName = ""; # turn off Ntuples
-    process.p = cms.Path(process.l1tPFMuProducerFromL1Mu + process.InfoOut + process.ntuple)
+    process.p = cms.Path(process.InfoOut + process.ntuple)
+def goGun():
+    process.ntuple.isParticleGun = True
+def goSpring17():
+    del process.ntuple.objects.TK
+    process.ntuple.objects.TPEcal = cms.VInputTag('l1tPFEcalProducerFromTPDigis:towers', 'l1tPFHGCalProducerFromTriggerCells:towersEE',)
+    process.ntuple.objects.TPHcal = cms.VInputTag('l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH',)
+    process.ntuple.objects.TPTK   = cms.VInputTag('l1tPFTkProducersFromL1Tracks',)
+    if hasattr(process, 'InfoOut'):
+        process.InfoOut.L1TrackTag = 'l1tPFTkProducersFromL1Tracks'
+        process.InfoOut.EcalTPTags = [ 'l1tPFEcalProducerFromTPDigis:towers', 'l1tPFHGCalProducerFromTriggerCells:towersEE' ]
+        process.InfoOut.HcalTPTags = [ 'l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH', ]
+        process.InfoOut.caloClusterer.linker.useCorrectedEcal = False
 def goRegional(inParallel=False):
     regions = cms.VPSet(
             cms.PSet(
@@ -81,7 +94,7 @@ def goRegional(inParallel=False):
     )
     if inParallel:
         process.InfoOutReg = process.InfoOut.clone(regions = regions)
-        process.p = cms.Path(process.l1tPFMuProducerFromL1Mu  + process.InfoOut + process.InfoOutReg + process.ntuple)
+        process.p = cms.Path(process.InfoOut + process.InfoOutReg + process.ntuple)
     else:
         process.InfoOut.regions = regions
 if False:

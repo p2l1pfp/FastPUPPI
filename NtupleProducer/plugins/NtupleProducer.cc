@@ -76,12 +76,8 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
   const bool          zeroSuppress_;
   const edm::InputTag L1TrackTag_;
-  const edm::InputTag EcalTPTag_;
-  const edm::InputTag HGEcalTPTag_;
-  const edm::InputTag HcalTPTag_;
-  const edm::InputTag HGHcalTPTag_;
-  const edm::InputTag BHHcalTPTag_;
-  const edm::InputTag HFTPTag_;
+  const std::vector<edm::InputTag> EcalTPTags_;
+  const std::vector<edm::InputTag> HcalTPTags_;
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
@@ -116,12 +112,8 @@ private:
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokEcalTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokHGEcalTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokHcalTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokHGHcalTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokBHHcalTPTag_;
-  edm::EDGetTokenT<L1PFCollection>                TokHFTPTag_;
+  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokEcalTPTags_;
+  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokHcalTPTags_;
   edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
   double trkPt_;
   bool   metRate_;
@@ -184,12 +176,8 @@ private:
 NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   zeroSuppress_         (iConfig.getParameter<bool>("zeroSuppress")),
   L1TrackTag_           (iConfig.getParameter<edm::InputTag>("L1TrackTag")),
-  EcalTPTag_            (iConfig.getParameter<edm::InputTag>("EcalTPTag")),
-  HGEcalTPTag_          (iConfig.getParameter<edm::InputTag>("HGEcalTPTag")),
-  HcalTPTag_            (iConfig.getParameter<edm::InputTag>("HcalTPTag")),
-  HGHcalTPTag_          (iConfig.getParameter<edm::InputTag>("HGHcalTPTag")),
-  BHHcalTPTag_          (iConfig.getParameter<edm::InputTag>("BHHcalTPTag")),
-  HFTPTag_              (iConfig.getParameter<edm::InputTag>("HFTPTag")),
+  EcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("EcalTPTags")),
+  HcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("HcalTPTags")),
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
@@ -240,12 +228,12 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("L1Puppi");
   TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
   TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
-  TokEcalTPTag_    = consumes<L1PFCollection>( EcalTPTag_   );
-  TokHGEcalTPTag_  = consumes<L1PFCollection>( HGEcalTPTag_ );
-  TokHcalTPTag_    = consumes<L1PFCollection>( HcalTPTag_   );
-  TokHGHcalTPTag_  = consumes<L1PFCollection>( HGHcalTPTag_ );
-  TokBHHcalTPTag_  = consumes<L1PFCollection>( BHHcalTPTag_ );
-  TokHFTPTag_      = consumes<L1PFCollection>( HFTPTag_     );
+  for (const edm::InputTag &tag : EcalTPTags_) {
+    TokEcalTPTags_.push_back(consumes<L1PFCollection>(tag));
+  }
+  for (const edm::InputTag &tag : HcalTPTags_) {
+    TokHcalTPTags_.push_back(consumes<L1PFCollection>(tag));
+  }
   TokMuonTPTag_    = consumes<L1PFCollection>( MuonTPTag_  );
   produces<unsigned int>("totNL1TK");
   produces<unsigned int>("totNL1Mu");
@@ -332,12 +320,13 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
 
   /// ----------------ECAL INFO-------------------
-  edm::Handle<L1PFCollection> classicecals;
-  iEvent.getByToken(TokEcalTPTag_, classicecals);
-  edm::Handle<L1PFCollection> hgecals;
-  iEvent.getByToken(TokHGEcalTPTag_, hgecals);
-  for (const l1tpf::Particle & it : *classicecals) ecalClusterer_.add(it); 
-  for (const l1tpf::Particle & it : *hgecals     ) ecalClusterer_.add(it); 
+  edm::Handle<L1PFCollection> ecals;
+  for (const auto & token : TokEcalTPTags_) {
+      iEvent.getByToken(token, ecals);
+      for (const l1tpf::Particle & it : *ecals) {
+          ecalClusterer_.add(it);
+      }
+  }
 
   ecalClusterer_.run();
   //// ---- Dummy calibration == no calibration
@@ -397,18 +386,14 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
 
   // / ----------------HCAL INFO-------------------
-  edm::Handle<L1PFCollection> classichcals;
-  iEvent.getByToken(TokHcalTPTag_, classichcals);
-  edm::Handle<L1PFCollection> hghcals;
-  iEvent.getByToken(TokHGHcalTPTag_, hghcals);
-  edm::Handle<L1PFCollection> bhhcals;
-  iEvent.getByToken(TokBHHcalTPTag_, bhhcals);
-  edm::Handle<L1PFCollection> hfhcals;
-  iEvent.getByToken(TokHFTPTag_, hfhcals);
-  for (const l1tpf::Particle & it : *classichcals) hcalClusterer_.add(it); 
-  for (const l1tpf::Particle & it : *hfhcals     ) hcalClusterer_.add(it); 
-  for (const l1tpf::Particle & it : *hghcals     ) hcalClusterer_.add(it);
-  for (const l1tpf::Particle & it : *bhhcals     ) hcalClusterer_.add(it); 
+
+  edm::Handle<L1PFCollection> hcals;
+  for (const auto & token : TokHcalTPTags_) {
+      iEvent.getByToken(token, hcals);
+      for (const l1tpf::Particle & it : *hcals) {
+          hcalClusterer_.add(it);
+      }
+  }
   hcalClusterer_.run();
 
   // Calorimeter linking

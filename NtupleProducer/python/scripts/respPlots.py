@@ -96,7 +96,7 @@ def doRespPt(oname, tree, name, expr, cut, resol=False):
 
 
 whats = [
-    ('inputs',[
+    ('inputs',[ # On RelVals
         ("Had",  "Hcal$", ROOT.kAzure+1,  25, 2.0),
         ("Em",   "Ecal$", ROOT.kGreen+2,  21, 1.5),
         ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
@@ -118,17 +118,17 @@ whats = [
         ("HGC/3D",  "TPHGCal3D$", ROOT.kGreen+1,  21, 1.5),
         ("TK", "TPL1Tk$", ROOT.kRed+2, 34, 1.5),
     ]),
+    ('OfflineInputs',[
+        ("Had",  "Hcal$+HGCalH$+HF$", ROOT.kAzure+1,  25, 2.0),
+        ("Em",   "Em$", ROOT.kGreen+2,  21, 1.5),
+        ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
+    ]),
     ('TPs',[
-        ("Calo/T", "TPEcalT$+TPHGCalTC$+TPHcal$", ROOT.kGreen+1, 21, 2.0),
+        ("Em/T", "TPEcalT$+TPHGCalTE$", ROOT.kAzure+1, 21, 2.2),
+        ("Calo/T", "TPEcalT$+TPHGCalTE$+TPHGCalTH$+TPHcal$", ROOT.kGreen+1, 21, 1.9),
         ("Calo/F", "TPEcalC$+TPHGCal3D$+TPHcal$", ROOT.kGreen+2, 33, 1.8),
         ("Trk",  "TPL1Tk$",   ROOT.kRed+1, 20, 1.2),
     ]),
-    #('inputs-simpleCorr',[
-    #    ("Had",    "Hcal$", ROOT.kAzure+1,  25, 2.0),
-    #    ("Em-C",   "Ecal$/(1+0.20*(abs(mc_eta)<3)-0.15*(abs(mc_eta)<1.5))", ROOT.kGreen+2,  21, 1.5),
-    #    ("Calo-C", "Hcal$ + (abs(mc_eta)<3)*Ecal$/(1+0.20*(abs(mc_eta)<3)-0.15*(abs(mc_eta)<1.5))", ROOT.kViolet+2, 34, 1.5),
-    #    ("Trk",    "TK$",   ROOT.kRed+1, 20, 1.2),
-    #]),
     ('l1pf',[
         ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
@@ -149,10 +149,12 @@ parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
 parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
 options, args = parser.parse_args()
+selparticles = options.particle.split(",") if options.particle else []
 
 sels = []; fname = args[0] # "respTupleNew_D4T_NoPU.root"
 for (particle, pdgIdCut, minPt, maxEta) in [ 
         ("pion", "abs(mc_id) == 211", 10, 5),
+        ("pizero", "abs(mc_id) == 111", 10, 5),
         ("photon", "abs(mc_id) == 22", 10, 5),
         ("electron", "abs(mc_id) == 11", 10, 5),
         ("muon", "abs(mc_id) == 13", 10, 5),
@@ -160,7 +162,7 @@ for (particle, pdgIdCut, minPt, maxEta) in [
         ("jet", "abs(mc_id) == 0", 30, 5),
         ("null", "abs(mc_id) == 999", 0, 5)
     ]:
-    if options.particle and (options.particle not in particle): 
+    if options.particle and (particle not in selparticles): 
         continue
     sels.append(("%s_pt_%2d_inf" % (particle, minPt), fname, "mc_pt > %g && %s" % (minPt, pdgIdCut)))
     if "null" in particle: continue; # not point in profiling random cones vs pt
@@ -184,7 +186,7 @@ for oname,fname,cut in sels:
     if "electron" in oname or "muon" in oname or "pion" in oname:
         cut += " && abs(mc_iso04) < 0.05" # isolated
     for kind,things in whats:
-        if options.what and (options.what != kind): 
+        if options.what and (kind not in options.what.split(",")): 
             continue
         if "tau" in oname:
             ptdefs = [ "pt", "pt02" ]
