@@ -64,7 +64,7 @@ l1tpf::EcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
     edm::Handle<EcalRecHitCollection> src;
     iEvent.getByToken(src_, src);
     for (const EcalRecHit & hit : *src) {
-        if (hit.energy() < eCut_) continue;
+        if (hit.energy() <= eCut_) continue;
         if (hit.checkFlag(EcalRecHit::kOutOfTime) || hit.checkFlag(EcalRecHit::kL1SpikeFlag)) continue;
         const GlobalPoint & pos = caloGeom->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();

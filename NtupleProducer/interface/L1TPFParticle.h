@@ -28,8 +28,8 @@ namespace l1tpf {
             float caloEta() const { return caloEta_ == -999 ? eta() : caloEta_; }
             float caloPhi() const { return caloPhi_ == -999 ? phi() : caloPhi_; }
 	    //iEta,iPhi (usuals)
-	    int   iEta() const { return l1tpf::translateIEta(eta_);}
-	    int   iPhi() const { return l1tpf::translateIPhi(phi_,eta_);}
+	    int   iEta() const { return l1tpf::translateIEta(eta());}
+	    int   iPhi() const { return l1tpf::translateIPhi(phi(),eta());}
 	    //iEta,iPhi as they are stored in Arrays
 	    int   aEta() const { return l1tpf::translateAEta(iEta());}
 	    int   aPhi() const { return l1tpf::translateAPhi(iPhi());}
@@ -82,7 +82,6 @@ namespace l1tpf {
             float dZ_;
             float sigma_;
             float caloEta_, caloPhi_;
-	    float eta_, phi_;
             float quality_;
             int isPV_;
             float hOverE_, chi2n_;

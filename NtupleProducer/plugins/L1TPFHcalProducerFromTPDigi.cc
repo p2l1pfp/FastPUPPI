@@ -63,6 +63,7 @@ l1tpf::HcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup
   for (const auto & itr : *hcalTPs) {
       HcalTrigTowerDetId id = itr.id();
       double et = decoder_->hcaletValue(itr.id(), itr.t0());
+      if (et <= 0) continue;
       float towerEta = l1t::CaloTools::towerEta(id.ieta());
       float towerPhi = l1t::CaloTools::towerPhi(id.ieta(), id.iphi());
       out->emplace_back( et, towerEta, towerPhi, 0,  0,0,0, towerEta, towerPhi, 0 );
