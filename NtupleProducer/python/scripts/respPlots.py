@@ -86,7 +86,10 @@ def doRespPt(oname, tree, name, expr, cut, resol=False):
         ret.Fit(tf1, "WQ0C EX0 ROB=0.95")
         ret.fit = tf1
     else:
-        tf1 = ROOT.TF1(name+"_f1","1/x++1", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+        if "Trk" in name:
+            tf1 = ROOT.TF1(name+"_f1","1/x++x", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+        else:
+            tf1 = ROOT.TF1(name+"_f1","1/x++1", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
         ret.Fit(tf1, "WQ0C EX0 ROB=0.95")
         ret.fit = tf1
     return ret
@@ -98,6 +101,27 @@ whats = [
         ("Em",   "Ecal$", ROOT.kGreen+2,  21, 1.5),
         ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
         ("Trk",  "TK$",   ROOT.kRed+1, 20, 1.2),
+    ]),
+    ('debug-1',[
+        ("EcalT",  "EcalT$", ROOT.kAzure+1,  25, 2.0),
+        ("EcalC",  "EcalC$", ROOT.kAzure+2,  21, 1.6),
+        ("HGC/E",  "HGCalE$", ROOT.kAzure+3,  21, 1.5),
+        ("Hcal",  "Hcal$", ROOT.kGreen+1,  25, 2.0),
+        ("HGC/H",  "HGCalH$", ROOT.kGreen+2,  25, 2.0),
+        ("HF", "HF$", ROOT.kViolet+2, 34, 1.5),
+    ]),
+    ('debug-2',[
+        ("EcalT",  "TPEcalT$", ROOT.kAzure+1,  25, 2.0),
+        ("EcalC",  "TPEcalC$", ROOT.kAzure+2,  21, 1.6),
+        ("Hcal",  "TPHcal$", ROOT.kGreen+3,  25, 2.0),
+        ("HGC/TC",  "TPHGCalTC$", ROOT.kGreen+2,  25, 2.0),
+        ("HGC/3D",  "TPHGCal3D$", ROOT.kGreen+1,  21, 1.5),
+        ("TK", "TPL1Tk$", ROOT.kRed+2, 34, 1.5),
+    ]),
+    ('TPs',[
+        ("Calo/T", "TPEcalT$+TPHGCalTC$+TPHcal$", ROOT.kGreen+1, 21, 2.0),
+        ("Calo/F", "TPEcalC$+TPHGCal3D$+TPHcal$", ROOT.kGreen+2, 33, 1.8),
+        ("Trk",  "TPL1Tk$",   ROOT.kRed+1, 20, 1.2),
     ]),
     #('inputs-simpleCorr',[
     #    ("Had",    "Hcal$", ROOT.kAzure+1,  25, 2.0),

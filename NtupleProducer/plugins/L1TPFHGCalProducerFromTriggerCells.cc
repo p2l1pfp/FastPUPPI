@@ -39,7 +39,8 @@ l1tpf::HGCalProducerFromTriggerCells::produce(edm::Event &iEvent, const edm::Eve
 
     for(auto it = multiclusters->begin(0), ed = multiclusters->end(0); it != ed; ++it) {
         if (it->pt() <= etCut_) continue;
-        out->emplace_back(it->pt(), it->eta(), it->phi(), 0., 0., it->layer(), 0, it->eta(), it->phi());
+        int id = HGCalDetId(it->detId()).subdetId() == HGCEE ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH;
+        out->emplace_back(it->pt(), it->eta(), it->phi(), 0., id, 0, it->eta(), it->phi());
     }
 
     iEvent.put(std::move(out));

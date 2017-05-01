@@ -49,7 +49,6 @@ l1tpf::TkProducerFromL1Tracks::TkProducerFromL1Tracks(const edm::ParameterSet&iC
 #ifdef HASL1TK
     TrackTag_ = consumes<std::vector<TTTrack<Ref_Phase2TrackerDigi_>>>(iConfig.getParameter<edm::InputTag>("L1TrackTag"));
 #endif
-    produces<std::vector<l1tpf::Particle>>();
     if (muonGunVeto_) GenTagForVeto_ = consumes<reco::CandidateView>(iConfig.getParameter<edm::InputTag>("GenTagForVeto"));
     produces<std::vector<l1tpf::Particle>>();
 }

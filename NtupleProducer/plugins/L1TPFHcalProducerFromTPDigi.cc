@@ -5,19 +5,20 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 
 #include "DataFormats/HcalDigi/interface/HcalDigiCollections.h"
-#include "CondFormats/L1TObjects/interface/L1CaloHcalScale.h"
 #include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
-#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
+//#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FWCore/Framework/interface/ESHandle.h"
-#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
-#include "Geometry/Records/interface/CaloGeometryRecord.h"
-#include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
-#include "DataFormats/DetId/interface/DetId.h"
-#include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
-#include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
+//#include "Geometry/CaloGeometry/interface/CaloGeometry.h"
+//#include "Geometry/Records/interface/CaloGeometryRecord.h"
+//include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
+//#include "DataFormats/DetId/interface/DetId.h"
+//#include "DataFormats/HcalDetId/interface/HcalSubdetector.h"
+//#include "Geometry/HcalTowerAlgo/interface/HcalTrigTowerGeometry.h"
+#include "DataFormats/HcalDetId/interface/HcalTrigTowerDetId.h"
+#include "CalibFormats/CaloTPG/interface/CaloTPGTranscoder.h"
+#include "CalibFormats/CaloTPG/interface/CaloTPGRecord.h"
 
-const double PI = 3.1415926535897;
 
 namespace l1tpf {
     class HcalProducerFromTPDigi : public edm::EDProducer {
@@ -27,9 +28,9 @@ namespace l1tpf {
 
         private:
             edm::EDGetTokenT<HcalTrigPrimDigiCollection> HcalTPTag_;
-            std::unique_ptr<L1CaloHcalScale> hcalScale_;
-            edm::ESHandle<CaloGeometry> calo;
-            edm::ESHandle<HcalTrigTowerGeometry> theTrigTowerGeometry;
+            edm::ESHandle<CaloTPGTranscoder> decoder_;
+            //edm::ESHandle<CaloGeometry> calo;
+            //edm::ESHandle<HcalTrigTowerGeometry> theTrigTowerGeometry;
 
 
             virtual void produce(edm::Event&, const edm::EventSetup&) override;
@@ -38,61 +39,32 @@ namespace l1tpf {
 } // namespace
 
 l1tpf::HcalProducerFromTPDigi::HcalProducerFromTPDigi(const edm::ParameterSet & iConfig) :
-    HcalTPTag_(consumes<HcalTrigPrimDigiCollection>(iConfig.getParameter<edm::InputTag>("HcalTPTag"))),
-    hcalScale_(new L1CaloHcalScale(0.5)) // HCAL LSB = 0.5
+    HcalTPTag_(consumes<HcalTrigPrimDigiCollection>(iConfig.getParameter<edm::InputTag>("HcalTPTag")))
 {
     produces<std::vector<l1tpf::Particle>>();
 }
 
 
+// https://github.com/cms-l1t-offline/cmssw/blob/phase2-l1t-integration-CMSSW_9_1_0_pre2/L1Trigger/L1TNtuples/plugins/L1CaloTowerTreeProducer.cc
 void 
 l1tpf::HcalProducerFromTPDigi::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) 
 {
   std::unique_ptr<std::vector<l1tpf::Particle>> out(new std::vector<l1tpf::Particle>());
 
-  iSetup.get<CaloGeometryRecord>().get(calo);
-  const CaloGeometry* geo = calo.product(); 
+  iSetup.get<CaloTPGRecord>().get(decoder_);
 
-  iSetup.get<CaloGeometryRecord>().get(theTrigTowerGeometry);
-  const HcalTrigTowerGeometry* geoTrig = theTrigTowerGeometry.product();
+  //iSetup.get<CaloGeometryRecord>().get(calo);
+  //const CaloGeometry* geo = calo.product(); 
+  //iSetup.get<CaloGeometryRecord>().get(theTrigTowerGeometry);
+  //const HcalTrigTowerGeometry* geoTrig = theTrigTowerGeometry.product();
 
-  // / ----------------HCAL INFO-------------------
-  // / Stealing some other code!
-  // / https://github.com/cms-sw/cmssw/blob/0397259dd747cee94b68928f17976224c037057a/L1Trigger/L1TNtuples/src/L1AnalysisCaloTP.cc#L40
-  // / 72 in phi and 56 in eta = 4032
-  // / 144 TP is HF: 4 (in eta) * 18 (in phi) * 2 (sides)
-  // / Hcal TPs
   edm::Handle< HcalTrigPrimDigiCollection > hcalTPs;
   iEvent.getByToken(HcalTPTag_, hcalTPs);
-  for (HcalTrigPrimDigiCollection::const_iterator it = hcalTPs->begin(); it != hcalTPs->end(); ++it) {
-      double et = hcalScale_->et( it->SOI_compressedEt(),it->id().ietaAbs(), it->id().zside() );
-
-      // convert ieta-iphi to eta,phi 
-      std::vector<HcalDetId> detids = geoTrig->detIds(it->id());
-      unsigned int ndetsPerTower = detids.size();
-      float towerEta = 0.;
-      float towerPhi = 0.;
-      float towerR   = 0.;
-      float curphimax = -9999.;
-      float curphimin = 9999.;
-      for (unsigned int i = 0; i < ndetsPerTower; i++){
-          const CaloCellGeometry *cell = geo->getGeometry( detids[i] );       
-          // std::cout << detids[i].det() << "," << detids[i].subdetId() << "," << detids[i].iphi() << "," << detids[i].ieta() << "," << cell->etaPos() << "," << cell->phiPos() << std::endl;
-          towerEta += cell->etaPos();
-          towerR   += cell->getPosition().mag();
-          if (curphimax < cell->phiPos()) curphimax = cell->phiPos();
-          if (curphimin > cell->phiPos()) curphimin = cell->phiPos();
-      }
-      // std::cout << "curphimax = " << curphimax << ", curphimin = " << curphimin << std::endl;
-      if (curphimax - curphimin < PI){ towerPhi = (curphimax + curphimin)/2.; }
-      else{ towerPhi = -3.14159;} // special case
-      // else{ towerPhi = (curphimax - curphimin + 2*PI)/2.; }
-      // std::cout << "towerPhi = " << towerPhi << std::endl;
-      // if (fabs(towerPhi) > PI && towerPhi > 0) towerPhi -= PI;
-      // if (fabs(towerPhi) > PI && towerPhi < 0) towerPhi += PI;
-      towerPhi *= 1.;
-      towerEta /= float(ndetsPerTower);
-      towerR /= float(ndetsPerTower);
+  for (const auto & itr : *hcalTPs) {
+      HcalTrigTowerDetId id = itr.id();
+      double et = decoder_->hcaletValue(itr.id(), itr.t0());
+      float towerEta = l1t::CaloTools::towerEta(id.ieta());
+      float towerPhi = l1t::CaloTools::towerPhi(id.ieta(), id.iphi());
       out->emplace_back( et, towerEta, towerPhi, 0,  0,0,0, towerEta, towerPhi, 0 );
   }
 

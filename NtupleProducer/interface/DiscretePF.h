@@ -119,7 +119,6 @@ namespace l1tpf_int {
   };
 
   struct PFParticle {
-      enum PID { CH=0, EL=1, NH=2, GAMMA=3, MU=4 };
       int16_t         hwPt;   
       int16_t         hwEta;  // at calo face 
       int16_t         hwPhi;   

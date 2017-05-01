@@ -474,7 +474,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   std::vector<l1tpf::Particle> CaloCands    = caloLinker_.fetch(true);
   // FIXME the sigma is known to the combiner, not the calo clusterer, at the moment
   for (l1tpf::Particle & calo : CaloCands) {
-    calo.setSigma(calo.pdgId() == combiner::GAMMA ?
+    calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
         connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
         connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
   }
@@ -608,13 +608,13 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
-    if(iCandidates[i0].pdgId() == combiner::CH) id = reco::PFCandidate::ParticleType::h;
-    if(iCandidates[i0].pdgId() == combiner::EL) id = reco::PFCandidate::ParticleType::e;
-    if(iCandidates[i0].pdgId() == combiner::NH) id = reco::PFCandidate::ParticleType::h0;
-    if(iCandidates[i0].pdgId() == combiner::GAMMA) id = reco::PFCandidate::ParticleType::gamma;
-    if(iCandidates[i0].pdgId() == combiner::MU) id = reco::PFCandidate::ParticleType::mu;
-    if(iCandidates[i0].pdgId() == combiner::CH || iCandidates[i0].pdgId() == combiner::EL)  pCharge = 1;
-    if(iCandidates[i0].pdgId() == combiner::MU)  pCharge = iCandidates[i0].charge();
+    if(iCandidates[i0].pdgId() == combiner::Particle::CH) id = reco::PFCandidate::ParticleType::h;
+    if(iCandidates[i0].pdgId() == combiner::Particle::EL) id = reco::PFCandidate::ParticleType::e;
+    if(iCandidates[i0].pdgId() == combiner::Particle::NH) id = reco::PFCandidate::ParticleType::h0;
+    if(iCandidates[i0].pdgId() == combiner::Particle::GAMMA) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].pdgId() == combiner::Particle::MU) id = reco::PFCandidate::ParticleType::mu;
+    if(iCandidates[i0].pdgId() == combiner::Particle::CH || iCandidates[i0].pdgId() == combiner::Particle::EL)  pCharge = 1;
+    if(iCandidates[i0].pdgId() == combiner::Particle::MU)  pCharge = iCandidates[i0].charge();
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
     corrCandidates_->push_back(pCand);
   }

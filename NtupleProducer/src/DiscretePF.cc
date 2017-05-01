@@ -66,7 +66,7 @@ void RegionMapper::addCalo( const l1tpf::Particle &p ) { //float et, float etErr
     // we don't propagate anything
     // we don't worry about borders
     CaloCluster calo;
-    calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == PFParticle::GAMMA, 0);
+    calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
         if (r.contains(p.eta(), p.phi())) {
             r.calo.push_back(calo);
@@ -97,7 +97,7 @@ std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin) const {
                 if (!r.fiducial(p.floatEta(), p.floatPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.isEM ? PFParticle::GAMMA : PFParticle::NH );
+                ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.isEM ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH );
             }
         }
     }
@@ -112,7 +112,7 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin) const {
                 if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? PFParticle::MU : PFParticle::CH, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge() );
+                ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? l1tpf::Particle::MU : l1tpf::Particle::CH, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge() );
             }
         }
     }
@@ -219,7 +219,7 @@ PFParticle & PFAlgo::addTrackToPF(Region &r, const PropagatedTrack &tk) const {
     pf.hwVtxPhi = tk.hwPhi; // before propagation
     pf.track = tk;
     pf.cluster.hwPt = 0;
-    pf.hwId = (tk.muonLink ? PFParticle::MU : PFParticle::CH);
+    pf.hwId = (tk.muonLink ? l1tpf::Particle::MU : l1tpf::Particle::CH);
     r.pf.push_back(pf);
     return r.pf.back();
 }
@@ -232,7 +232,7 @@ PFParticle & PFAlgo::addCaloToPF(Region &r, const CaloCluster &calo) const {
     pf.hwVtxPhi = calo.hwPhi; 
     pf.track.hwPt = 0;
     pf.cluster = calo;
-    pf.hwId = (calo.isEM ? PFParticle::GAMMA : PFParticle::NH);
+    pf.hwId = (calo.isEM ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH);
     r.pf.push_back(pf);
     return r.pf.back();
 }
@@ -257,7 +257,7 @@ void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & cal
         PFParticle & pf = addTrackToPF(r, tk);
         pf.hwPt = ptAvg;
         pf.cluster = calo;
-        pf.hwId = (calo.isEM ? PFParticle::EL : PFParticle::CH);
+        pf.hwId = (calo.isEM ? l1tpf::Particle::EL : l1tpf::Particle::CH);
         calo.used = true; // used, not to be added to the PF again
         if (debug_) printf("INT   case 2: merge, avg pt %7.2f from calo (%7.2f +- %.2f), track (%7.2f +- %.2f) weights %.3f %.3f\n", 
                                 pf.floatPt(), calo.floatPt(), calo.floatPtErr(), tk.floatPt(), tk.floatPtErr(), wcalo/(wcalo+wtk), wtk/(wcalo+wtk));
@@ -328,7 +328,7 @@ void PFAlgo::fillPuppi(Region &r) const {
     int16_t iptcutF = std::round(puppiPtCutF_ * CaloCluster::PT_SCALE);
     constexpr uint16_t PUPPIW_0p01 = std::round(0.01 * PFParticle::PUPPI_SCALE);
     for (PFParticle & p : r.pf) {
-        if (p.hwId == PFParticle::MU) {
+        if (p.hwId == l1tpf::Particle::MU) {
             r.puppi.push_back(p);
         } else if (p.hwId <= 1) { // charged
             if (p.hwPuppiWeight > 0) {

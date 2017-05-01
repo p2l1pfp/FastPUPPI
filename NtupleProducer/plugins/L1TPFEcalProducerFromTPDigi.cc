@@ -38,7 +38,8 @@ l1tpf::EcalProducerFromTPDigi::EcalProducerFromTPDigi(const edm::ParameterSet & 
     etCut_(iConfig.getParameter<double>("etMin"))
 
 {
-    produces<std::vector<l1tpf::Particle>>();
+    produces<std::vector<l1tpf::Particle>>("crystals");
+    produces<std::vector<l1tpf::Particle>>("towers");
 }
 
 
