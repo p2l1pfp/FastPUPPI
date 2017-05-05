@@ -39,26 +39,15 @@
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
-#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
-#include "FastPUPPI/NtupleProducer/interface/CaloClusterer.h"
 
-#include "DataFormats/L1GlobalTrigger/interface/L1GlobalTriggerReadoutRecord.h"
-#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuRegionalCand.h"
-#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
-#include "DataFormats/L1Trigger/interface/Muon.h"
-
-#include "L1Trigger/L1TCalorimeter/interface/CaloTools.h"
 #include "DataFormats/Math/interface/deltaR.h"
 
-
-const double PI = 3.1415926535897;
 
 // ROOT classes
 #include <TFile.h>
 #include <TH1D.h>
 #include <TTree.h>
-#include <TClonesArray.h>
 #include <TLorentzVector.h>
 #include <TMath.h>
 #include <TObject.h>
@@ -74,10 +63,9 @@ public:
   ~NtupleProducer();
   
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  const bool          zeroSuppress_;
   const edm::InputTag L1TrackTag_;
-  const std::vector<edm::InputTag> EcalTPTags_;
-  const std::vector<edm::InputTag> HcalTPTags_;
+  const std::vector<edm::InputTag> CaloClusterTags_;
+  const bool correctCaloEnergies_;
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
@@ -86,7 +74,6 @@ public:
   const std::string TrackResTag_;
   const std::string EleResTag_;
   const std::string PionResTag_;
-  std::unique_ptr<PFOutputCollection > corrCandidates_;
  
 private:
   inline std::string getFilePath(const edm::ParameterSet & pset, const std::string & name) const {
@@ -95,25 +82,16 @@ private:
     return ret;
   }
 
-  struct MyEcalCluster { 
-    int ieta, iphi; float et, corr_et, eta, phi; 
-    MyEcalCluster(int iIeta, int iIphi, float iEt, float iCorr_et, float iEta, float iPhi) :
-        ieta(iIeta), iphi(iIphi), et(iEt), corr_et(iCorr_et), eta(iEta), phi(iPhi) {}
-    bool operator<(const MyEcalCluster &other) const { return eta < other.eta; }
-  };
-
   virtual void beginJob() override;
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
-  void genMatch(std::vector<double> &iGenVars,int iType,double iEta,double iPhi,double iPt,const reco::GenParticleCollection &iGenParticles);
-  virtual void beginRun(edm::Run const&, edm::EventSetup const&) override;
-  void addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent);
+  void genMatch(std::vector<double> &iGenVars, int iType, double iEta, double iPhi, double iPt, const reco::GenParticleCollection &iGenParticles);
+  void addPF(const std::vector<combiner::Particle> &iCandidates, const std::string &iLabel, edm::Event& iEvent);
   void addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent);
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
-  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokEcalTPTags_;
-  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokHcalTPTags_;
+  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokCaloClusterTags_;
   edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
   double trkPt_;
   bool   metRate_;
@@ -130,9 +108,6 @@ private:
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
-  // new calo clusterer (float)
-  l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
-  l1pf_calo::SimpleCaloLinker caloLinker_;
   // debug flag
   int fDebug;
      
@@ -149,35 +124,15 @@ private:
   float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkd0;    
   float trkEcalEta, trkEcalPhi, trkEcalR;
   float genPt, genEta, genPhi, genId;
-
-  float ecal_subdet, ecal_ieta, ecal_iphi, ecal_curTwrEta, ecal_curTwrPhi, ecal_et, ecal_num,ecal_dr;
-  float hcal_subdet, hcal_ieta, hcal_iphi, hcal_TwrR, hcal_et, hcal_num, hcal_ecal_et,hcal_ecal_etcorr,hcal_ecal_eta,hcal_ecal_phi,hcal_dr;
-  float ecal_clust_et,ecal_clust_eta,ecal_clust_phi,ecal_corr_et;
-  float hcal_clust_et,hcal_clust_eta,hcal_clust_phi,hcal_clust_emf,hcal_corr_et,hcal_corr_emf;
-  float ecal_genPt, ecal_genEta, ecal_genPhi, ecal_genId;
-  float hcal_genPt, hcal_genEta, hcal_genPhi, hcal_genId;
-  //virtual void endRun(edm::Run const&, edm::EventSetup const&) override;
-  //virtual void beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;
-  //virtual void endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&) override;  
 };
-
-//
-// constants, enums and typedefs
-//
-
-
-//
-// static data member definitions
-//
 
 //
 // constructors and destructor
 //
 NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
-  zeroSuppress_         (iConfig.getParameter<bool>("zeroSuppress")),
   L1TrackTag_           (iConfig.getParameter<edm::InputTag>("L1TrackTag")),
-  EcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("EcalTPTags")),
-  HcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("HcalTPTags")),
+  CaloClusterTags_      (iConfig.getParameter<std::vector<edm::InputTag>>("CaloClusterTags")),
+  correctCaloEnergies_  (iConfig.getParameter<bool>("correctCaloEnergies")),
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
@@ -192,16 +147,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
-  ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
-  hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
-  caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
-  fTrkInfoTree          (0),
-  fEcalInfoTree         (0),
-  fHcalInfoTree         (0)
+  fTrkInfoTree          (0)
 {
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,11,fDebug);
@@ -228,11 +178,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("L1Puppi");
   TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
   TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
-  for (const edm::InputTag &tag : EcalTPTags_) {
-    TokEcalTPTags_.push_back(consumes<L1PFCollection>(tag));
-  }
-  for (const edm::InputTag &tag : HcalTPTags_) {
-    TokHcalTPTags_.push_back(consumes<L1PFCollection>(tag));
+  for (const edm::InputTag &tag : CaloClusterTags_) {
+    TokCaloClusterTags_.push_back(consumes<L1PFCollection>(tag));
   }
   TokMuonTPTag_    = consumes<L1PFCollection>( MuonTPTag_  );
   produces<unsigned int>("totNL1TK");
@@ -272,8 +219,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   connector_->clear();
   rawconnector_->clear();
   l1regions_.clear(); 
-  ecalClusterer_.clear();
-  hcalClusterer_.clear();
   /// ----------------TRACK INFO-------------------
   edm::Handle<std::vector<l1tpf::Particle>> l1tks;
   iEvent.getByLabel(L1TrackTag_, l1tks);
@@ -319,158 +264,35 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       l1regions_.addMuon(mu);
   }
 
-  /// ----------------ECAL INFO-------------------
-  edm::Handle<L1PFCollection> ecals;
-  for (const auto & token : TokEcalTPTags_) {
-      iEvent.getByToken(token, ecals);
-      for (const l1tpf::Particle & it : *ecals) {
-          ecalClusterer_.add(it);
-      }
-  }
 
-  ecalClusterer_.run();
-  //// ---- Dummy calibration == no calibration
-  // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
-  //    
-  //// ---- Trivial calibration by hand
-  /*
-  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-        if (std::abs(c.eta)<1.5) {
-            return c.et - (3.0 - std::abs(c.eta)); // it looks like otherwise there's an offset
-        } else if (std::abs(c.eta)<3) {
-            return c.et/1.2; // HGCal scale is off by ~1.2%
-        } else {
-            return c.et; 
-        }
-  } );
-  */
-  //// ---- Calibration from Phil's workflow
-  ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-      return ecorrector_->correct(0., c.et, ieta, iphi);
-    } );
-
-  // write debug output tree
-  if (!fOutputName.empty()) {
-      unsigned int ne = 0;
-      const auto & ecraw = ecalClusterer_.raw();
-      const auto & ecals = ecalClusterer_.clusters();
-      for (unsigned int i = 0, ncells = ecals.size(); i < ncells; ++i) {
-          if (ecals[i].et == 0) continue; 
-          ecal_num = ne++;
-          ecal_et = ecraw[i];
-          ecal_ieta = ecals.ieta(i);
-          ecal_iphi = ecals.iphi(i);
-          ecal_curTwrEta = ecals.eta(i);
-          ecal_curTwrPhi = ecals.phi(i);
-          ecal_clust_et = ecals[i].et;
-          ecal_clust_eta = ecals[i].eta;
-          ecal_clust_phi = ecals[i].phi;
-          ecal_corr_et = ecals[i].et_corr;
-
-          std::vector<double> lGenVars;
-          genMatch(lGenVars,1,ecal_clust_eta,ecal_clust_phi,ecal_clust_et,genParticles);
-          ecal_genPt=0; ecal_genEta=0; ecal_genPhi=0; ecal_genId=0; ecal_dr = 0;
-          if(lGenVars.size() > 3) { 
-              ecal_genPt   = float(lGenVars[0]);
-              ecal_genEta  = float(lGenVars[1]);
-              ecal_genPhi  = float(lGenVars[2]);
-              ecal_genId   = float(lGenVars[3]);
-              ecal_dr = reco::deltaR( ecal_genEta, ecal_genPhi, ecal_clust_eta,ecal_clust_phi );
-          }
-          if (zeroSuppress_) {
-              if(ecal_genPt > 1.) fEcalInfoTree->Fill();      
-          } else {
-              if(ecal_et > 1.) fEcalInfoTree->Fill();      
-          }
-      }
-  }
-
-  // / ----------------HCAL INFO-------------------
-
+  /// ----------------Clustered Calo INFO-------------------
+  L1PFCollection calos;
   edm::Handle<L1PFCollection> hcals;
-  for (const auto & token : TokHcalTPTags_) {
+  for (const auto & token : TokCaloClusterTags_) {
       iEvent.getByToken(token, hcals);
-      for (const l1tpf::Particle & it : *hcals) {
-          hcalClusterer_.add(it);
-      }
-  }
-  hcalClusterer_.run();
-
-  // Calorimeter linking
-  caloLinker_.run();
-  ///=== FIXME calibration goes here ====
-  //// ---- Trivial calibration by hand
-  /*
-  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
-        if (std::abs(c.eta)<3.0) {
-            return c.ecal_et + c.hcal_et * 1.25;
-        } else {
-            return c.et;
-        }
-  } );
-  */
-  //// ---- Dummy calibration (no calibration at all)
-  // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
-  //
-  //// ---- Calibration from Phil's workflow
-  caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
-      return corrector_->correct(c.et, c.ecal_et, ieta, iphi); 
-    } );
-
-  // write debug output tree
-  if (!fOutputName.empty()) {
-      const auto & clusters = caloLinker_.clusters();
-      unsigned int nh = 0;
-      for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
-          if (clusters[i].et == 0) continue; 
-          hcal_num = nh++;
-          hcal_et = clusters[i].hcal_et;
-          hcal_ecal_et = clusters[i].ecal_et;
-          hcal_ecal_eta = -999; // FIXME missing
-          hcal_ecal_phi = -999; // FIXME missing
-          hcal_ieta = clusters.ieta(i);
-          hcal_iphi = clusters.iphi(i);
-          hcal_clust_et  = clusters[i].et;  // all these are of the combined
-          hcal_clust_eta = clusters[i].eta; // cluster (ecal+hcal)
-          hcal_clust_phi = clusters[i].phi;
-          hcal_clust_emf = clusters[i].ecal_et / clusters[i].et; // note: this is raw EMF
-          hcal_corr_et  = clusters[i].et_corr;
-          hcal_corr_emf = -999; // FIXME
-          std::vector<double> lGenVars;
-          genMatch(lGenVars,1,hcal_clust_eta,hcal_clust_phi,hcal_clust_et,genParticles);
-          hcal_genPt=0; hcal_genEta=0; hcal_genPhi=0; hcal_genId=0; hcal_dr = 0;
-          if(lGenVars.size() > 3) { 
-              hcal_genPt   = float(lGenVars[0]);
-              hcal_genEta  = float(lGenVars[1]);
-              hcal_genPhi  = float(lGenVars[2]);
-              hcal_genId   = float(lGenVars[3]);
-              hcal_dr = reco::deltaR( hcal_genEta, hcal_genPhi, hcal_clust_eta,hcal_clust_phi );
-          }
-          if (zeroSuppress_) {
-              if(hcal_genPt > 1.) fHcalInfoTree->Fill();      
-          } else {
-              if(hcal_et > 1.) fHcalInfoTree->Fill();      
-          }
-      }
+      calos.insert(calos.end(), hcals->begin(), hcals->end());
   }
 
-  // Get particles from the clusterer
-  std::vector<l1tpf::Particle> RawCaloCands = caloLinker_.fetch(false);
-  std::vector<l1tpf::Particle> CaloCands    = caloLinker_.fetch(true);
-  // FIXME the sigma is known to the combiner, not the calo clusterer, at the moment
-  for (l1tpf::Particle & calo : CaloCands) {
-    calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
-        connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
-        connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
+  // add uncalibrated (or at least un-recalibrated) calos to rawconnector
+  for (const l1tpf::Particle & calo : calos) {
+      rawconnector_->addCalo(calo);
+  }
+
+  // ccalibrate and do the rest
+  for (l1tpf::Particle &calo : calos) {
+      if (correctCaloEnergies_) {
+          float ptcorr = corrector_->correct(calo.pt(), calo.emEt(), calo.iEta(), calo.iPhi());
+          calo.setPt(ptcorr);
+      }
+      calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
+              connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
+              connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
   }
 
   // pass to the PF algo
-  for (const l1tpf::Particle & calo : CaloCands) {
+  for (const l1tpf::Particle & calo : calos) {
       connector_->addCalo(calo);
       l1regions_.addCalo(calo); 
-  }
-  for (const l1tpf::Particle & calo : RawCaloCands) {
-      rawconnector_->addCalo(calo);
   }
 
   std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
@@ -588,8 +410,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
 
 }
-void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::string iLabel,edm::Event& iEvent) { 
-  corrCandidates_.reset( new PFOutputCollection );
+void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string &iLabel, edm::Event& iEvent) { 
+  std::unique_ptr<PFOutputCollection > corrCandidates( new PFOutputCollection );
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
@@ -601,10 +423,10 @@ void NtupleProducer::addPF(std::vector<combiner::Particle> &iCandidates,std::str
     if(iCandidates[i0].pdgId() == combiner::Particle::CH || iCandidates[i0].pdgId() == combiner::Particle::EL)  pCharge = 1;
     if(iCandidates[i0].pdgId() == combiner::Particle::MU)  pCharge = iCandidates[i0].charge();
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
-    corrCandidates_->push_back(pCand);
+    corrCandidates->push_back(pCand);
   }
   //Fill!
-  iEvent.put(std::move(corrCandidates_),iLabel);
+  iEvent.put(std::move(corrCandidates),iLabel);
 }
 void NtupleProducer::addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent) { 
   iEvent.put(std::make_unique<unsigned>(value), iLabel);
@@ -653,8 +475,6 @@ NtupleProducer::beginJob()
   fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
   fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
   fTrkInfoTree     = new TTree("TrkInfo",   "TrkInfo");
-  fEcalInfoTree     = new TTree("EcalInfo",   "EcalInfo");
-  fHcalInfoTree     = new TTree("HcalInfo",   "HcalInfo");
 
   fTrkInfoTree->Branch("runNum",  &runNum,  "runNum/F");
   fTrkInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
@@ -675,45 +495,6 @@ NtupleProducer::beginJob()
   fTrkInfoTree->Branch("genEta",      &genEta,  "genEta/F");
   fTrkInfoTree->Branch("genPhi",      &genPhi,  "genPhi/F");
   fTrkInfoTree->Branch("genid",       &genId,   "genid/F");
-  
-  fEcalInfoTree->Branch("ecal_ieta", &ecal_ieta, "ecal_ieta/F");
-  fEcalInfoTree->Branch("ecal_iphi", &ecal_iphi, "ecal_iphi/F");
-  fEcalInfoTree->Branch("ecal_curTwrEta", &ecal_curTwrEta, "ecal_curTwrEta/F");
-  fEcalInfoTree->Branch("ecal_curTwrPhi", &ecal_curTwrPhi, "ecal_curTwrPhi/F");
-  fEcalInfoTree->Branch("ecal_et", &ecal_et, "ecal_et/F");
-  fEcalInfoTree->Branch("ecal_num",&ecal_num, "ecal_num/F");
-  fEcalInfoTree->Branch("ecal_clust_et",  &ecal_clust_et , "ecal_clust_et/F");
-  fEcalInfoTree->Branch("ecal_clust_eta", &ecal_clust_eta, "ecal_clust_eta/F");
-  fEcalInfoTree->Branch("ecal_clust_phi", &ecal_clust_phi, "ecal_clust_phi/F");
-  fEcalInfoTree->Branch("ecal_corr_et"  , &ecal_corr_et  , "ecal_corr_et/F");
-  fEcalInfoTree->Branch("genPt",   &ecal_genPt,"ecal_genPt/F");
-  fEcalInfoTree->Branch("genEta",  &ecal_genEta,"ecal_genEta/F");
-  fEcalInfoTree->Branch("genPhi",  &ecal_genPhi,"ecal_genPhi/F");
-  fEcalInfoTree->Branch("genid",   &ecal_genId, "ecal_genid/F");
-  fEcalInfoTree->Branch("gendr",   &ecal_dr, "ecal_dr/F");
-
-
-  //fHcalInfoTree->Branch("hcal_subdet", &hcal_subdet, "hcal_subdet/F");
-  fHcalInfoTree->Branch("hcal_ieta", &hcal_ieta, "hcal_ieta/F");
-  fHcalInfoTree->Branch("hcal_iphi", &hcal_iphi, "hcal_iphi/F");
-  //fHcalInfoTree->Branch("hcal_TwrR", &hcal_TwrR, "hcal_TwrR/F");
-  fHcalInfoTree->Branch("hcal_num", &hcal_num, "hcal_num/F");
-  fHcalInfoTree->Branch("hcal_et", &hcal_et, "hcal_et/F");
-  fHcalInfoTree->Branch("hcal_clust_et",  &hcal_clust_et , "hcal_clust_et/F");
-  fHcalInfoTree->Branch("hcal_clust_eta", &hcal_clust_eta, "hcal_clust_eta/F");
-  fHcalInfoTree->Branch("hcal_clust_phi", &hcal_clust_phi, "hcal_clust_phi/F");
-  fHcalInfoTree->Branch("hcal_clust_emf" , &hcal_clust_emf , "hcal_clust_emf/F");
-  fHcalInfoTree->Branch("hcal_corr_et"  , &hcal_corr_et  , "hcal_corr_et/F");
-  fHcalInfoTree->Branch("hcal_corr_emf" , &hcal_corr_emf , "hcal_corr_emf/F");
-  fHcalInfoTree->Branch("ecal_et",      &hcal_ecal_et,     "hcal_ecal_et/F");
-  fHcalInfoTree->Branch("ecal_etcorr",  &hcal_ecal_etcorr, "hcal_ecal_etcorr/F");
-  //fHcalInfoTree->Branch("ecal_eta", &hcal_ecal_eta, "hcal_ecal_eta/F"); // FIXME
-  //fHcalInfoTree->Branch("ecal_phi", &hcal_ecal_phi, "hcal_ecal_phi/F"); // FIXME
-  fHcalInfoTree->Branch("genPt",   &hcal_genPt ,"hcal_genPt/F");
-  fHcalInfoTree->Branch("genEta",  &hcal_genEta,"hcal_genEta/F");
-  fHcalInfoTree->Branch("genPhi",  &hcal_genPhi,"hcal_genPhi/F");
-  fHcalInfoTree->Branch("genid",   &hcal_genId, "hcal_genid/F");
-  fHcalInfoTree->Branch("gendr",   &hcal_dr ,"hcal_dr/F");  
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
@@ -734,38 +515,6 @@ NtupleProducer::endJob() {
   fOutputFile->Close();
 }
 
-// ------------ method called when starting to processes a run  ------------
-
-void
-NtupleProducer::beginRun(edm::Run const&, edm::EventSetup const& iSetup)
-{
-}
-
- 
-// ------------ method called when ending the processing of a run  ------------
-/*
-void
-NtupleProducer::endRun(edm::Run const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method called when starting to processes a luminosity block  ------------
-/*
-void
-NtupleProducer::beginLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-{
-}
-*/
- 
-// ------------ method called when ending the processing of a luminosity block  ------------
-/*
-void
-NtupleProducer::endLuminosityBlock(edm::LuminosityBlock const&, edm::EventSetup const&)
-{
-}
-*/
- 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
 NtupleProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) {

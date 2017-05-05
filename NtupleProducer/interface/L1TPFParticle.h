@@ -43,6 +43,10 @@ namespace l1tpf {
             float puppiWeight() const { return puppiWeight_; }
             int isPV() const { return isPV_; }
             float hOverE() const { return hOverE_; }
+            float emEt() const { 
+                if (hOverE_ == -1) return 0;
+                return pt() / ( 1 + hOverE_ );
+            }
             // for L1Tk
             float normalizedChi2() const { return chi2n_; }
 
@@ -60,7 +64,8 @@ namespace l1tpf {
             void setPuppiWeight(float puppiWeight) { puppiWeight_ = puppiWeight; }
             void setIsPV(int isPV) { isPV_ = isPV; }
 
-            // for HGC 3D clusters, or our own linked ecal+hcal clusters
+            /// for HGC 3D clusters, or our own linked ecal+hcal clusters
+            /// -1 if E is zero.
             void setHOverE(float hOverE) { hOverE_ = hOverE; }
 
             // for L1Tk

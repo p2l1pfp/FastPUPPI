@@ -174,7 +174,7 @@ namespace l1pf_calo {
                 }
             }
 
-            std::vector<l1tpf::Particle> fetch(bool corrected=true) const ;
+            std::unique_ptr<std::vector<l1tpf::Particle>> fetch(bool corrected=true) const ;
         private:
             std::unique_ptr<Grid> grid_;
             const SingleCaloClusterer & ecal_, & hcal_;

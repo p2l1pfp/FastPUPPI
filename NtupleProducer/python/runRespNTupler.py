@@ -55,10 +55,12 @@ process.TFileService = cms.Service("TFileService", fileName = cms.string("respTu
 
 
 if True:
+    process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
     process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
+    process.CaloInfoOut.outputName = ""; # turn off Ntuples
     process.InfoOut.outputName = ""; # turn off Ntuples
-    process.p = cms.Path(process.InfoOut + process.ntuple)
+    process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.ntuple)
 def goGun():
     process.ntuple.isParticleGun = True
 def goSpring17():
@@ -68,9 +70,9 @@ def goSpring17():
     process.ntuple.objects.TPTK   = cms.VInputTag('l1tPFTkProducersFromL1Tracks',)
     if hasattr(process, 'InfoOut'):
         process.InfoOut.L1TrackTag = 'l1tPFTkProducersFromL1Tracks'
-        process.InfoOut.EcalTPTags = [ 'l1tPFEcalProducerFromTPDigis:towers', 'l1tPFHGCalProducerFromTriggerCells:towersEE' ]
-        process.InfoOut.HcalTPTags = [ 'l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH', ]
-        process.InfoOut.caloClusterer.linker.useCorrectedEcal = False
+        process.CaloInfoOut.EcalTPTags = [ 'l1tPFEcalProducerFromTPDigis:towers', 'l1tPFHGCalProducerFromTriggerCells:towersEE' ]
+        process.CaloInfoOut.HcalTPTags = [ 'l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH', ]
+        process.CaloInfoOut.caloClusterer.linker.useCorrectedEcal = False
 def goRegional(inParallel=False):
     regions = cms.VPSet(
             cms.PSet(
