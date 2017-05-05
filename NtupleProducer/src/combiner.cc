@@ -64,7 +64,7 @@ l1tpf::Particle combiner::makeCalo(double iCalo,double iEcal,double iCaloEta,dou
   if(iCalo < 1.1*iEcal) lPhi = iEcalPhi;
   double lSigma = lEt;
   iCalo < 1.1*iEcal ? lSigma = getEleRes(lEt,lEta,lPhi) : lSigma = getPionRes(lEt,lEta,lPhi);
-  int lId = NH; if(iCalo < 1.1*iEcal) lId = GAMMA;
+  int lId = Particle::NH; if(iCalo < 1.1*iEcal) lId = Particle::GAMMA;
   return Particle(lEt,lEta,lPhi,0.,lId,lSigma,0.,lEta,lPhi);
 }
 void combiner::addCalo(const l1tpf::Particle & particle) { 
@@ -98,10 +98,10 @@ void combiner::link(bool iMetRate) {
       }
       if (curDR < 0.2 && (curDPT) < 4 && fabs(curDPT) < minPtDiff){
         if (imatch > -1) { // we've found a new match, the previous one should be unmatched
-            fTkParticles[i1].setPdgId(CH);
+            fTkParticles[i1].setPdgId(Particle::CH);
             fTkParticles[i1].setMass(0.135);
         }
-        fTkParticles[i1].setPdgId(MU);
+        fTkParticles[i1].setPdgId(Particle::MU);
         fTkParticles[i1].setMass(0.105);
         minPtDiff = fabs(curDPT);
         imatch = i1;
@@ -111,7 +111,7 @@ void combiner::link(bool iMetRate) {
   // then do track + calo linking
   if (fDebug) printf("Trying to link. I have %d tracks, %d calo\n", int(fTkParticles.size()), int(fParticles.size()));
   for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-    if(fTkParticles[i0].pdgId() == MU) continue; // skip muons for now, add them at the end
+    if(fTkParticles[i0].pdgId() == Particle::MU) continue; // skip muons for now, add them at the end
     if (fDebug>1) printf("\t track %d (pt %7.2f +- %5.2f)\n", i0, fTkParticles[i0].pt(), fTkParticles[i0].sigma());
     bool pFilled = false; // if true, the track has already been added in the PF candidates; if false, it's still to be added
     int pIMatch = -1; double pPtMatch = -1;
@@ -121,7 +121,7 @@ void combiner::link(bool iMetRate) {
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
             if (fDebug>1) printf("outside dR (%.3f).\n",deltaR(fTkParticles[i0],fParticles[i1])); 
             continue; }
-      if(fParticles[i1].pdgId() == CH || fParticles[i1].pdgId() == EL)  { 
+      if(fParticles[i1].pdgId() == Particle::CH || fParticles[i1].pdgId() == Particle::EL)  { 
             if (fDebug>1) printf("already linked.\n");  
             continue; }
       if(fParticles[i1].pt()+2.*fParticles[i1].sigma() < fTkParticles[i0].pt()) { 
@@ -148,7 +148,7 @@ void combiner::link(bool iMetRate) {
   // now do muons... when not using muon gun+PU as a neutrino gun
   if(!iMetRate) { 
     for(unsigned int i0   = 0; i0 < fTkParticles.size(); i0++) { 
-      if (fTkParticles[i0].pdgId() == MU) fParticles.push_back(fTkParticles[i0]);
+      if (fTkParticles[i0].pdgId() == Particle::MU) fParticles.push_back(fTkParticles[i0]);
     }
   }
 }
@@ -173,7 +173,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     double pSigTot  = 1./pSigma/pSigma + 1./pTkSigma/pTkSigma;
     double pAvgEt   = (iParticle1.pt()/pSigma/pSigma + iTkParticle.pt()/pTkSigma/pTkSigma)/pSigTot;
     iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), 0.137);
-    iParticle1.setPdgId(iParticle1.pdgId() == GAMMA ? EL : CH); 
+    iParticle1.setPdgId(iParticle1.pdgId() == Particle::GAMMA ? Particle::EL : Particle::CH); 
     if (fDebug) printf("   case 2: merge, avg pt %7.2f\n", iParticle1.pt());
     return;
   }

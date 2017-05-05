@@ -67,7 +67,7 @@ l1tpf::HGCalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::E
     iEvent.getByToken(src_, src);
     for (const HGCRecHit & hit : *src) {
         assert(hit.detid().det() == DetId::Forward && (3 <= hit.detid().subdetId() && hit.detid().subdetId() <= 4));
-        if (hit.energy() < eCut_) continue;
+        if (hit.energy() <= eCut_) continue;
         const GlobalPoint & pos = (hit.detid().subdetId() == 3 ? geomEE : geomFH)->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();
         if (et < etCut_) continue; 

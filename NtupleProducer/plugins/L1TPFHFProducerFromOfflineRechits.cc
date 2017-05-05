@@ -62,7 +62,7 @@ l1tpf::HFProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Even
     edm::Handle<HFRecHitCollection> src;
     iEvent.getByToken(src_, src);
     for (const HFRecHit & hit : *src) {
-        if (hit.energy() < eCut_) continue;
+        if (hit.energy() <= eCut_) continue;
         const GlobalPoint & pos = caloGeom->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();
         if (et < etCut_) continue; 

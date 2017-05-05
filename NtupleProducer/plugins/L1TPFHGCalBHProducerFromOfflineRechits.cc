@@ -66,7 +66,7 @@ l1tpf::HGCalBHProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm:
     iEvent.getByToken(src_, src);
     for (const HGCRecHit & hit : *src) {
         assert(hit.detid().det() == DetId::Hcal && (hit.detid().subdetId() == 2));
-        if (hit.energy() < eCut_) continue;
+        if (hit.energy() <= eCut_) continue;
         const GlobalPoint & pos = caloGeom->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();
         if (et < etCut_) continue; 

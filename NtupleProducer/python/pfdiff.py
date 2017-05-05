@@ -23,8 +23,14 @@ while len(args) < 3: args.append("")
 
 events = Events(args[0])
 
-pf1   = Handle("std::vector<reco::PFCandidate>")
-pf2   = Handle("std::vector<reco::PFCandidate>")
+if args[1].startswith("l1tPF"):
+    pf1 = Handle("std::vector<l1tpf::Particle>")
+else:
+    pf1   = Handle("std::vector<reco::PFCandidate>")
+if args[2].startswith("l1tPF"):
+    pf2 = Handle("std::vector<l1tpf::Particle>")
+else:
+    pf2   = Handle("std::vector<reco::PFCandidate>")
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 

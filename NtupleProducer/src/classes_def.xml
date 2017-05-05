@@ -1,5 +1,6 @@
 <lcgdict>
-    <class name="l1tpf::Particle"  ClassVersion="11">
+    <class name="l1tpf::Particle"  ClassVersion="12">
+        <version ClassVersion="12" checksum="3806701049"/>
         <version ClassVersion="11" checksum="3274669475"/>
     </class>
     <class name="std::vector<l1tpf::Particle>" />

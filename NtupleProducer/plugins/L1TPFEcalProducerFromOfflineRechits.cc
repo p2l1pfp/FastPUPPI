@@ -64,13 +64,13 @@ l1tpf::EcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
     edm::Handle<EcalRecHitCollection> src;
     iEvent.getByToken(src_, src);
     for (const EcalRecHit & hit : *src) {
-        if (hit.energy() < eCut_) continue;
+        if (hit.energy() <= eCut_) continue;
         if (hit.checkFlag(EcalRecHit::kOutOfTime) || hit.checkFlag(EcalRecHit::kL1SpikeFlag)) continue;
         const GlobalPoint & pos = caloGeom->getPosition(hit.detid());
         double et = pos.perp()/pos.mag() * hit.energy();
         if (et < etCut_) continue; 
         EBDetId id(hit.detid());
-        out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0, 0, 0, 0, pos.eta(), pos.phi());
+        out_crystal->emplace_back(et, pos.eta(), pos.phi(), 0., 0);
 	//Using Local iEta,iPhi conventions since all the others are driving me nuts
 	towers[make_pair(l1tpf::translateIEta(pos.eta()),l1tpf::translateIPhi(pos.phi(),pos.eta()))].emplace_back(et, pos.eta(), pos.phi());
 	//std::cout << "check ieta " << id.tower_ieta() << " -- " << id.tower_iphi() << " -- " << l1tpf::translateIEta(pos.eta()) << " -- " << l1tpf::translateIPhi(pos.phi(),pos.eta()) << std::endl;
@@ -87,7 +87,7 @@ l1tpf::EcalProducerFromOfflineRechits::produce(edm::Event &iEvent, const edm::Ev
 	  etaetsum /= etsum;
 	  phietsum /= etsum;
 	}
-	out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0, 0,0,0,etaetsum + reta,reco::deltaPhi(phietsum + rphi, 0.));
+	out_tower->emplace_back(etsum, etaetsum + reta, reco::deltaPhi(phietsum + rphi, 0.), 0., 0);
     }
 
   iEvent.put(std::move(out_crystal), "crystals");

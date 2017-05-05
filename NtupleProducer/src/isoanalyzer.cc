@@ -79,13 +79,13 @@ void isoanalyzer::matchMuons(std::vector<combiner::Particle> &iParticle){
 
   // first find the muon matched to GEN
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
-    if ((gmu1.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::MU)){
+    if ((gmu1.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::Particle::MU)){
       if (gmu1.DeltaR(iParticle[i0].tp4()) < 0.4){
         // std::cout << "found a matching muon1!" << iParticle[i0].tp4().Pt() << std::endl;
         _mu1 = iParticle[i0].tp4();
       }
     }
-    if ((gmu2.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::MU)){
+    if ((gmu2.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::Particle::MU)){
       if (gmu2.DeltaR(iParticle[i0].tp4()) < 0.4){
         // std::cout << "found a matching muon2!" << iParticle[i0].tp4().Pt() << std::endl;
         _mu2 = iParticle[i0].tp4();        

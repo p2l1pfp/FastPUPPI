@@ -8,44 +8,51 @@
 namespace l1tpf {
     class Particle : public reco::LeafCandidate {
         public:
+            enum MyParticleId { CH=0, EL=1, NH=2, GAMMA=3, MU=4 };
             Particle() {}
             Particle(double iEt,double iEta,double iPhi,double iM,int iId,double iSigma=0,double iDZ=0,double iCaloEta=0,double iCaloPhi=0, double iCharge = 0, double iQuality = -999, double iIsPV = 0, float alphaF = -999, float alphaC = -999, float puppiWeight = -99) :
                 LeafCandidate(iCharge, reco::LeafCandidate::PolarLorentzVector(iEt,iEta,iPhi,iM), reco::LeafCandidate::Point(), iId),
                 dZ_(iDZ),
                 sigma_(iSigma),
-                caloEta_(iCaloEta),
-                caloPhi_(iCaloPhi),
-                eta_(iEta),phi_(iPhi),
+                caloEta_(-999),
+                caloPhi_(-999),
                 quality_(iQuality),
                 isPV_(iIsPV),
+                hOverE_(0.), chi2n_(0),
                 alphaF_(alphaF),
                 alphaC_(alphaC),
                 puppiWeight_(puppiWeight) {}
 
             float dz() const { return dZ_; }
             float sigma() const { return sigma_; }  
-            float caloEta() const { return caloEta_; }
-            float caloPhi() const { return caloPhi_; }
+            float caloEta() const { return caloEta_ == -999 ? eta() : caloEta_; }
+            float caloPhi() const { return caloPhi_ == -999 ? phi() : caloPhi_; }
 	    //iEta,iPhi (usuals)
-	    int   iEta() const { return l1tpf::translateIEta(eta_);}
-	    int   iPhi() const { return l1tpf::translateIPhi(phi_,eta_);}
+	    int   iEta() const { return l1tpf::translateIEta(eta());}
+	    int   iPhi() const { return l1tpf::translateIPhi(phi(),eta());}
 	    //iEta,iPhi as they are stored in Arrays
 	    int   aEta() const { return l1tpf::translateAEta(iEta());}
 	    int   aPhi() const { return l1tpf::translateAPhi(iPhi());}
 	    //Center of the trigger tower
-	    float dEta() const { return l1tpf::towerEta(l1tpf::translateIEta(eta_));}
-	    float dPhi() const { return l1tpf::towerPhi(l1tpf::translateIEta(eta_),l1tpf::translateIPhi(phi_,eta_));}
+	    float dEta() const { return l1tpf::towerEta(l1tpf::translateIEta(eta()));}
+	    float dPhi() const { return l1tpf::towerPhi(l1tpf::translateIEta(eta()),l1tpf::translateIPhi(phi(),eta()));}
             //Other stuff
 	    float quality() const { return quality_; }
             float alphaF() const { return alphaF_; }
             float alphaC() const { return alphaC_; }
             float puppiWeight() const { return puppiWeight_; }
             int isPV() const { return isPV_; }
+            float hOverE() const { return hOverE_; }
+            float emEt() const { 
+                if (hOverE_ == -1) return 0;
+                return pt() / ( 1 + hOverE_ );
+            }
+            // for L1Tk
+            float normalizedChi2() const { return chi2n_; }
+
 	    
             void setCaloEta(float caloEta) { caloEta_ = caloEta; }
             void setCaloPhi(float caloPhi) { caloPhi_ = caloPhi; }
-            void setEta(float iEta) { eta_ = iEta; }
-            void setPhi(float iPhi) { phi_ = iPhi; }
             void setCaloEtaPhi(float caloEta, float caloPhi) { caloEta_ = caloEta; caloPhi_ = caloPhi; }
             //void setIEtaIPhi(int iEta, int iPhi) { iEta_ = iEta; iPhi_ = iPhi; }
 
@@ -56,6 +63,13 @@ namespace l1tpf {
             void setAlphaC(float alphaC) { alphaC_ = alphaC; }
             void setPuppiWeight(float puppiWeight) { puppiWeight_ = puppiWeight; }
             void setIsPV(int isPV) { isPV_ = isPV; }
+
+            /// for HGC 3D clusters, or our own linked ecal+hcal clusters
+            /// -1 if E is zero.
+            void setHOverE(float hOverE) { hOverE_ = hOverE; }
+
+            // for L1Tk
+            void setNormalizedChi2(float normalizedChi2) { chi2n_ = normalizedChi2; }
 
             TLorentzVector tp4() const { 
                 TLorentzVector ret;
@@ -73,9 +87,9 @@ namespace l1tpf {
             float dZ_;
             float sigma_;
             float caloEta_, caloPhi_;
-	    float eta_, phi_;
             float quality_;
             int isPV_;
+            float hOverE_, chi2n_;
             float alphaF_, alphaC_, puppiWeight_;
     }; // class
 } // namespace
