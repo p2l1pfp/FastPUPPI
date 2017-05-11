@@ -17,6 +17,9 @@ public:
   typedef l1tpf::Particle Particle;
 
   combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes,int debug=0);
+  void configureLinking(float iDRMatch, float iPtMatchLow, float iPtMatchHigh, bool iUseTrackCaloSigma, bool iRescaleUnmatchedTrack, float iMaxInvisiblePt) {
+    fDRMatch = iDRMatch; fPtMatchLow = iPtMatchLow; fPtMatchHigh = iPtMatchHigh; fUseTrackCaloSigma = iUseTrackCaloSigma; fRescaleUnmatchedTrack = iRescaleUnmatchedTrack; fMaxInvisiblePt = iMaxInvisiblePt;
+  }
   l1tpf::Particle makeCalo(double iCalo,double iEcal,double iCaloEta,double iCaloPhi,double iEcalEta,double iEcalPhi) const ;
   void addCalo(const l1tpf::Particle & particle);
   void addMuon(const l1tpf::Particle & particle); 
@@ -55,7 +58,9 @@ private:
   TGraph **fPionRes;
   int   fNEta;
   double fEta;
-  double fDRMatch;
+  float fDRMatch;
+  float fPtMatchLow, fPtMatchHigh, fMaxInvisiblePt;
+  bool   fUseTrackCaloSigma, fRescaleUnmatchedTrack;  
   double fPuppiPt;
   double fVtxRes;
   std::vector<Particle> fTkParticles;

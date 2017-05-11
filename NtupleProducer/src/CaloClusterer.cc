@@ -234,6 +234,17 @@ void l1pf_calo::SingleCaloClusterer::run()
 
 }
 
+std::unique_ptr<std::vector<l1tpf::Particle>> l1pf_calo::SingleCaloClusterer::fetch(bool corrected) const {
+    auto ret = std::make_unique<std::vector<l1tpf::Particle>>();
+    for (unsigned int i = 0, ncells = grid_->size(); i < ncells; ++i) {
+        if (cluster_[i].et > 0) {
+            ret->emplace_back(corrected ? cluster_[i].et_corr : cluster_[i].et, cluster_[i].eta, cluster_[i].phi, 0.0, 3);  
+            ret->back().setCaloEtaPhi(cluster_[i].eta, cluster_[i].phi);
+        }
+    }
+    return ret;
+}
+
 l1pf_calo::SimpleCaloLinker::SimpleCaloLinker(const edm::ParameterSet &pset, const SingleCaloClusterer & ecal,  const SingleCaloClusterer & hcal) :
     grid_(new Stage1Grid()),
     ecal_(ecal), hcal_(hcal),

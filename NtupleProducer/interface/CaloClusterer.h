@@ -133,6 +133,7 @@ namespace l1pf_calo {
             void run() ; 
             const EtGrid      & raw()      const { return rawet_; }
             const ClusterGrid & clusters() const { return cluster_; }
+            std::unique_ptr<std::vector<l1tpf::Particle>> fetch(bool corrected=true) const ;
             
             // for the moment, generic interface that takes a cluster and corrects it
             template<typename Corrector>
