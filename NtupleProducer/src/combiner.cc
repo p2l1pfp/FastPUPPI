@@ -147,7 +147,10 @@ void combiner::link(bool iMetRate) {
     //Remove high pT fakes
     if(fTkParticles[i0].pt() > fMaxInvisiblePt) {
         if (fRescaleUnmatchedTrack && pIMatchPtTooLow != -1) {
-            throw cms::Exception("Configuration", "rescaleUnmatchedTrack is not yet implemented");
+            Particle & iParticle1 = fParticles[pIMatchPtTooLow];
+            iParticle1.setPtEtaPhiM(iParticle1.pt(), fTkParticles[i0].eta(), fTkParticles[i0].phi(), 0.137);
+            iParticle1.setPdgId(iParticle1.pdgId() == Particle::GAMMA ? Particle::EL : Particle::CH); 
+            iParticle1.setDz(fTkParticles[i0].dz());
         }
         pFilled = true; // mark it as used so it's not turned into a PF candidate
     }
@@ -182,6 +185,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     double pAvgEt   = (iParticle1.pt()/pSigma/pSigma + iTkParticle.pt()/pTkSigma/pTkSigma)/pSigTot;
     iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), 0.137);
     iParticle1.setPdgId(iParticle1.pdgId() == Particle::GAMMA ? Particle::EL : Particle::CH); 
+    iParticle1.setDz(iTkParticle.dz());
     if (fDebug) printf("   case 2: merge, avg pt %7.2f\n", iParticle1.pt());
   }
 }

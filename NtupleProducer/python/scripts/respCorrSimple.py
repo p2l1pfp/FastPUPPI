@@ -6,6 +6,29 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 
+##### EXAMPLE USAGE:
+# 1) ECAL Corrections from Pi0
+#       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU.root plots/corr/em -p pizero -w TPEcal_pt02 -e TPEcal_pt02 -E 3.0
+#
+#    Check closure, after re-running Pi0 with Ecal calibration applied
+#       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/em/closure -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02 -E 3.0
+#       
+#       
+# 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
+#       python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/had -p pion -w L1RawCalo_pt02 -e L1RawCalo_pt02 --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.5,0.875
+#
+#    Check closure, after re-running Pi with Ecal + Had calibration applied 
+#       python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/had/closure -p pion -w L1Calo_pt02 -e L1Calo_pt02 --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.5,0.875
+#   
+#    
+# 3) Resolutions, after all the corrections
+#    Hadrons, calo
+#        python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/resolution -p pion -w L1Calo_pt02 -e L1Calo_pt02  -r
+#    EM, calo
+#        python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/resolution -p pizero -w L1Calo_pt02 -e L1Calo_pt02  -r
+#    Hadrons, track
+#        python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/resolution -p pion -w TPTK_pthighest -e TPTK_pthighest   -r
+
 if __name__ == "__main__":
     from optparse import OptionParser
     parser = OptionParser("%(prog) infile [ src [ dst ] ]")

@@ -78,20 +78,21 @@ def goSpring17(mode="towers"):
             process.CaloInfoOut.caloClusterer.linker.useCorrectedEcal = False
             #process.CaloInfoOut.corrector   = cms.string("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre3/src/FastPUPPI/NtupleProducer/data/pion_eta_phi.root")
             #process.CaloInfoOut.ecorrector  = cms.string("/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre3/src/FastPUPPI/NtupleProducer/data/ecorr.root")
+            # Temporary calibrations
             if True:
+                process.CaloInfoOut.caloClusterer.linker.useCorrectedEcal = True
                 process.CaloInfoOut.simpleCorrEM = cms.PSet(
                             etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000),
                             offset  = cms.vdouble(-1.402, -1.733, -2.007, -0.983, -1.140, -1.362),
                             scale   = cms.vdouble( 0.977,  0.976,  0.960,  0.915,  0.949,  0.986),
                             )
-                process.CaloInfoOut.caloClusterer.linker.useCorrectedEcal = True
-            if True:
                 process.CaloInfoOut.simpleCorrHad = cms.PSet(
                         etaBins = cms.vdouble( 0.500,  0.500,  0.500,  1.000,  1.000,  1.000,  1.500,  1.500,  1.500,  2.000,  2.000,  2.000,  2.500,  2.500,  2.500,  3.000,  3.000,  3.000,  3.500,  4.000,  4.500,  5.000),
                         emfBins = cms.vdouble( 0.125,  0.500,  0.875,  0.125,  0.500,  0.875,  0.125,  0.500,  0.875,  0.125,  0.500,  0.875,  0.125,  0.500,  0.875,  0.125,  0.500,  0.875,  1.100,  1.100,  1.100,  1.100),
                         offset  = cms.vdouble(-2.765, -1.101, -3.387, -3.069, -0.775, -2.698, -5.154,  0.823, -1.693, -2.871, -0.408, -1.276, -2.205, -0.923, -2.050, -3.338,  0.284, -1.839, -3.910, -3.679, -3.361, -4.131),
                         scale   = cms.vdouble( 0.951,  0.719,  0.721,  0.977,  0.702,  0.722,  0.915,  0.651,  0.647,  0.586,  0.671,  0.722,  0.608,  0.670,  0.732,  0.544,  0.578,  0.674,  1.157,  1.154,  1.060,  0.744),
                         )
+            # Temporary resolutions
             if True:
                 process.InfoOut.simpleResolHad = cms.PSet(
                         etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
@@ -111,13 +112,15 @@ def goSpring17(mode="towers"):
                         scale   = cms.vdouble( 0.303,  0.465,  1.003,  1.219,  1.518),
                         kind    = cms.string('track'),
                         )
+            # Options to optimize the linking
             if True:
                 process.InfoOut.linking = cms.PSet(
                         trackCaloDR = cms.double(0.15),
                         trackCaloNSigmaLow = cms.double(2.0),
                         trackCaloNSigmaHigh = cms.double(2.0),
                         useTrackCaloSigma = cms.bool(True),
-                        rescaleUnmatchedTrack = cms.bool(True),
+                        rescaleUnmatchedTrack = cms.bool(False),
+                        maxInvisiblePt = cms.double(20.0),
                         )
 
             process.ntuple.objects.L1RawCalo = cms.VInputTag(cms.InputTag('CaloInfoOut','uncalibrated'))
