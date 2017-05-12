@@ -26,9 +26,10 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
                             # replace 'myfile.root' with the source file you want to use
-                            fileNames = cms.untracked.vstring(
-        '/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/GEN-SIM-RECO/90X_upgrade2023_realistic_v9_D12-v1/00000/0A8B6505-A215-E711-B25B-0CC47A4C8F26.root'
-        )
+                            fileNames = cms.untracked.vstring('file:inputs_17D.root')
+                            #fileNames = cms.untracked.vstring(
+        #'/store/relval/CMSSW_9_1_0_pre1/RelValZMM_14/GEN-SIM-RECO/90X_upgrade2023_realistic_v9_D12-v1/00000/0A8B6505-A215-E711-B25B-0CC47A4C8F26.root'
+                            #)
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 

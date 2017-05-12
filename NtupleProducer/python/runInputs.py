@@ -38,10 +38,36 @@ process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_c
 #process.load('FastPUPPI.NtupleProducer._cfi')
 
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('/store/mc/PhaseIISpring17D/SinglePhoton_FlatPt-8to150/GEN-SIM-DIGI-RAW/NoPU_90X_upgrade2023_realistic_v9-v1/70000/008FC219-132A-E711-893F-A0000420FE80.root')
-    fileNames = cms.untracked.vstring('file:SinglePion_17D.root',)
+                            #fileNames = cms.untracked.vstring('/store/mc/PhaseIISpring17D/SinglePhoton_FlatPt-8to150/GEN-SIM-DIGI-RAW/NoPU_90X_upgrade2023_realistic_v9-v1/70000/008FC219-132A-E711-893F-A0000420FE80.root')
+                            fileNames = cms.untracked.vstring(
+        '/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1084.root',
+        '/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1085.root'),
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1086.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1087.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1088.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1090.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1091.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1093.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1094.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1095.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1096.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1097.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1098.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1099.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1101.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1102.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1103.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1104.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1105.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1106.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1107.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1108.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1109.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1110.root',
+#'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1111.root'),
+                            duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(40))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 
 process.s = cms.Sequence(
     process.reprocess_L1Phase2_MC +

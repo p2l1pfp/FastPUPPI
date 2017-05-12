@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 import ROOT as r,sys,math,array,os,argparse,numpy
 from array import array
-sys.path.insert(0, '/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/calib')
+sys.path.insert(0, '/afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre3/src/FastPUPPI/NtupleProducer/calib')
 from tools import end
 from ecal  import resolution,gausRes,proj,draw
 import tdrstyle
@@ -9,7 +9,7 @@ tdrstyle.setTDRStyle()
 
 parser = argparse.ArgumentParser(description='Process benchmarks.')
 parser.add_argument('-Tree'   ,'--Tree'      ,action='store'  ,dest='Tree',default='HcalInfo',help='Tree Name')
-parser.add_argument('-input'  ,'--input'     ,action='store'  ,dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_v4.root',help='input file')
+parser.add_argument('-input'  ,'--input'     ,action='store'  ,dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_TP.root',help='input file')
 parser.add_argument('-pt'     ,'--pt'        ,dest='ptrange'  ,nargs='+',type=float,default=range(2,20,2)+range(20,100,5),help='pt range')
 parser.add_argument('-build'  ,'--build'     ,action='store_true',dest='build'  ,default=False      ,help='build')
 parser.add_argument('-emfrac' ,'--emfrac'    ,dest='emfrange' ,nargs='+',type=float,default=numpy.arange(-0.1,1.1,0.2),help='emf range')
@@ -236,4 +236,4 @@ if __name__ == "__main__":
     for pGraph in lMu:
         pGraph.Write()
     lOFile.Close()
-    os.system('mv Output.root /afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre2/src/FastPUPPI/NtupleProducer/calib/hcal/hcal_ieta_%d.root' % args.ieta[0])
+    os.system('mv Output.root /afs/cern.ch/user/p/pharris/pharris/public/bacon/prod/CMSSW_9_1_0_pre3/src/FastPUPPI/NtupleProducer/calib/hcal/hcal_ieta_%d.root' % args.ieta[0])

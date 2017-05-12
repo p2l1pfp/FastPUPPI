@@ -7,7 +7,7 @@ tdrstyle.setTDRStyle()
 
 parser = argparse.ArgumentParser(description='Process benchmarks.')
 parser.add_argument('-Tree'   ,'--Tree'      ,action='store',dest='Tree'   ,default='EcalInfo'      ,help='Tree Name')
-parser.add_argument('-input'  ,'--input'     ,action='store',dest='input'  ,default='/tmp/pharris/Pion_v4.root',help='input file')
+parser.add_argument('-input'  ,'--input'     ,action='store',dest='input'  ,default='/tmp/pharris/Pion.root',help='input file')
 parser.add_argument('-var'    ,'--var'       ,action='store',dest='var'    ,default='ecal_clust_et'  ,help='var') 
 parser.add_argument('-genvar' ,'--genvar'    ,action='store',dest='genvar' ,default='genPt'         ,help='mass') 
 parser.add_argument('-build'  ,'--build'     ,action='store_true',dest='build'  ,default=False      ,help='build')

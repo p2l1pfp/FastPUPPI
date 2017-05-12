@@ -8,7 +8,7 @@ tdrstyle.setTDRStyle()
 
 parser = argparse.ArgumentParser(description='Process benchmarks.')
 parser.add_argument('-Tree'   ,'--Tree'      ,action='store',dest='Tree',default='HcalInfo',help='Tree Name')
-parser.add_argument('-input'  ,'--input'     ,action='store',dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_v4.root',help='input file')
+parser.add_argument('-input'  ,'--input'     ,action='store',dest='input'  ,default='/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion_TP.root',help='input file')
 parser.add_argument('-pt'     ,'--pt'        ,dest='ptrange' ,nargs='+',type=float,default=range(6,20,2)+range(20,100,5),help='pt range')
 parser.add_argument('-build'  ,'--build'     ,action='store_true',dest='build'  ,default=False      ,help='build')
 parser.add_argument('-emfrac' ,'--emfrac'    ,dest='emfrange',nargs='+',type=float,default=numpy.arange(-0.1,1.1,0.2),help='emf range')
