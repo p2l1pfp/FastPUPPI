@@ -165,13 +165,13 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad");
   simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk");
   if (iConfig.existsAs<edm::ParameterSet>("linking")) {
-    edm::ParameterSet cfg = iConfig.getParameter<edm::ParameterSet>("linking");
-    connector_->configureLinking(cfg.getParameter<double>("trackCaloDR"),
-                                cfg.getParameter<double>("trackCaloNSigmaLow"),
-                                cfg.getParameter<double>("trackCaloNSigmaHigh"),
-                                cfg.getParameter<bool>("useTrackCaloSigma"),
-                                cfg.getParameter<bool>("rescaleUnmatchedTrack"),
-                                cfg.getParameter<double>("maxInvisiblePt"));
+    edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+    connector_->configureLinking(linkcfg.getParameter<double>("trackCaloDR"),
+                                linkcfg.getParameter<double>("trackCaloNSigmaLow"),
+                                linkcfg.getParameter<double>("trackCaloNSigmaHigh"),
+                                linkcfg.getParameter<bool>("useTrackCaloSigma"),
+                                linkcfg.getParameter<bool>("rescaleUnmatchedTrack"),
+                                linkcfg.getParameter<double>("maxInvisiblePt"));
   }
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;

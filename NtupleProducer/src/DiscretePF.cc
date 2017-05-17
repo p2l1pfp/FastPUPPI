@@ -36,11 +36,10 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
 void RegionMapper::addTrack( const l1tpf::Particle & t ) {
     // now let's be optimistic and make things very simple
     // we propagate in floating point the track to the calo
-    // we add the track to the region corresponding to its vertex (eta,phi) coordinates
-    // we don't worry about borders
+    // we add the track to the region corresponding to its vertex (eta,phi) coordinates AND its (eta,phi) calo coordinates
     PropagatedTrack prop;
     prop.fillInput(t.pt(), t.eta(), t.phi(), t.charge(), t.dz(), 0);
-    prop.fillPropagated(t.pt(), t.sigma(), t.caloEta(), t.caloPhi(), 0);
+    prop.fillPropagated(t.pt(), t.sigma(), t.caloSigma(), t.caloEta(), t.caloPhi(), 0);
     for (Region &r : regions_) {
         if (r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi())) {
             r.track.push_back(prop);
@@ -51,7 +50,6 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
 void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
     // now let's be optimistic and make things very simple
     // we don't propagate anything
-    // we don't worry about borders
     Muon prop;
     prop.fill(mu.pt(), mu.eta(), mu.phi(), mu.charge(), mu.quality());
     for (Region &r : regions_) {
@@ -61,10 +59,7 @@ void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
     } 
 }
 
-void RegionMapper::addCalo( const l1tpf::Particle &p ) { //float et, float etErr, float eta, float phi, bool em, unsigned int flags ) {
-    // now let's be optimistic and make things very simple
-    // we don't propagate anything
-    // we don't worry about borders
+void RegionMapper::addCalo( const l1tpf::Particle &p ) { 
     CaloCluster calo;
     calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
@@ -126,17 +121,33 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     puppiPtCutC_(1*iConfig.getParameter<double>("puppiPtCut")),
     puppiPtCutF_(2*iConfig.getParameter<double>("puppiPtCut")),
     vtxCut_(1.5*iConfig.getParameter<double>("vtxRes")),
+    drMatch_(0.2), ptMatchLow_(2.0), ptMatchHigh_(2.0), maxInvisiblePt_(20.0),
+    useTrackCaloSigma_(false), rescaleUnmatchedTrack_(false),
     debug_(iConfig.getUntrackedParameter<int>("debug",0))
 {
+    if (iConfig.existsAs<edm::ParameterSet>("linking")) {
+        edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+        drMatch_ = linkcfg.getParameter<double>("trackCaloDR");
+        ptMatchLow_ = linkcfg.getParameter<double>("trackCaloNSigmaLow");
+        ptMatchHigh_ = linkcfg.getParameter<double>("trackCaloNSigmaHigh");
+        useTrackCaloSigma_ = linkcfg.getParameter<bool>("useTrackCaloSigma");
+        rescaleUnmatchedTrack_ = linkcfg.getParameter<bool>("rescaleUnmatchedTrack");
+        maxInvisiblePt_  = linkcfg.getParameter<double>("maxInvisiblePt");
+        if (rescaleUnmatchedTrack_) std::cout << "WARNING: rescaleUnmatchedTrack not yet implemented for integer code" << std::endl;
+    }
+    intDrMatchBox_ = std::ceil(drMatch_ * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
+    intPtMatchLowX4_ = std::ceil(ptMatchLow_ * 4);
+    intPtMatchHighX4_ = std::ceil(ptMatchHigh_ * 4);
+    intMaxInvisiblePt_ = std::round(maxInvisiblePt_ * CaloCluster::PT_SCALE);
+
+
+    intDrMuonMatchBox_ = std::ceil(0.20 * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
 }
 
 void PFAlgo::runPF(Region &r) const {
     r.inputSort();
 
     // do a rectangular match for the moment; make a box of the same are as a 0.2 cone
-    constexpr int16_t BOX_0p20  = std::ceil(0.20 * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
-    constexpr int16_t BOX_0p15  = std::ceil(0.15 * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
-    constexpr int16_t PT_20_GEV = std::round(20 * CaloCluster::PT_SCALE);
     
     // first do the muon/tracking matching
     if (debug_) printf("INTMU Trying to link. I have %d tracks, %d muons\n", int(r.track.size()), int(r.muon.size()));
@@ -146,10 +157,10 @@ void PFAlgo::runPF(Region &r) const {
         float minPtDiff = 4; int imatch = -1;
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             if (debug_>1) printf("INTMU \t\t track %d (pt %7.2f): ", itk, r.track[itk].floatPt());
-            if (std::abs(r.muon[imu].hwEta - r.track[itk].hwEta) >= BOX_0p20) {
+            if (std::abs(r.muon[imu].hwEta - r.track[itk].hwEta) >= intDrMuonMatchBox_) {
                 if (debug_>1) printf("outside deta.\n");
                 continue; }
-            if (std::abs((r.muon[imu].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= BOX_0p20) {
+            if (std::abs((r.muon[imu].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= intDrMuonMatchBox_) {
                 if (debug_>1) printf("outside dphi.\n");  // phi wrapping would play nice if we had a power of 2 bins in phi
                 continue; }
             // FIXME for the moment, we do the floating point matching in pt
@@ -158,6 +169,7 @@ void PFAlgo::runPF(Region &r) const {
                 if (debug_>1) printf("new best match.\n");
                 if (imatch >= 0) r.track[imatch].muonLink = false;
                 r.track[itk].muonLink = true;
+                minPtDiff = dpt; imatch = itk;
             } else if (debug_>1) printf("new match, but %g worse than %d (%g).\n", dpt, imatch, minPtDiff);
         }
     }
@@ -168,17 +180,19 @@ void PFAlgo::runPF(Region &r) const {
         int iMatch = -1; int16_t dptMatch = 0;
         if (debug_>1) printf("INT \t track %d (pt %7.2f)\n", itk, r.track[itk].floatPt());
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
+            int16_t hwCaloErr = r.calo[ic].hwPtErr;
+            if (useTrackCaloSigma_) hwCaloErr = std::max(r.calo[ic].hwPtErr, r.track[itk].hwCaloPtErr);
             if (debug_>1) printf("INT \t\t calo %d (pt %7.2f): ", ic, r.calo[ic].floatPt());
             if (r.calo[ic].used) { 
                 if (debug_>1) printf("used.\n"); 
                 continue; }
-            if (std::abs(r.calo[ic].hwEta - r.track[itk].hwEta) >= BOX_0p15)  { 
+            if (std::abs(r.calo[ic].hwEta - r.track[itk].hwEta) >= intDrMatchBox_)  { 
                 if (debug_>1) printf("outside deta.\n"); 
                 continue; }
-            if (std::abs((r.calo[ic].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= BOX_0p15) {
+            if (std::abs((r.calo[ic].hwPhi - r.track[itk].hwPhi) % CaloCluster::PHI_WRAP) >= intDrMatchBox_) {
                 if (debug_>1) printf("outside dphi.\n"); 
                 continue; } // phi wrapping would play nice if we had a power of 2 bins in phi
-            if (r.calo[ic].hwPt + 2*r.calo[ic].hwPtErr < r.track[itk].hwPt) { 
+            if (r.calo[ic].hwPt + ((intPtMatchLowX4_ * hwCaloErr)/4) < r.track[itk].hwPt) { 
                 if (debug_>1) printf("calo pt is too low.\n"); 
                 continue; }
             int16_t dpt = std::abs(r.calo[ic].hwPt - r.track[itk].hwPt);
@@ -194,7 +208,7 @@ void PFAlgo::runPF(Region &r) const {
                             ::deltaR(r.track[itk].floatEta(),r.track[itk].floatPhi(),r.calo[iMatch].floatEta(),r.calo[iMatch].floatPhi()), 
                             (r.track[itk].floatEta()-r.calo[iMatch].floatEta()), ::deltaPhi(r.track[itk].floatPhi(),r.calo[iMatch].floatPhi()));
             mergeTkCalo(r, r.track[itk], r.calo[iMatch]); 
-        } else if (r.track[itk].hwPt < PT_20_GEV) {
+        } else if (r.track[itk].hwPt < intMaxInvisiblePt_) {
             addTrackToPF(r, r.track[itk]);
         }
     }
@@ -238,19 +252,21 @@ PFParticle & PFAlgo::addCaloToPF(Region &r, const CaloCluster &calo) const {
 }
 
 void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const {
-    int16_t totErr2 = 2*(tk.hwPtErr + calo.hwPtErr); // should be in quadrature
+    int16_t hwCaloErr = calo.hwPtErr;
+    if (useTrackCaloSigma_) hwCaloErr = std::max(calo.hwPtErr, tk.hwCaloPtErr);
+    int16_t totErr2 = (intPtMatchHighX4_*(tk.hwPtErr + hwCaloErr))/4; // should be in quadrature
     if (calo.hwPt - tk.hwPt > totErr2) { // calo > track + 2 sigma
         calo.hwPt -= tk.hwPt;
         // FIXME the floating point code does a vector subtraction, and so it changes also the eta and phi
         if (debug_) printf("INT   case 1: add track, reduce calo pt to %7.2f\n", calo.floatPt());
         addTrackToPF(r, tk);
-    } else if (calo.hwPt - tk.hwPt > -totErr2) { // |calo - track |  < 2 sigma
+    } else { // |calo - track|  < 2 sigma
         // FIXME for the moment, doing the full weighted average
         // in float; to test alternatives in the future.
         float wcalo = 0, wtk = 1;
         int16_t ptAvg = tk.hwPt;
         if (tk.hwPtErr > 0) { // it can easily be zero due to underflows
-            wcalo = 1.0/std::pow(float(calo.hwPtErr),2);
+            wcalo = 1.0/std::pow(float(hwCaloErr),2);
             wtk   = 1.0/std::pow(float(tk.hwPtErr),2);
             ptAvg = std::round( ( float(calo.hwPt)*wcalo + float(tk.hwPt)*wtk ) / (wcalo + wtk) );
         }
@@ -261,14 +277,7 @@ void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & cal
         calo.used = true; // used, not to be added to the PF again
         if (debug_) printf("INT   case 2: merge, avg pt %7.2f from calo (%7.2f +- %.2f), track (%7.2f +- %.2f) weights %.3f %.3f\n", 
                                 pf.floatPt(), calo.floatPt(), calo.floatPtErr(), tk.floatPt(), tk.floatPtErr(), wcalo/(wcalo+wtk), wtk/(wcalo+wtk));
-    } else { // track > calo + 2 sigma
-        addTrackToPF(r, tk);
-        // here we assume the track was a MIP 
-        constexpr int16_t PT_2_GEV   = std::round(2  * CaloCluster::PT_SCALE);
-        constexpr int16_t PT_0p1_GEV = std::round(.1 * CaloCluster::PT_SCALE);
-        calo.hwPt = std::min<int16_t>(PT_0p1_GEV, calo.hwPt - PT_2_GEV);
-        if (debug_) printf("INT   case 3: add track, reduce calo pt to %7.2f\n", calo.floatPt());
-    }
+    } 
 }
 
 void PFAlgo::runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {
