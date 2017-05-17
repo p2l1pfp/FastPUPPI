@@ -180,8 +180,7 @@ void PFAlgo::runPF(Region &r) const {
         int iMatch = -1; int16_t dptMatch = 0;
         if (debug_>1) printf("INT \t track %d (pt %7.2f)\n", itk, r.track[itk].floatPt());
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
-            int16_t hwCaloErr = r.calo[ic].hwPtErr;
-            if (useTrackCaloSigma_) hwCaloErr = std::max(r.calo[ic].hwPtErr, r.track[itk].hwCaloPtErr);
+            int16_t hwCaloErr = useTrackCaloSigma_ ? r.track[itk].hwCaloPtErr : r.calo[ic].hwPtErr ;
             if (debug_>1) printf("INT \t\t calo %d (pt %7.2f): ", ic, r.calo[ic].floatPt());
             if (r.calo[ic].used) { 
                 if (debug_>1) printf("used.\n"); 
@@ -252,8 +251,7 @@ PFParticle & PFAlgo::addCaloToPF(Region &r, const CaloCluster &calo) const {
 }
 
 void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const {
-    int16_t hwCaloErr = calo.hwPtErr;
-    if (useTrackCaloSigma_) hwCaloErr = std::max(calo.hwPtErr, tk.hwCaloPtErr);
+    int16_t hwCaloErr = useTrackCaloSigma_ ? tk.hwCaloPtErr : calo.hwPtErr;
     int16_t totErr2 = (intPtMatchHighX4_*(tk.hwPtErr + hwCaloErr))/4; // should be in quadrature
     if (calo.hwPt - tk.hwPt > totErr2) { // calo > track + 2 sigma
         calo.hwPt -= tk.hwPt;

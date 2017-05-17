@@ -118,8 +118,7 @@ void combiner::link(bool iMetRate) {
     for(unsigned int i1 = 0; i1 < fParticles.size();   i1++) { 
       if (fDebug>1) printf("\t\t calo %d (pt %7.2f +- %5.2f): ", i1, fParticles[i1].pt(), fParticles[i1].sigma());
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
-      float caloSigma = fParticles[i1].sigma();
-      if (fUseTrackCaloSigma) caloSigma = std::max(caloSigma, fTkParticles[i0].caloSigma());
+      float caloSigma = fUseTrackCaloSigma ? fTkParticles[i0].caloSigma() : fParticles[i1].sigma();
       if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
             if (fDebug>1) printf("outside dR (%.3f).\n",deltaR(fTkParticles[i0],fParticles[i1])); 
             continue; }
@@ -167,8 +166,7 @@ void combiner::link(bool iMetRate) {
 //Merge Particles
 void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Particle> &iCollection) { 
 
-  float caloSigma = iParticle1.sigma();
-  if (fUseTrackCaloSigma) caloSigma = std::max(caloSigma, iTkParticle.caloSigma());
+  float caloSigma = fUseTrackCaloSigma ? iTkParticle.caloSigma() : iParticle1.sigma();
   float lTotSigma = hypot(iTkParticle.sigma(), caloSigma);
   //Case 1 calo to large
   if(iParticle1.pt()-iTkParticle.pt() > fPtMatchHigh*lTotSigma) { 
