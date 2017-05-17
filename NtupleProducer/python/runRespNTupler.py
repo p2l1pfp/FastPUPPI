@@ -140,22 +140,23 @@ def goRegional(inParallel=False):
     )
     if inParallel:
         process.InfoOutReg = process.InfoOut.clone(regions = regions)
-        process.p = cms.Path(process.InfoOut + process.InfoOutReg + process.ntuple)
+        process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.InfoOutReg + process.ntuple)
     else:
         process.InfoOut.regions = regions
 if False:
+    goGun(); tmpCalib(); tmpResol();
+    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion0_NoPU_job42.root']
+    process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion_NoPU_job42.root']
+    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_TTbar_NoPU_job1.root']
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),
     )
     process.e = cms.EndPath(process.out)
-if False:
+    process.maxEvents.input = 50
     process.MessageLogger.cerr.FwkReport.reportEvery = 1
-    process.maxEvents.input = 3
-    process.InfoOut.debug = 2
     if False:
-        process.filter = cms.EDFilter("CandViewSelector",
-            src = cms.InputTag("genParticles"),
-            cut = cms.string("pt > 10 && abs(eta) < 1.5"),
-            filter = cms.bool(True),
-        )
-        process.p = cms.Path(process.filter + process.InfoOut)
+        #process.source.fileNames = [ 'file:l1pf_remade.root' ]
+        process.TFileService.fileName = cms.string("respTupleNew_1.root")
+        process.out.fileName = cms.untracked.string("l1pf_remade_1.root")
+        process.source.eventsToProcess = cms.untracked.VEventRange("1:6315:307280")
+    process.InfoOut.debug = 1
