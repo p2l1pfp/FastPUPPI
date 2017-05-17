@@ -39,6 +39,7 @@
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
+#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -106,35 +107,7 @@ private:
   jetanalyzer* jetanalyzer_;
   isoanalyzer* isoanalyzer_;
   // simplified resolutions
-  struct SimpleResol { 
-    SimpleResol() {}
-    SimpleResol(const edm::ParameterSet &icfg) : 
-        eta(icfg.getParameter<std::vector<double>>("etaBins")), offset(icfg.getParameter<std::vector<double>>("offset")), scale(icfg.getParameter<std::vector<double>>("scale")) 
-        {
-            std::string skind = icfg.getParameter<std::string>("kind");
-            if      (skind == "track") kind = Track;
-            else if (skind == "calo")  kind = Calo;
-            else throw cms::Exception("Configuration", "Bad kind of resolution");
-        }
-    float operator()(const float pt, const float abseta) const { 
-        for (unsigned int i = 0, n = eta.size(); i < n; ++i) {
-            if (abseta < eta[i]) {
-                //printf("found bin %d, scale = %6.3f offset = %6.3f\n", i, scale[i], offset[i]);
-                switch(kind) {
-                    case Track: return pt * std::min<float>(1.f, std::hypot(pt*scale[i]*0.001,offset[i])); 
-                    case Calo:  return std::min<float>(pt,pt*scale[i]+offset[i]); 
-                }
-            }
-        }
-        return std::min<float>(pt,0.3*pt+8);
-    } 
-    bool empty() const { return eta.empty(); }
-    enum Kind { Calo, Track };
-    protected:
-        std::vector<double> eta, offset, scale; 
-        Kind kind;
-  };
-  SimpleResol simpleResolEm_, simpleResolHad_, simpleResolTrk_;
+  l1tpf::SimpleResol simpleResolEm_, simpleResolHad_, simpleResolTrk_;
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
@@ -188,11 +161,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
   connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
   rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,vtxRes_);
-  if (iConfig.existsAs<edm::ParameterSet>("simpleResolEm")) {
-    simpleResolEm_ = SimpleResol(iConfig.getParameter<edm::ParameterSet>("simpleResolEm"));
-    simpleResolHad_ = SimpleResol(iConfig.getParameter<edm::ParameterSet>("simpleResolHad"));
-    simpleResolTrk_ = SimpleResol(iConfig.getParameter<edm::ParameterSet>("simpleResolTrk"));
-  }
+  simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm");
+  simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad");
+  simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk");
   if (iConfig.existsAs<edm::ParameterSet>("linking")) {
     edm::ParameterSet cfg = iConfig.getParameter<edm::ParameterSet>("linking");
     connector_->configureLinking(cfg.getParameter<double>("trackCaloDR"),
@@ -271,12 +242,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       // the combiner knows the sigma, the track producer doesn't
       if (simpleResolTrk_.empty()) {
           tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); 
-          tk.setCaloSigma(connector_->getPionRes(tk.pt(), tk.eta(), tk.phi()));
       } else {
           tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
-          tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
-          if (fDebug > 1) printf("track %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt());
       }
+      if (simpleResolHad_.empty()) {
+          tk.setCaloSigma(connector_->getPionRes(tk.pt(), tk.eta(), tk.phi()));
+      } else {
+          tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
+      }
+      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt());
       // adding objects to PF
       if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
@@ -336,7 +310,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
           float ptcorr = corrector_->correct(calo.pt(), calo.emEt(), calo.iEta(), calo.iPhi());
           calo.setPt(ptcorr);
       }
-      if (simpleResolEm_.empty()) {
+      if (simpleResolEm_.empty() || simpleResolHad_.empty()) {
           calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
                   connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
                   connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));

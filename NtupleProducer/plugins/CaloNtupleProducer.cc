@@ -36,6 +36,7 @@
 
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/CaloClusterer.h"
+#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -85,31 +86,8 @@ private:
   std::unique_ptr<corrector> corrector_;
   std::unique_ptr<corrector> ecorrector_;
   // simplified corrections
-  struct SimpleCorrEM { float scale, offset; float operator()(const float x) const { return (x-offset)/scale; } };
-  std::vector<SimpleCorrEM> simpleCorrEM_;
-  struct SimpleCorrHad { 
-        std::vector<float> etas, emfs, scales, offsets; 
-        float operator()(const float x, float abseta, float emf) const {
-            unsigned int i = 0, n = emfs.size();
-            // step 1: find the first emf bin for this eta
-            while (i < n && abseta > etas[i]) i++;
-            if (i == n) {
-                //printf("for pt %7.2f eta %4.2f emf %4.2f will not apply any correction (no eta bin found)\n", x, abseta, emf);
-                return x;
-            }
-            unsigned int i2 = i;
-            while (i < n && etas[i] == etas[i2] && emf > emfs[i]) i++;
-            if (i == n || etas[i] != etas[i2]) {
-                //printf("for pt %7.2f eta %4.2f emf %4.2f will not apply any correction (no emf bin found)\n", x, abseta, emf);
-                return x;
-            } 
-            //printf("for pt %7.2f eta %4.2f emf %4.2f will use bin %d eta [ * , %4.2f ] emf [ * , %4.2f ] offset = %+5.2f scale=%.3f -> corr pt %7.2f\n",
-            //        x, abseta, emf, i, etas[i], emfs[i], offsets[i], scales[i], (x-offsets[i])/scales[i]);
-            return (x-offsets[i])/scales[i]; 
-        } 
-        bool empty() const { return etas.empty(); }
-  };
-  SimpleCorrHad simpleCorrHad_;
+  l1tpf::SimpleCorrEm simpleCorrEm_;
+  l1tpf::SimpleCorrHad simpleCorrHad_;
 
   // new calo clusterer (float)
   l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
@@ -145,6 +123,8 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
   corrector_            (new corrector(CorrectorTag_,11,iConfig.getUntrackedParameter<int>("debug",0))),
   ecorrector_           (new corrector(ECorrectorTag_,1,iConfig.getUntrackedParameter<int>("debug",0))),
+  simpleCorrEm_         (iConfig, "simpleCorrEm"),
+  simpleCorrHad_        (iConfig, "simpleCorrHad"),
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
   hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
   caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
@@ -161,39 +141,6 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   for (const edm::InputTag &tag : HcalTPTags_) {
     TokHcalTPTags_.push_back(consumes<L1PFCollection>(tag));
   }
-  if (iConfig.existsAs<edm::ParameterSet>("simpleCorrEM")) {
-      edm::ParameterSet cpset = iConfig.getParameter<edm::ParameterSet>("simpleCorrEM");
-      std::vector<double> etaBins = cpset.getParameter<std::vector<double>>("etaBins");
-      std::vector<double> offset = cpset.getParameter<std::vector<double>>("offset");
-      std::vector<double> scale = cpset.getParameter<std::vector<double>>("scale");
-      unsigned int nbins = etaBins.size();
-      unsigned int neta  = l1tpf::towerNEta() + 1;
-      simpleCorrEM_.resize(neta+1);
-      for (unsigned int ieta = 0; ieta <= neta; ++ieta) {
-          float tEta = ieta > 0 ? l1tpf::towerEta(ieta) : 0;
-          simpleCorrEM_[ieta].scale  = 1; 
-          simpleCorrEM_[ieta].offset = 0;
-          for (unsigned int  i = 0; i < nbins; ++i) {
-              if (etaBins[i] > tEta) {
-                  simpleCorrEM_[ieta].scale  = scale[i];
-                  simpleCorrEM_[ieta].offset = offset[i];
-                  break;
-              }
-          }
-      }
-  }
-  if (iConfig.existsAs<edm::ParameterSet>("simpleCorrHad")) {
-      edm::ParameterSet cpset = iConfig.getParameter<edm::ParameterSet>("simpleCorrHad");
-      std::vector<double> etaBins = cpset.getParameter<std::vector<double>>("etaBins");
-      std::vector<double> emfBins = cpset.getParameter<std::vector<double>>("emfBins");
-      std::vector<double> offset = cpset.getParameter<std::vector<double>>("offset");
-      std::vector<double> scale = cpset.getParameter<std::vector<double>>("scale");
-      simpleCorrHad_.etas.insert(simpleCorrHad_.etas.end(), etaBins.begin(), etaBins.end());
-      simpleCorrHad_.emfs.insert(simpleCorrHad_.emfs.end(), emfBins.begin(), emfBins.end());
-      simpleCorrHad_.scales.insert(simpleCorrHad_.scales.end(), scale.begin(), scale.end());
-      simpleCorrHad_.offsets.insert(simpleCorrHad_.offsets.end(), offset.begin(), offset.end());
-  }
-
   produces<L1PFCollection>("emCalibrated");
   produces<L1PFCollection>("emUncalibrated");
   produces<L1PFCollection>("uncalibrated");
@@ -237,26 +184,14 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //// ---- Dummy calibration == no calibration
   // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
   //    
-  //// ---- Trivial calibration by hand
-  /*
-  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-        if (std::abs(c.eta)<1.5) {
-            return c.et - (3.0 - std::abs(c.eta)); // it looks like otherwise there's an offset
-        } else if (std::abs(c.eta)<3) {
-            return c.et/1.2; // HGCal scale is off by ~1.2%
-        } else {
-            return c.et; 
-        }
-  } );
-  */
   //// ---- Calibration from Phil's workflow
-  if (simpleCorrEM_.empty()) {
+  if (simpleCorrEm_.empty()) {
       ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
               return ecorrector_->correct(0., c.et, ieta, iphi);
               } );
   } else {
       ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-              return simpleCorrEM_[std::abs(ieta)](c.et);
+              return simpleCorrEm_(c.et, std::abs(c.eta));
               } );
   }
   // write debug output tree
@@ -308,16 +243,6 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   // Calorimeter linking
   caloLinker_.run();
-  //// ---- Trivial calibration by hand
-  /*
-  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
-        if (std::abs(c.eta)<3.0) {
-            return c.ecal_et + c.hcal_et * 1.25;
-        } else {
-            return c.et;
-        }
-  } );
-  */
   //// ---- Dummy calibration (no calibration at all)
   // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
   //
