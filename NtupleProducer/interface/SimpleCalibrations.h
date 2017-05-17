@@ -36,11 +36,11 @@ namespace l1tpf {
                 if (iConfig.existsAs<edm::ParameterSet>(name)) {
                     edm::ParameterSet cpset = iConfig.getParameter<edm::ParameterSet>(name);
                     std::vector<double> etaBins = cpset.getParameter<std::vector<double>>("etaBins");
-                    std::vector<double> emfs = cpset.getParameter<std::vector<double>>("emfBins");
+                    std::vector<double> emfBins = cpset.getParameter<std::vector<double>>("emfBins");
                     std::vector<double> offset = cpset.getParameter<std::vector<double>>("offset");
                     std::vector<double> scale = cpset.getParameter<std::vector<double>>("scale");
                     etas.insert(etas.end(), etaBins.begin(), etaBins.end());
-                    etas.insert(etas.end(), emfs.begin(), emfs.end());
+                    emfs.insert(emfs.end(), emfBins.begin(), emfBins.end());
                     scales.insert(scales.end(), scale.begin(), scale.end());
                     offsets.insert(offsets.end(), offset.begin(), offset.end());
                 }

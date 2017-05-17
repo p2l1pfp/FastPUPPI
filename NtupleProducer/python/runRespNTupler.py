@@ -56,14 +56,23 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
 process.p = cms.Path(process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
 
-
 if True:
     process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
     process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
-    process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
     process.CaloInfoOut.outputName = ""; # turn off Ntuples
     process.InfoOut.outputName = ""; # turn off Ntuples
     process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.ntuple)
+if True:
+    process.genInAcceptance = cms.EDFilter("GenParticleSelector",
+        src = cms.InputTag("genParticles"),
+        cut = cms.string("status == 1 && (abs(pdgId) != 12 && abs(pdgId) != 14 && abs(pdgId) != 16) && "+
+                         "(abs(eta) < 2.5 && pt > 2 && charge != 0 || "+
+                         "abs(pdgId) == 22 && pt > 1 || "+
+                         "charge == 0 && pt > 1 || "+
+                         "charge != 0 && abs(eta) > 2.5 && pt > 2) ") # tracks below pT 2 bend by more than 0.4,
+    )
+    process.ntuple.objects.GenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
+    process.p = cms.Path(process.genInAcceptance + process.p._seq)
 def goGun():
     process.ntuple.isParticleGun = True
 def tmpCalib():
@@ -104,7 +113,7 @@ def newLink():
             trackCaloNSigmaLow = cms.double(2.0),
             trackCaloNSigmaHigh = cms.double(2.0),
             useTrackCaloSigma = cms.bool(True),
-            rescaleUnmatchedTrack = cms.bool(True),
+            rescaleUnmatchedTrack = cms.bool(False),
             maxInvisiblePt = cms.double(10.0),
             )
 def useClusters():

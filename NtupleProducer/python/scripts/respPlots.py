@@ -140,6 +140,7 @@ whats = [
         ("Trk",  "TPTK$",   ROOT.kRed+1, 20, 1.2),
     ]),
     ('l1pf',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+1, 20, 1.2),
@@ -147,6 +148,7 @@ whats = [
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
     ]),
     ('il1pf',[
+        ("Gen #times Acc",         "GenAcc$",     ROOT.kAzure+1,  20, 1.2),
         ("iCalo",       "L1ICalo$",    ROOT.kViolet+2, 34, 1.5),
         ("iTK",         "L1ITK$",      ROOT.kRed+1, 20, 1.2),
         ("iPF",         "L1IPF$",      ROOT.kOrange+7, 34, 1.2),
@@ -221,6 +223,7 @@ if __name__ == "__main__":
                     if "eta_25" in oname or "eta_30" in oname:
                         if "TK" in expr: continue
                     if "Puppi" in name and "PU0" in odir: continue
+                    if name == "Gen" and  "jet" not in oname: continue
                     if "pt" in oname:
                         prof, pres = doRespEta(oname,tree,name,exprptdef,cut), None
                     else:
