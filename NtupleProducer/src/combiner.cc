@@ -169,11 +169,13 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
   float caloSigma = fUseTrackCaloSigma ? iTkParticle.caloSigma() : iParticle1.sigma();
   float lTotSigma = hypot(iTkParticle.sigma(), caloSigma);
   //Case 1 calo to large
-  if(iParticle1.pt()-iTkParticle.pt() > fPtMatchHigh*lTotSigma) { 
-    TLorentzVector pVec0 = iParticle1.tp4();
-    TLorentzVector pVec1 = iTkParticle.tp4();
-    pVec0 -= pVec1;
-    iParticle1.setPtEtaPhiM(pVec0.Pt(),pVec0.Eta(),pVec0.Phi(),0);
+  if(iParticle1.pt()-iTkParticle.pt() > fPtMatchHigh*lTotSigma) {
+    //TLorentzVector pVec0 = iParticle1.tp4();
+    //TLorentzVector pVec1 = iTkParticle.tp4();
+    //pVec0 -= pVec1;
+    //iParticle1.setPtEtaPhiM(pVec0.Pt(),pVec0.Eta(),pVec0.Phi(),0);
+    //- scalar subtraction works slightly better than vector one, in addition to be simpler
+    iParticle1.setPt(iParticle1.pt()-iTkParticle.pt());
     iCollection.push_back(iTkParticle);
     if (fDebug) printf("   case 1: add track, reduce calo pt to %7.2f\n", iParticle1.pt());
   } else {
