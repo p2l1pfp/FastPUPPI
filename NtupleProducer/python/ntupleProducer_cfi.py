@@ -1,7 +1,8 @@
 import FWCore.ParameterSet.Config as cms
 
 InfoOut = cms.EDProducer('NtupleProducer',
-         L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+         #L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
+         L1TrackTag  = cms.InputTag('l1tPFTkProducersFromL1Tracks'),
          CaloClusterTags  = cms.VInputTag( cms.InputTag('CaloInfoOut','calibrated') ),
          correctCaloEnergies = cms.bool(False),
          MuonTPTag   = cms.InputTag('l1tPFMuProducerFromL1Mu'), 
@@ -16,6 +17,14 @@ InfoOut = cms.EDProducer('NtupleProducer',
          etaCharged  = cms.double(2.5),
          puppiPtCut  = cms.double(4.0),
          vtxRes      = cms.double(0.333),
+         linking = cms.PSet(
+                        trackCaloDR = cms.double(0.15),
+                        trackCaloNSigmaLow = cms.double(2.0),
+                        trackCaloNSigmaHigh = cms.double(2.0),
+                        useTrackCaloSigma = cms.bool(False),
+                        rescaleUnmatchedTrack = cms.bool(False),
+                        maxInvisiblePt = cms.double(20.0),
+                        ),
          outputName  = cms.untracked.string("ntuple.root"),
          debug       = cms.untracked.int32(0),
 )

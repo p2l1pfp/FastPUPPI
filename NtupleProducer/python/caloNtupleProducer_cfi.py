@@ -1,12 +1,17 @@
 import FWCore.ParameterSet.Config as cms
 
 CaloInfoOut = cms.EDProducer('CaloNtupleProducer',
-         EcalTPTags  = cms.VInputTag( cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
-                                      cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers') ),
-         HcalTPTags  = cms.VInputTag( cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
-                                      cms.InputTag('l1tPFHGCalFHProducerFromOfflineRechits','towers'),
-                                      cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers'),
-                                      cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers') ),
+         #EcalTPTags  = cms.VInputTag( cms.InputTag('l1tPFEcalProducerFromOfflineRechits','towers'),
+         #                             cms.InputTag('l1tPFHGCalEEProducerFromOfflineRechits','towers') ),
+         #HcalTPTags  = cms.VInputTag( cms.InputTag('l1tPFHcalProducerFromOfflineRechits','towers'),
+         #                             cms.InputTag('l1tPFHGCalFHProducerFromOfflineRechits','towers'),
+         #                             cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers'),
+         #                             cms.InputTag('l1tPFHFProducerFromOfflineRechits','towers') ),
+         EcalTPTags = cms.VInputTag( cms.InputTag('l1tPFEcalProducerFromTPDigis','towers'),
+                                     cms.InputTag('l1tPFHGCalProducerFromTriggerCells','towersEE')),
+         HcalTPTags =  cms.VInputTag( cms.InputTag('l1tPFHcalProducerFromTPDigis'),
+                                      cms.InputTag('l1tPFHGCalProducerFromTriggerCells','towersFHBH') ),
+                                    # could maybe add cms.InputTag('l1tPFHGCalBHProducerFromOfflineRechits','towers')
          genParTag   = cms.InputTag('genParticles'),
          zeroSuppress = cms.bool(False),
          corrector   = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
