@@ -6,16 +6,19 @@
 #include <TFile.h>
 #include <TH1F.h>
 #include <algorithm>
+#include <cassert>
 #include "TMath.h"
 #include "Math/QuantFuncMathCore.h"
 #include "Math/SpecFuncMathCore.h"
 #include "Math/ProbFunc.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
+#include "DataFormats/Math/interface/deltaR.h"
 
-combiner::combiner(const std::string & iPionFile,const std::string & iElectronFile,const std::string & iTrackFile,const std::string & iFile,double iEtaCharged,double iPuppiPt,double iVtxRes,int debug) {
+combiner::combiner(const std::string & iPionFile,const std::string & iElectronFile,const std::string & iTrackFile,const std::string & iFile,double iEtaCharged,double iPuppiPt,double iPuppiDr,double iVtxRes,int debug) {
   fDebug = debug; // 0 = nothing; 1 = something; 2 = lots; ...
   fEta     = iEtaCharged;
   fPuppiPt = iPuppiPt;
+  fPuppiDr = iPuppiDr;
   fDRMatch = 0.15; fPtMatchLow = 2.0; fPtMatchHigh = 2.0; fUseTrackCaloSigma = false; fRescaleUnmatchedTrack = false; fMaxInvisiblePt = 20.0;
   fVtxRes  = iVtxRes;
   fNEta  = l1tpf::towerNEta();
@@ -69,18 +72,24 @@ l1tpf::Particle combiner::makeCalo(double iCalo,double iEcal,double iCaloEta,dou
 }
 void combiner::addCalo(const l1tpf::Particle & particle) { 
   if(particle.pt() < 0.01) return;
+  assert(particle.charge() == 0);
+  assert(particle.pdgId() == 2 || particle.pdgId() == 3);
   insert(particle,fParticles);
 }
 
 //Add Tracks
 void combiner::addTrack(const l1tpf::Particle &particle) { 
   if(particle.pt() < 0.1) return; //Just to avoid calling things that will crash later
+  assert(particle.charge() != 0);
+  assert(particle.pdgId() == 0);
   insert(particle,fTkParticles);
 }
 
 //Add muons
-void combiner::addMuon(const l1tpf::Particle &lParticle) {
-  fMuParticles.push_back(lParticle);
+void combiner::addMuon(const l1tpf::Particle &particle) {
+  assert(particle.charge() != 0);
+  assert(particle.pdgId() == 4);
+  fMuParticles.push_back(particle);
 }
 
 //Iterate down in Track Pt
@@ -119,8 +128,8 @@ void combiner::link(bool iMetRate) {
       if (fDebug>1) printf("\t\t calo %d (pt %7.2f +- %5.2f): ", i1, fParticles[i1].pt(), fParticles[i1].sigma());
       // what happens if there is no matching cluster?  does it throw out the track? it should to reduce fake tracks (see below=> still debating)
       float caloSigma = fUseTrackCaloSigma ? fTkParticles[i0].caloSigma() : fParticles[i1].sigma();
-      if(deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
-            if (fDebug>1) printf("outside dR (%.3f).\n",deltaR(fTkParticles[i0],fParticles[i1])); 
+      if(combiner::deltaR(fTkParticles[i0],fParticles[i1]) > fDRMatch) { 
+            if (fDebug>1) printf("outside dR (%.3f).\n",combiner::deltaR(fTkParticles[i0],fParticles[i1])); 
             continue; }
       if(fParticles[i1].pdgId() == Particle::CH || fParticles[i1].pdgId() == Particle::EL)  { 
             if (fDebug>1) printf("already linked.\n");  
@@ -139,7 +148,7 @@ void combiner::link(bool iMetRate) {
       if (fDebug) printf("Linking track of pt %7.2f eta %+5.2f phi %+5.2f (calo eta %+5.2f phi %+5.2f) to calo of pt %7.2f eta %+5.2f phi %+5.2f (dR = %.3f, deta = %.3f, dphi = %.3f)\n",
                     fTkParticles[i0].pt(), fTkParticles[i0].eta(), fTkParticles[i0].phi(), fTkParticles[i0].caloEta(), fTkParticles[i0].caloPhi(),
                     fParticles[pIMatch].pt(), fParticles[pIMatch].eta(), fParticles[pIMatch].phi(),
-                    deltaR(fTkParticles[i0],fParticles[pIMatch]), (fTkParticles[i0].caloEta()-fParticles[pIMatch].eta()), ::deltaPhi(fTkParticles[i0].caloPhi(),fTkParticles[i0].phi()));
+                    combiner::deltaR(fTkParticles[i0],fParticles[pIMatch]), (fTkParticles[i0].caloEta()-fParticles[pIMatch].eta()), ::deltaPhi(fTkParticles[i0].caloPhi(),fTkParticles[i0].phi()));
       merge(fTkParticles[i0],fParticles[pIMatch],fParticles);
       pFilled = true;
     }
@@ -186,6 +195,7 @@ void combiner::merge(Particle &iTkParticle,Particle &iParticle1,std::vector<Part
     iParticle1.setPtEtaPhiM(pAvgEt, iTkParticle.eta(), iTkParticle.phi(), 0.137);
     iParticle1.setPdgId(iParticle1.pdgId() == Particle::GAMMA ? Particle::EL : Particle::CH); 
     iParticle1.setDz(iTkParticle.dz());
+    iParticle1.setCharge(iTkParticle.charge());
     if (fDebug) printf("   case 2: merge, avg pt %7.2f\n", iParticle1.pt());
   }
 }
@@ -206,18 +216,12 @@ void combiner::insert(const Particle &iParticle,std::vector<Particle> &iParticle
 
 //Delta R
 double  combiner::deltaR(Particle &iParticle1,Particle &iParticle2) {
-  double pDPhi=fabs(iParticle1.caloPhi()-iParticle2.caloPhi()); 
-  if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
-  double pDEta=iParticle1.caloEta()-iParticle2.caloEta();
-  return sqrt(pDPhi*pDPhi+pDEta*pDEta);
+  return ::deltaR(iParticle1.caloEta(),iParticle1.caloPhi(),iParticle2.caloEta(),iParticle2.caloPhi());
 }
 
 //Delta R
 double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
-  double pDPhi=fabs(iParticle1.phi()-iParticle2.phi()); 
-  if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
-  double pDEta=iParticle1.eta()-iParticle2.eta();
-  return sqrt(pDPhi*pDPhi+pDEta*pDEta);
+  return ::deltaR(iParticle1.eta(),iParticle1.phi(),iParticle2.eta(),iParticle2.phi());
 }
 
 void combiner::doVertexing(){
@@ -243,6 +247,7 @@ void combiner::doVertexing(){
   fDZ = pvdz;
   for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
     float curdz  = fParticles[i0].dz();
+    if(fParticles[i0].charge() != 0) fParticles[i0].setIsPV(0);
     if (curdz < pvdz_hi && curdz > pvdz_lo){
       if(fParticles[i0].charge() != 0) fTkParticlesWVertexing.push_back( fParticles[i0] );
       if(fParticles[i0].charge() != 0) fParticles[i0].setIsPV(1);
@@ -289,7 +294,7 @@ void combiner::computeAlphas(std::vector<Particle> neighborParticles, int isCent
     float curalpha = 0;
     for (unsigned int j0 = 0; j0 < neighborParticles.size(); j0++) {
       float curdr = deltaRraw(fParticles[i0],neighborParticles[j0]);
-      if (curdr < 0.5 && curdr != 0) curalpha += neighborParticles[j0].pt() * neighborParticles[j0].pt() / curdr / curdr;
+      if (curdr < fPuppiDr && curdr != 0) curalpha += neighborParticles[j0].pt() * neighborParticles[j0].pt() / curdr / curdr;
     }
     float logcuralpha = -99;
     if (curalpha != 0.) logcuralpha = log(curalpha);
@@ -371,8 +376,10 @@ void combiner::computeWeights(){
       curalpha = fParticles[i0].alphaC();
     }
     //PH: Getting good performance
-    if (fParticles[i0].isPV() == 1 && fParticles[i0].charge() != 0){ fParticles[i0].setPuppiWeight(1); continue;}
-    if (fParticles[i0].isPV() == 0 && fParticles[i0].charge() != 0){ fParticles[i0].setPuppiWeight(0); continue;}
+    if (fParticles[i0].charge() != 0){ 
+        fParticles[i0].setPuppiWeight(fParticles[i0].isPV() ? 1.0 : 0.0); 
+        continue;
+    }
     if (curalpha < -98){ fParticles[i0].setPuppiWeight(0); continue; }
 
     float lVal = (curalpha - curmed)*fabs((curalpha - curmed))/currms/currms;
@@ -381,29 +388,23 @@ void combiner::computeWeights(){
   }
 
   // std::cout << "write out PUPPI collection..." << std::endl;
-  int puppictr = 0;
-  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
-    float ptcutC = fPuppiPt;//Tight cuts for high PU
-    float ptcutF = fPuppiPt*2.0;
-    if (fParticles[i0].pdgId() == 4) { fParticlesPuppi.push_back(fParticles[i0]); puppictr++; }
-    if (fParticles[i0].puppiWeight() <= 0.01) continue;
-    if (fParticles[i0].pdgId() != 4 && fParticles[i0].puppiWeight() > 0.01){
-      if (fabs(fParticles[i0].eta()) < fEta){
-        if (fParticles[i0].pt()*fParticles[i0].puppiWeight() > ptcutC || (fParticles[i0].pdgId() != 3 &&  fParticles[i0].pdgId() != 2) ){
-	  //if (fParticles[i0].pt()*fParticles[i0].puppiWeight() > ptcutC) { 
-          fParticlesPuppi.push_back(fParticles[i0]);
-          fParticlesPuppi[puppictr].setPt(fParticles[i0].pt()*fParticles[i0].puppiWeight());          
-          puppictr++;
-        }
+  float ptcutC = fPuppiPt;//Tight cuts for high PU
+  float ptcutF = fPuppiPt*2.0;
+  for (const l1tpf::Particle & particle : fParticles) {
+      if (particle.pdgId() == 4) {
+          fParticlesPuppi.push_back(particle);
+      } else if (particle.charge() != 0) {
+          assert(particle.puppiWeight() == particle.isPV());
+          if (particle.isPV()) fParticlesPuppi.push_back(particle);
+      } else {
+          if (particle.puppiWeight() > 0.01) {
+              float rescpt = particle.puppiWeight() * particle.pt();
+              if (rescpt > (std::abs(particle.eta()) < fEta ? ptcutC : ptcutF)) {
+                  fParticlesPuppi.push_back(particle); 
+                  fParticlesPuppi.back().setPt(rescpt); 
+              }
+          }
       }
-      else{
-        if (fParticles[i0].pt()*fParticles[i0].puppiWeight() > ptcutF){
-          fParticlesPuppi.push_back(fParticles[i0]);
-          fParticlesPuppi[puppictr].setPt(fParticles[i0].pt()*fParticles[i0].puppiWeight());
-          puppictr++;
-        }
-      }
-    }
   }
 
 }

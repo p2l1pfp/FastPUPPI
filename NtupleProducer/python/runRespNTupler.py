@@ -72,7 +72,18 @@ if True:
                          "charge != 0 && abs(eta) > 2.5 && pt > 2) ") # tracks below pT 2 bend by more than 0.4,
     )
     process.ntuple.objects.GenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
-    process.p = cms.Path(process.genInAcceptance + process.p._seq)
+    process.chGenInAcceptance = cms.EDFilter("GenParticleSelector",
+        src = cms.InputTag("genParticles"),
+        cut = cms.string("status == 1 && (abs(eta) < 2.5 && pt > 2 && charge != 0)")
+    )
+    process.ntuple.objects.ChGenAcc = cms.VInputTag(cms.InputTag("chGenInAcceptance"))
+    process.p = cms.Path(process.genInAcceptance + process.chGenInAcceptance + process.p._seq)
+if True:
+    process.L1PFCharged   = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:PF"),   cut = cms.string("charge != 0"))
+    process.L1IPFCharged  = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:L1PF"), cut = cms.string("charge != 0"))
+    process.ntuple.objects.L1PFCharged = cms.VInputTag("L1PFCharged",)
+    process.ntuple.objects.L1IPFCharged = cms.VInputTag("L1IPFCharged",)
+    process.p.replace(process.ntuple, process.L1PFCharged + process.L1IPFCharged + process.ntuple)
 def goGun():
     process.ntuple.isParticleGun = True
 def tmpCalib():
@@ -153,10 +164,11 @@ def goRegional(inParallel=False):
     else:
         process.InfoOut.regions = regions
 if False:
-    goGun(); tmpCalib(); tmpResol();
+    #goGun(); 
+    tmpCalib(); tmpResol(); newLink();
     #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion0_NoPU_job42.root']
-    process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion_NoPU_job42.root']
-    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_TTbar_NoPU_job1.root']
+    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion_NoPU_job42.root']
+    process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_TTbar_NoPU_job1.root']
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),
     )

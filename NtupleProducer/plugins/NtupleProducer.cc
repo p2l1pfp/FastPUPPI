@@ -97,7 +97,7 @@ private:
   double trkPt_;
   bool   metRate_;
   double etaCharged_;
-  double puppiPtCut_;
+  double puppiPtCut_, puppiDr_;
   double vtxRes_;
   corrector* corrector_;
   corrector* ecorrector_;
@@ -147,6 +147,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   metRate_              (iConfig.getParameter<bool>         ("metRate")),
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
+  puppiDr_              (iConfig.getParameter<double>       ("puppiDr")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
@@ -159,8 +160,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,11,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
-  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
-  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,vtxRes_);
+  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_,fDebug);
+  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_);
   simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm");
   simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad");
   simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk");

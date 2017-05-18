@@ -136,5 +136,9 @@ for iev,event in enumerate(events):
                                 print "%+d[pt %.1f, dr %.2f]" % (g.pdgId(), g.pt(), deltaR(g,d)),
                 print ""
             print "   total pt within 0.4: %7.2f" %ptsum
+            if "PF" in a:
+                print "   total charged pt within 0.4: %7.2f" % sum(d.pt() for d in charged if d.dr < 0.4)
+                print "   total neutral pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4)
+
             print ""
     print "\n========================\n"     

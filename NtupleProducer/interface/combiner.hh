@@ -16,7 +16,7 @@ class combiner {
 public:
   typedef l1tpf::Particle Particle;
 
-  combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iVtxRes,int debug=0);
+  combiner(const std::string &iPionFile,const std::string & iElectronFile,const std::string &iTrackFile,const std::string &iFile,double iEtaCharged,double iPuppiPt,double iPuppiDr,double iVtxRes,int debug=0);
   void configureLinking(float iDRMatch, float iPtMatchLow, float iPtMatchHigh, bool iUseTrackCaloSigma, bool iRescaleUnmatchedTrack, float iMaxInvisiblePt) {
     fDRMatch = iDRMatch; fPtMatchLow = iPtMatchLow; fPtMatchHigh = iPtMatchHigh; fUseTrackCaloSigma = iUseTrackCaloSigma; fRescaleUnmatchedTrack = iRescaleUnmatchedTrack; fMaxInvisiblePt = iMaxInvisiblePt;
   }
@@ -62,6 +62,7 @@ private:
   float fPtMatchLow, fPtMatchHigh, fMaxInvisiblePt;
   bool   fUseTrackCaloSigma, fRescaleUnmatchedTrack;  
   double fPuppiPt;
+  double fPuppiDr;
   double fVtxRes;
   std::vector<Particle> fTkParticles;
   std::vector<Particle> fTkParticlesWVertexing;  

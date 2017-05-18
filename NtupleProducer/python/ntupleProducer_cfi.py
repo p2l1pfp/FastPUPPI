@@ -16,6 +16,7 @@ InfoOut = cms.EDProducer('NtupleProducer',
          metRate     = cms.bool(False),
          etaCharged  = cms.double(2.5),
          puppiPtCut  = cms.double(4.0),
+         puppiDr     = cms.double(0.5),
          vtxRes      = cms.double(0.333),
          linking = cms.PSet(
                         trackCaloDR = cms.double(0.15),

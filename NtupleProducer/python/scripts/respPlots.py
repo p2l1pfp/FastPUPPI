@@ -147,6 +147,16 @@ whats = [
         ("PF",         "L1PF$",      ROOT.kOrange+7, 34, 1.2),
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
     ]),
+    ('pfdebug',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
+        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
+        ("TK",         "L1TK$",                 ROOT.kRed+1,    20, 1.2),
+        ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
+        ("PFCh",       "L1PFCharged$",          ROOT.kGreen+1,  34, 1.2),
+        ("PFNh",       "L1PF$-L1PFCharged$",    ROOT.kGreen+3,  34, 1.2),
+    ]),
     ('il1pf',[
         ("Gen #times Acc",         "GenAcc$",     ROOT.kAzure+1,  20, 1.2),
         ("iCalo",       "L1ICalo$",    ROOT.kViolet+2, 34, 1.5),
@@ -180,11 +190,12 @@ if __name__ == "__main__":
             continue
         sels.append(("%s_pt_%2d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
-        sels.append(("%s_eta_00_15"     % (particle),     "abs(mc_eta) < 1.5                      && %s" % (pdgIdCut)))
-        sels.append(("%s_eta_15_25"  % (particle),        "abs(mc_eta) > 1.5 && abs(mc_eta) < 2.5 && %s" % (pdgIdCut)))
-        sels.append(("%s_eta_25_30"  % (particle),        "abs(mc_eta) > 2.5 && abs(mc_eta) < 3.0 && %s" % (pdgIdCut)))
-        sels.append(("%s_eta_30_50"  % (particle),        "abs(mc_eta) > 3.0 && abs(mc_eta) < 5.0 && %s" % (pdgIdCut)))
-        sels.append(("%s_eta_30_45"  % (particle),        "abs(mc_eta) > 3.0 && abs(mc_eta) < 4.5 && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_00_13"  % (particle), "abs(mc_eta) < 1.3                      && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_13_17"  % (particle), "abs(mc_eta) > 1.3 && abs(mc_eta) < 1.7 && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_17_25"  % (particle), "abs(mc_eta) > 1.7 && abs(mc_eta) < 2.5 && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_25_30"  % (particle), "abs(mc_eta) > 2.5 && abs(mc_eta) < 3.0 && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_30_50"  % (particle), "abs(mc_eta) > 3.0 && abs(mc_eta) < 5.0 && %s" % (pdgIdCut)))
+        sels.append(("%s_eta_30_45"  % (particle), "abs(mc_eta) > 3.0 && abs(mc_eta) < 4.5 && %s" % (pdgIdCut)))
 
     tree = ROOT.TChain("ntuple/tree")
     print args
@@ -252,8 +263,11 @@ if __name__ == "__main__":
                         frame = ROOT.TH1F("stk","stk",100,0.0,250.0 if "jet" in oname else 100.0)
                         if "resolution" in ptype:
                             frame.GetYaxis().SetTitle("#sigma_{eff}(p_{T}^{corr})/p_{T}^{corr}")
-                            frame.GetYaxis().SetRangeUser(0.008,10.0)
-                            c1.SetLogy(True)
+                            if "jet" in oname:
+                                frame.GetYaxis().SetRangeUser(0.0,1.0)
+                            else:
+                                frame.GetYaxis().SetRangeUser(0.008,10.0)
+                                c1.SetLogy(True)
                         else:
                             frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                             frame.GetYaxis().SetRangeUser(0,2.2)
