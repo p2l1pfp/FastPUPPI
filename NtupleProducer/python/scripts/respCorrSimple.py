@@ -38,6 +38,7 @@ if __name__ == "__main__":
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
+    parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
     parser.add_option("--emf-slices", dest="emfSlices", nargs=2, default=None)
     parser.add_option("-r","--resolution", dest="resolution", default=False, action="store_true")
     options, args = parser.parse_args()
@@ -55,9 +56,9 @@ if __name__ == "__main__":
             emfmin = emfbins[i-1] if i > 0 else 0
             emfs.append((emfmax, "emf_%04.0f_%04.0f" % (emfmin*1000,emfmax*1000), "%g <= %s && %s <= %g" % (emfmin, definition, definition, emfmax)))
     for (particle, pdgIdCut, minPt, maxEta) in [ 
-            ("pion", "abs(mc_id) == 211", 10, 5),
-            ("pizero", "abs(mc_id) == 111", 10, 5),
-            ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 10, 5),
+            ("pion", "abs(mc_id) == 211", 2, 5),
+            ("pizero", "abs(mc_id) == 111", 2, 5),
+            ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -78,7 +79,7 @@ if __name__ == "__main__":
                 if ieta*0.1 >= options.etaMax: break
                 etas.append((0.1*(ieta),0.1*(ieta+5)))
         for etamin,etamax in etas:
-            sels.append(("%s_eta_%02d_%02d"  % (particle,int(etamin*10),int(etamax*10)), "abs(mc_eta) > %.1f && abs(mc_eta) < %.1f && mc_pt > %g &&  %s" % (etamin,etamax,minPt,pdgIdCut)))
+            sels.append(("%s_eta_%02d_%02d"  % (particle,int(etamin*10),int(etamax*10)), "abs(mc_eta) > %.1f && abs(mc_eta) < %.1f && mc_pt > %g &&  %s" % (etamin,etamax,max(options.ptmin,minPt),pdgIdCut)))
     if options.emfSlices:
         oldsels, oldetas = sels[:], etas[:]
         sels = []; etas = []; emfbins = []

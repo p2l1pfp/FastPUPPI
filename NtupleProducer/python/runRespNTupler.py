@@ -13,6 +13,12 @@ process.source = cms.Source("PoolSource",
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
+
+process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
+process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
+process.CaloInfoOut.outputName = ""; # turn off Ntuples
+process.InfoOut.outputName = ""; # turn off Ntuples
+
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
     genParticles = cms.InputTag("genParticles"),
@@ -54,15 +60,10 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         "InfoOut:maxNL1Calo", "InfoOut:maxNL1TK", "InfoOut:maxNL1Mu", "InfoOut:maxNL1PF", "InfoOut:maxNL1Puppi",
     )
 )
-process.p = cms.Path(process.ntuple)
+process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
 
-if True:
-    process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
-    process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
-    process.CaloInfoOut.outputName = ""; # turn off Ntuples
-    process.InfoOut.outputName = ""; # turn off Ntuples
-    process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.ntuple)
+# Below for more debugging
 if True:
     process.genInAcceptance = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
