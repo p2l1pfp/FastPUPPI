@@ -206,7 +206,7 @@ namespace l1tpf_int {
         void runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
     private:
         bool skipMuons_;
-        float etaCharged_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
+        float etaCharged_, puppiDr_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
         float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
         int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;
         bool useTrackCaloSigma_, rescaleUnmatchedTrack_;

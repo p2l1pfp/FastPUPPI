@@ -118,6 +118,7 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin) const {
 PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     skipMuons_(iConfig.getParameter<bool>("metRate")),
     etaCharged_(iConfig.getParameter<double>("etaCharged")),
+    puppiDr_(iConfig.getParameter<double>("puppiDr")),
     puppiPtCutC_(1*iConfig.getParameter<double>("puppiPtCut")),
     puppiPtCutF_(2*iConfig.getParameter<double>("puppiPtCut")),
     vtxCut_(1.5*iConfig.getParameter<double>("vtxRes")),
@@ -139,7 +140,6 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     intPtMatchLowX4_ = std::ceil(ptMatchLow_ * 4);
     intPtMatchHighX4_ = std::ceil(ptMatchHigh_ * 4);
     intMaxInvisiblePt_ = std::round(maxInvisiblePt_ * CaloCluster::PT_SCALE);
-
 
     intDrMuonMatchBox_ = std::ceil(0.20 * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
 }
@@ -293,6 +293,7 @@ void PFAlgo::makeChargedPV(Region &r, float z0) const {
 void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {
     int16_t ietacut = std::round(etaCharged_ * CaloCluster::ETAPHI_SCALE);
     // FIXME floats for now
+    float puppiDr2 = std::pow(puppiDr_,2);
     for (PFParticle & p : r.pf) {
         // charged
         if (p.hwId <= 1) {
@@ -303,7 +304,7 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
         float alphaC = 0, alphaF = 0;
         for (const PFParticle & p2 : r.pf) {
             float dr2 = ::deltaR2(p.floatEta(), p.floatPhi(), p2.floatEta(), p2.floatPhi());
-            if (dr2 > 0 && dr2 < 0.25) {
+            if (dr2 > 0 && dr2 < puppiDr2) {
                 float w = std::pow(p2.floatPt(),2) / dr2;
                 alphaF += w;
                 if (p2.chargedPV) alphaC += w;
