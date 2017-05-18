@@ -157,6 +157,15 @@ whats = [
         ("PFCh",       "L1PFCharged$",          ROOT.kGreen+1,  34, 1.2),
         ("PFNh",       "L1PF$-L1PFCharged$",    ROOT.kGreen+3,  34, 1.2),
     ]),
+    ('pfdebug2',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
+        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
+        ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
+        ("PFPh",       "L1PFPhoton$",          ROOT.kGreen+1,  34, 1.2),
+        ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kGreen+3,  34, 1.2),
+    ]),
     ('il1pf',[
         ("Gen #times Acc",         "GenAcc$",     ROOT.kAzure+1,  20, 1.2),
         ("iCalo",       "L1ICalo$",    ROOT.kViolet+2, 34, 1.5),
@@ -234,7 +243,7 @@ if __name__ == "__main__":
                     if "eta_25" in oname or "eta_30" in oname:
                         if "TK" in expr: continue
                     if "Puppi" in name and "PU0" in odir: continue
-                    if name == "Gen" and  "jet" not in oname: continue
+                    if "Gen" in name and  "jet" not in oname: continue
                     if "pt" in oname:
                         prof, pres = doRespEta(oname,tree,name,exprptdef,cut), None
                     else:
@@ -263,11 +272,7 @@ if __name__ == "__main__":
                         frame = ROOT.TH1F("stk","stk",100,0.0,250.0 if "jet" in oname else 100.0)
                         if "resolution" in ptype:
                             frame.GetYaxis().SetTitle("#sigma_{eff}(p_{T}^{corr})/p_{T}^{corr}")
-                            if "jet" in oname:
-                                frame.GetYaxis().SetRangeUser(0.0,1.0)
-                            else:
-                                frame.GetYaxis().SetRangeUser(0.008,10.0)
-                                c1.SetLogy(True)
+                            frame.GetYaxis().SetRangeUser(0.0,0.8)
                         else:
                             frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                             frame.GetYaxis().SetRangeUser(0,2.2)

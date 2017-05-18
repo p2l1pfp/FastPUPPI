@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
+    parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--emf-slices", dest="emfSlices", nargs=2, default=None)
     parser.add_option("-r","--resolution", dest="resolution", default=False, action="store_true")
     options, args = parser.parse_args()
@@ -64,34 +65,32 @@ if __name__ == "__main__":
             ("jet", "abs(mc_id) == 0", 30, 5),
         ]:
         if options.particle != particle: continue
-        if options.resolution:
+        if options.eta:
+            etas = [ options.eta ]
+        elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
             else:
                 etas = [ 1.3, 1.7, 2.8, 3.2, 4.0, 5.0 ]
-        elif options.emfSlices:
-           for ieta in range(0,50,5):
-                if ieta*0.1 >= options.etaMax: break
-                etas.append(0.1*(ieta+5))
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) ]
         else: 
             for ieta in range(0,50,5):
                 if ieta*0.1 >= options.etaMax: break
-                etas.append(0.1*(ieta+5))
-        for ieta,etamax in enumerate(etas):
-            etamin = etas[ieta-1] if ieta else 0
+                etas.append((0.1*(ieta),0.1*(ieta+5)))
+        for etamin,etamax in etas:
             sels.append(("%s_eta_%02d_%02d"  % (particle,int(etamin*10),int(etamax*10)), "abs(mc_eta) > %.1f && abs(mc_eta) < %.1f && mc_pt > %g &&  %s" % (etamin,etamax,minPt,pdgIdCut)))
     if options.emfSlices:
         oldsels, oldetas = sels[:], etas[:]
         sels = []; etas = []; emfbins = []
-        for sel,eta in zip(oldsels,oldetas):
-            if abs(eta) <= 3.0:
+        for sel,(etamin,etamax) in zip(oldsels,oldetas):
+            if abs(etamin) < 3.0:
                 for emfmax,emfname,emfcut in emfs:
                     sels.append((sel[0]+"_"+emfname, "(%s) && (%s)" % (sel[1],emfcut)))
-                    etas.append(eta)
+                    etas.append((etamin,etamax))
                     emfbins.append(emfmax)
             else:
                 sels.append(sel)
-                etas.append(eta)
+                etas.append((etamin,etamax))
                 emfbins.append(1.1)
     tree = ROOT.TChain("ntuple/tree")
     for a in args[:]:
@@ -158,14 +157,14 @@ if __name__ == "__main__":
                 del frame
     if options.emfSlices:
         print "simpleCorrHad = cms.PSet( "
-        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in etas))
+        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas))
         print "\t\t\temfBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in emfbins))
         print "\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets))
         print "\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales))
         print ")"
     else:
         print "simpleCorrEM = cms.PSet( "
-        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in etas))
+        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas))
         print "\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets))
         print "\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales))
         if options.resolution:
