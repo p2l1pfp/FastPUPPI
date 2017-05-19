@@ -37,10 +37,20 @@ metanalyzer::metanalyzer(std::string iFile) {
   fTree->Branch("pupmetphi"  ,&fVar[25],"pupmetphi/D");
   fTree->Branch("pupu1"      ,&fVar[26],"pupu1/D");
   fTree->Branch("pupu2"      ,&fVar[27],"pupu2/D");
-  fTree->Branch("dz"         ,&fVar[28],"dz/D");
-  fTree->Branch("dzmu"       ,&fVar[29],"dzmu/D");
-  fTree->Branch("genmet"     ,&fVar[30],"genmet/D");
-  fTree->Branch("genmetphi"  ,&fVar[31],"genmetphi/D");
+
+  fTree->Branch("ipfmet"     ,&fVar[28],"ipfmet/D");
+  fTree->Branch("ipfmetphi"  ,&fVar[29],"ipfmetphi/D");
+  fTree->Branch("ipfu1"      ,&fVar[30],"ipfu1/D");
+  fTree->Branch("ipfu2"      ,&fVar[31],"ipfu2/D");
+  fTree->Branch("ipupmet"     ,&fVar[32],"ipupmet/D");
+  fTree->Branch("ipupmetphi"  ,&fVar[33],"ipupmetphi/D");
+  fTree->Branch("ipupu1"      ,&fVar[34],"ipupu1/D");
+  fTree->Branch("ipupu2"      ,&fVar[35],"ipupu2/D");
+
+  fTree->Branch("dz"         ,&fVar[36],"dz/D");
+  fTree->Branch("dzmu"       ,&fVar[37],"dzmu/D");
+  fTree->Branch("genmet"     ,&fVar[38],"genmet/D");
+  fTree->Branch("genmetphi"  ,&fVar[39],"genmetphi/D");
 }
 void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
@@ -57,8 +67,8 @@ void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
       fVar[1]  = pVec0.Pt();
       fVar[2]  = pVec0.Eta();
       fVar[3]  = pVec0.Phi();
-      fVar[28] = iDZ;
-      fVar[29] = (iParticle[i0].dz()+iParticle[i1].dz())/2.;
+      fVar[36] = iDZ;
+      fVar[37] = (iParticle[i0].dz()+iParticle[i1].dz())/2.;
       break;
     }
   }
@@ -85,6 +95,6 @@ void metanalyzer::setGenMET(const reco::GenParticleCollection &iGenParticles) {
     TLorentzVector pVec(0.,0.,0.,0.);  pVec.SetPtEtaPhiM(itGenP->pt(),0.,itGenP->phi(),0.);
     lVec -= pVec;
   }
-  fVar[30] = lVec.Pt();
-  fVar[31] = lVec.Phi();
+  fVar[38] = lVec.Pt();
+  fVar[39] = lVec.Phi();
 }
