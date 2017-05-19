@@ -415,6 +415,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       metanalyzer_->setMETRecoil(1,lCorrCalo,true);
       metanalyzer_->setMETRecoil(5,lPupCands,false);
       metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
+      metanalyzer_->setMETRecoil(6,ll1PFCands ,false);
+      metanalyzer_->setMETRecoil(7,ll1PupCands ,false);      
       metanalyzer_->setGenMET(genParticles);
       metanalyzer_->fill();
   }
