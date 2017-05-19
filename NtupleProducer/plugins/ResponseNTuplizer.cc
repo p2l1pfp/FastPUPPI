@@ -153,6 +153,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
       edm::EDGetTokenT<std::vector<reco::GenParticle>> genparticles_;
       bool isParticleGun_;
       std::unique_ptr<TRandom> random_;
+      bool doRandom_;
       TTree *tree_;
       uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
@@ -233,7 +234,7 @@ ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     genjets_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
     genparticles_(consumes<std::vector<reco::GenParticle>>(iConfig.getParameter<edm::InputTag>("genParticles"))),
     isParticleGun_(iConfig.getParameter<bool>("isParticleGun")),
-    random_(new TRandom3())
+    random_(new TRandom3()), doRandom_(iConfig.getParameter<bool>("doRandom"))
 {
     usesResource("TFileService");
     edm::Service<TFileService> fs;
@@ -364,33 +365,35 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
         tree_->Fill();
     }
     // now let's throw a few "random" cones
-    for (int icone = 0; icone < 7; ++icone) {
-        mc_.pt  = 10;
-        mc_.eta = random_->Rndm() * 10 - 5;
-        mc_.phi = M_PI*(random_->Rndm() * 2 - 1);
-        mc_.id = 999;
-        mc_.iso02 = 0;
-        mc_.iso04 = 0;
-        bool badcone = false;
-        for (const reco::GenParticle &gen : *genparticles) {
-            if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && gen.pt() > 0.5) {
-                if (::deltaR2(mc_.eta,mc_.phi,gen.eta(),gen.phi()) < 0.36f) {
+    if (doRandom_) {
+        for (int icone = 0; icone < 7; ++icone) {
+            mc_.pt  = 10;
+            mc_.eta = random_->Rndm() * 10 - 5;
+            mc_.phi = M_PI*(random_->Rndm() * 2 - 1);
+            mc_.id = 999;
+            mc_.iso02 = 0;
+            mc_.iso04 = 0;
+            bool badcone = false;
+            for (const reco::GenParticle &gen : *genparticles) {
+                if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && gen.pt() > 0.5) {
+                    if (::deltaR2(mc_.eta,mc_.phi,gen.eta(),gen.phi()) < 0.36f) {
+                        badcone = true; break;
+                    }
+                }
+            }
+            if (badcone) continue;
+            for (const reco::GenJet & j : *genjets) {
+                if (j.pt() > 5 && ::deltaR2(mc_.eta,mc_.phi,j.eta(),j.phi()) < 0.64f) {
                     badcone = true; break;
                 }
             }
-        }
-        if (badcone) continue;
-        for (const reco::GenJet & j : *genjets) {
-            if (j.pt() > 5 && ::deltaR2(mc_.eta,mc_.phi,j.eta(),j.phi()) < 0.64f) {
-                badcone = true; break;
+            if (badcone) continue;
+            for (auto & recopair : reco_) {
+                recopair.second.fill(recopair.first.objects(), mc_.eta, mc_.phi);
             }
-        }
-        if (badcone) continue;
-        for (auto & recopair : reco_) {
-            recopair.second.fill(recopair.first.objects(), mc_.eta, mc_.phi);
-        }
-        tree_->Fill();
+            tree_->Fill();
 
+        }
     }
     for (auto & recopair : reco_) {
         recopair.first.clear();

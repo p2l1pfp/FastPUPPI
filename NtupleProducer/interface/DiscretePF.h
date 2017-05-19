@@ -78,20 +78,23 @@ namespace l1tpf_int {
   struct PropagatedTrack : public InputTrack {
       int16_t  hwPt;
       int16_t  hwPtErr;
+      int16_t  hwCaloPtErr;
       int16_t  hwEta; // at calo
       int16_t  hwPhi; // at calo
       bool     muonLink;
       // sorting
       bool operator<(const PropagatedTrack &other) const { return hwPt > other.hwPt; }
-      void fillPropagated(float pt, float ptErr, float eta, float phi, unsigned int flags) {
+      void fillPropagated(float pt, float ptErr, float caloPtErr, float eta, float phi, unsigned int flags) {
           hwPt  = round(pt  * CaloCluster::PT_SCALE);
           hwPtErr = round(ptErr  * CaloCluster::PT_SCALE);
+          hwCaloPtErr = round(caloPtErr  * CaloCluster::PT_SCALE);
           hwEta = round(eta * CaloCluster::ETAPHI_SCALE);
           hwPhi = int16_t(round(phi * CaloCluster::ETAPHI_SCALE)) % CaloCluster::PHI_WRAP;
           muonLink = false;
       }
       float floatPt() const { return float(hwPt) / CaloCluster::PT_SCALE; }
       float floatPtErr() const { return float(hwPtErr) / CaloCluster::PT_SCALE; }
+      float floatCaloPtErr() const { return float(hwCaloPtErr) / CaloCluster::PT_SCALE; }
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
   };
@@ -203,7 +206,10 @@ namespace l1tpf_int {
         void runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
     private:
         bool skipMuons_;
-        float etaCharged_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
+        float etaCharged_, puppiDr_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
+        float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
+        int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;
+        bool useTrackCaloSigma_, rescaleUnmatchedTrack_;
         int debug_;
         PFParticle & addTrackToPF(Region &r, const PropagatedTrack &tk) const ;
         PFParticle & addCaloToPF(Region &r, const CaloCluster &calo) const ;

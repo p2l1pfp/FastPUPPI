@@ -16,6 +16,7 @@ namespace l1tpf {
                 sigma_(iSigma),
                 caloEta_(-999),
                 caloPhi_(-999),
+                caloSigma_(-999),
                 quality_(iQuality),
                 isPV_(iIsPV),
                 hOverE_(0.), chi2n_(0),
@@ -27,6 +28,7 @@ namespace l1tpf {
             float sigma() const { return sigma_; }  
             float caloEta() const { return caloEta_ == -999 ? eta() : caloEta_; }
             float caloPhi() const { return caloPhi_ == -999 ? phi() : caloPhi_; }
+            float caloSigma() const { return caloSigma_ == -999 ? sigma() : caloSigma_; }
 	    //iEta,iPhi (usuals)
 	    int   iEta() const { return l1tpf::translateIEta(eta());}
 	    int   iPhi() const { return l1tpf::translateIPhi(phi(),eta());}
@@ -58,6 +60,7 @@ namespace l1tpf {
 
             void setDz(float dz) { dZ_ = dz; }
             void setSigma(float sigma) { sigma_ = sigma; }  
+            void setCaloSigma(float sigma) { caloSigma_ = sigma; }  
             void setQuality(float quality) { quality_ = quality; }
             void setAlphaF(float alphaF) { alphaF_ = alphaF; }
             void setAlphaC(float alphaC) { alphaC_ = alphaC; }
@@ -86,7 +89,7 @@ namespace l1tpf {
         protected:
             float dZ_;
             float sigma_;
-            float caloEta_, caloPhi_;
+            float caloEta_, caloPhi_, caloSigma_;
             float quality_;
             int isPV_;
             float hOverE_, chi2n_;

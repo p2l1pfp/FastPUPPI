@@ -7,23 +7,24 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "DataFormats/L1THGCal/interface/HGCalMulticluster.h"
 #include "FastPUPPI/NtupleProducer/interface/L1TPFParticle.h"
+#include "DataFormats/Phase2L1CaloTrig/interface/L1EGCrystalCluster.h"
 
 namespace l1tpf {
-    class HGCalProducerFrom3DTPs : public edm::stream::EDProducer<> {
+    class EcalProducerFromL1EGCrystalCluster : public edm::stream::EDProducer<> {
         public:
-            explicit HGCalProducerFrom3DTPs(const edm::ParameterSet&) ;
-            ~HGCalProducerFrom3DTPs() {}
+            explicit EcalProducerFromL1EGCrystalCluster(const edm::ParameterSet&) ;
+            ~EcalProducerFromL1EGCrystalCluster() {}
 
         private:
-            edm::EDGetTokenT<l1t::HGCalMulticlusterBxCollection> src_;
+            edm::EDGetTokenT<l1slhc::L1EGCrystalClusterCollection> src_;
             double etCut_;
 
             virtual void produce(edm::Event&, const edm::EventSetup&) override;
     }; // class
 } // namespace
 
-l1tpf::HGCalProducerFrom3DTPs::HGCalProducerFrom3DTPs(const edm::ParameterSet & iConfig) :
-    src_(consumes<l1t::HGCalMulticlusterBxCollection>(iConfig.getParameter<edm::InputTag>("src"))),
+l1tpf::EcalProducerFromL1EGCrystalCluster::EcalProducerFromL1EGCrystalCluster(const edm::ParameterSet & iConfig) :
+    src_(consumes<l1slhc::L1EGCrystalClusterCollection>(iConfig.getParameter<edm::InputTag>("src"))),
     etCut_(iConfig.getParameter<double>("etMin"))
 {
     produces<std::vector<l1tpf::Particle>>();
@@ -31,19 +32,19 @@ l1tpf::HGCalProducerFrom3DTPs::HGCalProducerFrom3DTPs(const edm::ParameterSet & 
 
 
 void 
-l1tpf::HGCalProducerFrom3DTPs::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) 
+l1tpf::EcalProducerFromL1EGCrystalCluster::produce(edm::Event &iEvent, const edm::EventSetup &iSetup) 
 {
     std::unique_ptr<std::vector<l1tpf::Particle>> out(new std::vector<l1tpf::Particle>());
-    edm::Handle<l1t::HGCalMulticlusterBxCollection> multiclusters;
-    iEvent.getByToken(src_, multiclusters);
+    edm::Handle<l1slhc::L1EGCrystalClusterCollection> clusters;
+    iEvent.getByToken(src_, clusters);
 
-    for(auto it = multiclusters->begin(0), ed = multiclusters->end(0); it != ed; ++it) {
+    for(auto it = clusters->begin(), ed = clusters->end(); it != ed; ++it) {
         if (it->pt() <= etCut_) continue;
         out->emplace_back(it->pt(), it->eta(), it->phi(), 0., 0);
-        out->back().setHOverE(it->hOverE());
+        out->back().setHOverE(it->hovere());
     }
 
     iEvent.put(std::move(out));
 }
-using l1tpf::HGCalProducerFrom3DTPs;
-DEFINE_FWK_MODULE(HGCalProducerFrom3DTPs);
+using l1tpf::EcalProducerFromL1EGCrystalCluster;
+DEFINE_FWK_MODULE(EcalProducerFromL1EGCrystalCluster);

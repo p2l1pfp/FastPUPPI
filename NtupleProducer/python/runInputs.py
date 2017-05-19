@@ -33,6 +33,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFHGCalProducerFromTriggerCells_cfi')
 process.load('FastPUPPI.NtupleProducer.l1tPFTkProducersFromL1Tracks_cfi')
 process.load('FastPUPPI.NtupleProducer.l1tPFMuProducerFromL1Mu_cfi')
 process.l1tPFMuProducerFromL1Mu.MuonTag = "simGmtStage2Digis"
+process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_cfi')
 
 #process.load('FastPUPPI.NtupleProducer._cfi')
 
@@ -73,6 +74,7 @@ process.s = cms.Sequence(
     process.ecalDigis + process.ecalPreshowerDigis + process.hcalDigis + process.bunchSpacingProducer + process.ecalLocalRecoSequence + process.hcalLocalRecoSequence + process.hcalGlobalRecoSequence + process.hgcalLocalRecoSequence +
     process.l1tPFEcalProducerFromOfflineRechits + process.l1tPFHcalProducerFromOfflineRechits + process.l1tPFHFProducerFromOfflineRechits + process.l1tPFHGCalEEProducerFromOfflineRechits + process.l1tPFHGCalFHProducerFromOfflineRechits + process.l1tPFHGCalBHProducerFromOfflineRechits +
     process.l1tPFEcalProducerFromTPDigis +
+    process.L1EGammaCrystalsProducer + process.l1tPFEcalProducerFromL1EGCrystalClusters +
     process.l1tPFHcalProducerFromTPDigis +
     process.l1tPFHGCalProducerFrom3DTPs +
     process.l1tPFHGCalProducerFromTriggerCells +

@@ -36,6 +36,8 @@
 
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/CaloClusterer.h"
+#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
+#include "FastPUPPI/NtupleProducer/interface/L1TPFUtils.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -83,6 +85,10 @@ private:
   std::vector<edm::EDGetTokenT<L1PFCollection>>   TokHcalTPTags_;
   std::unique_ptr<corrector> corrector_;
   std::unique_ptr<corrector> ecorrector_;
+  // simplified corrections
+  l1tpf::SimpleCorrEm simpleCorrEm_;
+  l1tpf::SimpleCorrHad simpleCorrHad_;
+
   // new calo clusterer (float)
   l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
   l1pf_calo::SimpleCaloLinker caloLinker_;
@@ -117,6 +123,8 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
   corrector_            (new corrector(CorrectorTag_,11,iConfig.getUntrackedParameter<int>("debug",0))),
   ecorrector_           (new corrector(ECorrectorTag_,1,iConfig.getUntrackedParameter<int>("debug",0))),
+  simpleCorrEm_         (iConfig, "simpleCorrEm"),
+  simpleCorrHad_        (iConfig, "simpleCorrHad"),
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
   hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
   caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
@@ -133,11 +141,12 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   for (const edm::InputTag &tag : HcalTPTags_) {
     TokHcalTPTags_.push_back(consumes<L1PFCollection>(tag));
   }
-
+  produces<L1PFCollection>("emCalibrated");
+  produces<L1PFCollection>("emUncalibrated");
   produces<L1PFCollection>("uncalibrated");
   produces<L1PFCollection>("calibrated");
-  produces<PFOutputCollection>("uncalibrated");
-  produces<PFOutputCollection>("calibrated");
+  produces<PFOutputCollection>("RawCalo");
+  produces<PFOutputCollection>("Calo");
 }
 
 CaloNtupleProducer::~CaloNtupleProducer()
@@ -175,23 +184,16 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //// ---- Dummy calibration == no calibration
   // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
   //    
-  //// ---- Trivial calibration by hand
-  /*
-  ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-        if (std::abs(c.eta)<1.5) {
-            return c.et - (3.0 - std::abs(c.eta)); // it looks like otherwise there's an offset
-        } else if (std::abs(c.eta)<3) {
-            return c.et/1.2; // HGCal scale is off by ~1.2%
-        } else {
-            return c.et; 
-        }
-  } );
-  */
   //// ---- Calibration from Phil's workflow
-  ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-      return ecorrector_->correct(0., c.et, ieta, iphi);
-    } );
-
+  if (simpleCorrEm_.empty()) {
+      ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+              return ecorrector_->correct(0., c.et, ieta, iphi);
+              } );
+  } else {
+      ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
+              return simpleCorrEm_(c.et, std::abs(c.eta));
+              } );
+  }
   // write debug output tree
   if (!fOutputName.empty()) {
       unsigned int ne = 0;
@@ -241,24 +243,19 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   // Calorimeter linking
   caloLinker_.run();
-  //// ---- Trivial calibration by hand
-  /*
-  caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double {
-        if (std::abs(c.eta)<3.0) {
-            return c.ecal_et + c.hcal_et * 1.25;
-        } else {
-            return c.et;
-        }
-  } );
-  */
   //// ---- Dummy calibration (no calibration at all)
   // caloLinker_.correct( [](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { return c.et; } );
   //
   //// ---- Calibration from Phil's workflow
-  caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
-      return corrector_->correct(c.et, c.ecal_et, ieta, iphi); 
-    } );
-
+  if (simpleCorrHad_.empty()) {
+      caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
+              return corrector_->correct(c.et, c.ecal_et, ieta, iphi); 
+              } );
+  } else {
+      caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
+              return simpleCorrHad_(c.et, std::abs(c.eta), c.ecal_et/c.et); 
+              } );
+  }
   // write debug output tree
   if (!fOutputName.empty()) {
       const auto & clusters = caloLinker_.clusters();
@@ -300,11 +297,19 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   std::unique_ptr<L1PFCollection> RawCalo  = caloLinker_.fetch(false);
   std::unique_ptr<L1PFCollection> CorrCalo = caloLinker_.fetch(true);
 
-  addPF(*RawCalo,  "uncalibrated",  iEvent);
-  addPF(*CorrCalo, "calibrated",    iEvent);
+  addPF(*RawCalo,  "RawCalo",  iEvent);
+  addPF(*CorrCalo, "Calo",     iEvent);
 
   iEvent.put(std::move(RawCalo),  "uncalibrated");
   iEvent.put(std::move(CorrCalo), "calibrated");
+
+  // Get also ecal-only from the clusterer
+  std::unique_ptr<L1PFCollection> RawEcal  = ecalClusterer_.fetch(false);
+  std::unique_ptr<L1PFCollection> CorrEcal = ecalClusterer_.fetch(true);
+
+  iEvent.put(std::move(RawEcal),  "emUncalibrated");
+  iEvent.put(std::move(CorrEcal), "emCalibrated");
+
 
 }
 

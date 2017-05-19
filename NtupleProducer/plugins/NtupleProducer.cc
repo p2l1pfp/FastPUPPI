@@ -39,6 +39,7 @@
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
+#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
@@ -96,7 +97,7 @@ private:
   double trkPt_;
   bool   metRate_;
   double etaCharged_;
-  double puppiPtCut_;
+  double puppiPtCut_, puppiDr_;
   double vtxRes_;
   corrector* corrector_;
   corrector* ecorrector_;
@@ -105,6 +106,8 @@ private:
   metanalyzer* metanalyzer_;
   jetanalyzer* jetanalyzer_;
   isoanalyzer* isoanalyzer_;
+  // simplified resolutions
+  l1tpf::SimpleResol simpleResolEm_, simpleResolHad_, simpleResolTrk_;
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
@@ -144,6 +147,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   metRate_              (iConfig.getParameter<bool>         ("metRate")),
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
+  puppiDr_              (iConfig.getParameter<double>       ("puppiDr")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
@@ -156,8 +160,20 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,11,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
-  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,vtxRes_,fDebug);
-  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,vtxRes_);
+  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_,fDebug);
+  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_);
+  simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm");
+  simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad");
+  simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk");
+  if (iConfig.existsAs<edm::ParameterSet>("linking")) {
+    edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+    connector_->configureLinking(linkcfg.getParameter<double>("trackCaloDR"),
+                                linkcfg.getParameter<double>("trackCaloNSigmaLow"),
+                                linkcfg.getParameter<double>("trackCaloNSigmaHigh"),
+                                linkcfg.getParameter<bool>("useTrackCaloSigma"),
+                                linkcfg.getParameter<bool>("rescaleUnmatchedTrack"),
+                                linkcfg.getParameter<double>("maxInvisiblePt"));
+  }
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;
       jetanalyzer_ = nullptr;
@@ -224,7 +240,18 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByLabel(L1TrackTag_, l1tks);
   trkNum = 0;
   for (l1tpf::Particle tk : *l1tks) { // no const & since we modify it to set the sigma
-      tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); // the combiner knows the sigma, the track producer doesn't
+      // the combiner knows the sigma, the track producer doesn't
+      if (simpleResolTrk_.empty()) {
+          tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); 
+      } else {
+          tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
+      }
+      if (simpleResolHad_.empty()) {
+          tk.setCaloSigma(connector_->getPionRes(tk.pt(), tk.eta(), tk.phi()));
+      } else {
+          tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
+      }
+      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt());
       // adding objects to PF
       if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
@@ -284,9 +311,16 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
           float ptcorr = corrector_->correct(calo.pt(), calo.emEt(), calo.iEta(), calo.iPhi());
           calo.setPt(ptcorr);
       }
-      calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
-              connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
-              connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
+      if (simpleResolEm_.empty() || simpleResolHad_.empty()) {
+          calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
+                  connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
+                  connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
+      } else {
+          calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
+                  simpleResolEm_(calo.pt(), std::abs(calo.eta())) :
+                  simpleResolHad_(calo.pt(), std::abs(calo.eta())) );
+          if (fDebug > 1) printf("calo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
+      }
   }
 
   // pass to the PF algo
