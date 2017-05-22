@@ -111,6 +111,21 @@ namespace {
                 }
                 return mysum;
             }
+            int number(float dr, float threshold) const { 
+                float dr2 = dr*dr, absthreshold = sum()*threshold;
+                int mysum = 0;
+                for (const auto & p : ptdr2) {
+                    if (p.second < dr2 && p.first > absthreshold) mysum++;
+                }
+                return mysum;
+            }
+            float mindr(float threshold) const {
+                float best = 9999, absthreshold = sum()*threshold;
+                for (const auto & p : ptdr2) {
+                    if (p.second < best && p.first > absthreshold) best = p.second;
+                }
+                return std::sqrt(best);
+            }
             float nearest() const {
                 std::pair<float,float> best(0,9999);
                 for (const auto & p : ptdr2) {
@@ -189,12 +204,15 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, ptbest, pthighest;
+         float pt, pt02, ptbest, pthighest, mindr025; int n025, n010;
          void makeBranches(const std::string &prefix, TTree *tree) {
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
              tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
              tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
              tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
+             tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
+             tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
+             tree->Branch((prefix+"_n010").c_str(), &n010, (prefix+"_n010/I").c_str());
          }
          void fill(const std::vector<::SimpleObject> & objects, float eta, float phi) {
              ::InCone incone(objects, eta, phi, 0.4);
@@ -202,6 +220,9 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
              pt02 = incone.sum(0.2);
              ptbest = incone.nearest();
              pthighest = incone.max();
+             mindr025 =  incone.mindr(0.25);
+             n025 = incone.number(0.2, 0.25);
+             n010 = incone.number(0.2, 0.10);
          }
       };
       std::vector<std::pair<::MultiCollection,RecoVars>> reco_;
