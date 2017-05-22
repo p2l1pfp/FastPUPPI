@@ -184,6 +184,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
       isoanalyzer_ = new isoanalyzer("IsoFile.root");
   }
   produces<PFOutputCollection>("TK");
+  produces<PFOutputCollection>("TKVtx");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
@@ -354,29 +355,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       l1pfalgo_.runPF(l1region);
       l1pfalgo_.runPuppi(l1region, z0, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
   }
-  /*
-  unsigned int lBase = lCands.size(); 
-  bool *lFound = new bool[lBase]; for(unsigned int i0 = 0; i0 < lBase; i0++) lFound[i0] = false;  
-  for (reco::GenParticleCollection::const_iterator itGenP = genParticles.begin(); itGenP!=genParticles.end(); ++itGenP) {
-    if(itGenP->status() != 1 || itGenP->pt() < 5) continue;
-    bool pFound = false;
-    for(unsigned int i0   = 0; i0 < lBase; i0++) { 
-      double pDPhi = fabs(lCands[i0].phi()-itGenP->phi()); if(pDPhi > 2.*TMath::Pi()-pDPhi) pDPhi = 2.*TMath::Pi()-pDPhi;
-      double pDEta = fabs(lCands[i0].eta()-itGenP->eta());
-      if(sqrt(pDEta*pDEta+pDPhi*pDPhi) > 0.1) continue;
-      lFound[i0] = true;
-      pFound = true;
-    }
-    //if(!pFound) std::cout << "Not Found===> " << itGenP->pt() << " -- " << itGenP->eta() << " -- " << itGenP->phi() << " -- " << itGenP->mass() << " ---> " << itGenP->pdgId() << std::endl;
-    if(!pFound) { 
-      l1tpf::Particle lPart(itGenP->pt(),itGenP->eta(),itGenP->phi(),itGenP->mass(),itGenP->pdgId(),1,0,itGenP->eta(),itGenP->phi());
-      //lCands.push_back(lPart);
-    }
-  }
-  */
+
   addPF(lRawCalo ,"RawCalo" ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
+  addPF(lTKVtxCands,"TKVtx" ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
   addPF(lPupCands,"Puppi"   ,iEvent);
 

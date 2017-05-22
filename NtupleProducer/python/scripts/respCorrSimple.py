@@ -63,7 +63,7 @@ if __name__ == "__main__":
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
             ("tau", "(abs(mc_id) == 15 || abs(mc_id) == 211)", 20, 5),
-            ("jet", "abs(mc_id) == 0", 30, 5),
+            ("jet", "abs(mc_id) == 0", 20, 5),
         ]:
         if options.particle != particle: continue
         if options.eta:
@@ -71,6 +71,8 @@ if __name__ == "__main__":
         elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
+            elif ("PF" in options.expr or "Puppi" in options.expr):
+                etas = [ 1.3, 1.7, 2.5, 3.0, 4.0, 5.0 ]
             else:
                 etas = [ 1.3, 1.7, 2.8, 3.2, 4.0, 5.0 ]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) ]
