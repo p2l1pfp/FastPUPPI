@@ -1,6 +1,5 @@
 #include "../interface/DiscretePF.h"
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
-#include "DataFormats/L1GlobalMuonTrigger/interface/L1MuGMTReadoutCollection.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "Math/ProbFunc.h"
 
@@ -21,7 +20,7 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
                     regions_.push_back(Region(
                             etaBoundaries[ieta], etaBoundaries[ieta+1], phiCenter, phiWidth, 
                             phiExtra, etaExtra,
-                            9999,999,9,9999,9999)); 
+                            9999,9999,999,9,9999,9999)); 
                 }
             }
         }
@@ -29,7 +28,7 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
     } else {
         // start off with a dummy region
         regions_.push_back(Region(-5.5,5.5, 0,2*M_PI, 0.5, 0.5,
-                                 9999,999,9,9999,9999));
+                                 9999,9999,999,9,9999,9999));
     }
 }
 
@@ -68,6 +67,16 @@ void RegionMapper::addCalo( const l1tpf::Particle &p ) {
         }
     } 
 }
+void RegionMapper::addEmCalo( const l1tpf::Particle &p ) { 
+    CaloCluster calo;
+    calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
+    for (Region &r : regions_) {
+        if (r.contains(p.eta(), p.phi())) {
+            r.emcalo.push_back(calo);
+        }
+    } 
+}
+
 
 std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin) const {
     std::vector<l1tpf::Particle> ret;
@@ -145,8 +154,26 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
 }
 
 void PFAlgo::runPF(Region &r) const {
-    r.inputSort();
+    initRegion(r);
+    muonTrackLink(r);
+    caloTrackLink(r);
+    // then do muons
+    if(!skipMuons_) { 
+        for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
+            if (r.track[itk].muonLink) addTrackToPF(r, r.track[itk]);
+        }
+    }
+}
 
+void PFAlgo::initRegion(Region &r) const {
+    r.inputSort();
+    r.pf.clear(); r.puppi.clear();
+    for (auto & c : r.calo) c.used = false;
+    for (auto & c : r.emcalo) c.used = false;
+    for (auto & t : r.track) { t.used = false; t.muonLink = false; }
+}
+
+void PFAlgo::muonTrackLink(Region &r) const {
     // do a rectangular match for the moment; make a box of the same are as a 0.2 cone
     
     // first do the muon/tracking matching
@@ -173,6 +200,9 @@ void PFAlgo::runPF(Region &r) const {
             } else if (debug_>1) printf("new match, but %g worse than %d (%g).\n", dpt, imatch, minPtDiff);
         }
     }
+}
+
+void PFAlgo::caloTrackLink(Region &r) const {
     // then do track + calo linking
     if (debug_) printf("INT Trying to link. I have %d tracks, %d calo\n", int(r.track.size()), int(r.calo.size()));
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
@@ -216,12 +246,6 @@ void PFAlgo::runPF(Region &r) const {
         if (!r.calo[ic].used) addCaloToPF(r, r.calo[ic]);
     }
     
-    // then do muons
-    if(!skipMuons_) { 
-        for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
-            if (r.track[itk].muonLink) addTrackToPF(r, r.track[itk]);
-        }
-    }
 }
 PFParticle & PFAlgo::addTrackToPF(Region &r, const PropagatedTrack &tk) const {
     PFParticle pf;
@@ -255,7 +279,6 @@ void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & cal
     int16_t totErr2 = (intPtMatchHighX4_*(tk.hwPtErr + hwCaloErr))/4; // should be in quadrature
     if (calo.hwPt - tk.hwPt > totErr2) { // calo > track + 2 sigma
         calo.hwPt -= tk.hwPt;
-        // FIXME the floating point code does a vector subtraction, and so it changes also the eta and phi
         if (debug_) printf("INT   case 1: add track, reduce calo pt to %7.2f\n", calo.floatPt());
         addTrackToPF(r, tk);
     } else { // |calo - track|  < 2 sigma

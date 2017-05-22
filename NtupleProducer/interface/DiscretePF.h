@@ -45,6 +45,7 @@ namespace l1tpf_int {
       float floatPtErr() const { return float(hwPtErr) / CaloCluster::PT_SCALE; }
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
+      void  setFloatPt(float pt) { hwPt  = round(pt  * CaloCluster::PT_SCALE); }
   };
 
   // https://twiki.cern.ch/twiki/bin/view/CMS/L1TriggerPhase2InterfaceSpecifications
@@ -82,6 +83,7 @@ namespace l1tpf_int {
       int16_t  hwEta; // at calo
       int16_t  hwPhi; // at calo
       bool     muonLink;
+      bool     used; // note: this flag is not used in the default PF, but is used in alternative algos
       // sorting
       bool operator<(const PropagatedTrack &other) const { return hwPt > other.hwPt; }
       void fillPropagated(float pt, float ptErr, float caloPtErr, float eta, float phi, unsigned int flags) {
@@ -91,6 +93,7 @@ namespace l1tpf_int {
           hwEta = round(eta * CaloCluster::ETAPHI_SCALE);
           hwPhi = int16_t(round(phi * CaloCluster::ETAPHI_SCALE)) % CaloCluster::PHI_WRAP;
           muonLink = false;
+          used = false;
       }
       float floatPt() const { return float(hwPt) / CaloCluster::PT_SCALE; }
       float floatPtErr() const { return float(hwPtErr) / CaloCluster::PT_SCALE; }
@@ -146,33 +149,36 @@ namespace l1tpf_int {
       void setPuppiW(float w) {
             hwPuppiWeight = std::round(w * PUPPI_SCALE);
       }
+      void  setFloatPt(float pt) { hwPt  = round(pt  * CaloCluster::PT_SCALE); }
   };
 
   struct Region {
     std::vector<CaloCluster>      calo;
+    std::vector<CaloCluster>      emcalo; // not used in the default implementation
     std::vector<PropagatedTrack>  track;
     std::vector<Muon>             muon;
     std::vector<PFParticle>       pf;
     std::vector<PFParticle>       puppi;
-    unsigned int caloOverflow, trackOverflow, muonOverflow, pfOverflow, puppiOverflow;
+    unsigned int caloOverflow, emcaloOverflow, trackOverflow, muonOverflow, pfOverflow, puppiOverflow;
 
     const float etaMin, etaMax, phiCenter, phiHalfWidth;
     const float etaExtra, phiExtra;
-    const unsigned int ncaloMax, ntrackMax, nmuonMax, npfMax, npuppiMax;
+    const unsigned int ncaloMax, nemcaloMax, ntrackMax, nmuonMax, npfMax, npuppiMax;
     Region(float etamin, float etamax, float phicenter, float phiwidth, float etaextra, float phiextra,
-           unsigned int ncalomax, unsigned int ntrackmax, unsigned int nmuonmax, unsigned int npfmax, unsigned int npuppimax) :
+           unsigned int ncalomax, unsigned int nemcalomax, unsigned int ntrackmax, unsigned int nmuonmax, unsigned int npfmax, unsigned int npuppimax) :
         etaMin(etamin), etaMax(etamax), phiCenter(phicenter), phiHalfWidth(0.5*phiwidth), etaExtra(etaextra), phiExtra(phiextra),
-        ncaloMax(ncalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
+        ncaloMax(ncalomax), nemcaloMax(nemcalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
 
     bool contains(float eta, float phi) const { return (etaMin-etaExtra <= eta && eta <= etaMax+etaExtra && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth+phiExtra); }
     bool fiducial(float eta, float phi) const { return (etaMin <= eta && eta <= etaMax && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth); }
 
     void zero() {
-        calo.clear(); track.clear(); muon.clear(); pf.clear(); puppi.clear();
-        caloOverflow = 0; trackOverflow = 0; muonOverflow = 0; pfOverflow = 0; puppiOverflow = 0;
+        calo.clear(); emcalo.clear(); track.clear(); muon.clear(); pf.clear(); puppi.clear();
+        caloOverflow = 0; emcaloOverflow = 0; trackOverflow = 0; muonOverflow = 0; pfOverflow = 0; puppiOverflow = 0;
     }
     void inputSort() {
         std::sort(calo.begin(),  calo.end());
+        std::sort(emcalo.begin(),  emcalo.end());
         std::sort(track.begin(), track.end());
         std::sort(muon.begin(),  muon.end());
     }
@@ -188,6 +194,7 @@ namespace l1tpf_int {
         void addTrack( const l1tpf::Particle & t ) ;
         void addMuon( const l1tpf::Particle & t );
         void addCalo( const l1tpf::Particle & t ); 
+        void addEmCalo( const l1tpf::Particle & t ); 
 
         void clear() { for (Region & r : regions_) r.zero(); }
         std::vector<Region> & regions() { return regions_; }
@@ -202,15 +209,18 @@ namespace l1tpf_int {
   class PFAlgo {
     public:
         PFAlgo( const edm::ParameterSet& ) ;
-        void runPF(Region &r) const ;
-        void runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
-    private:
+        virtual void runPF(Region &r) const ;
+        virtual void runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
+    protected:
         bool skipMuons_;
         float etaCharged_, puppiDr_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
         float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
         int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;
         bool useTrackCaloSigma_, rescaleUnmatchedTrack_;
         int debug_;
+        void initRegion(Region &r) const ;
+        void muonTrackLink(Region &r) const ;
+        void caloTrackLink(Region &r) const ;
         PFParticle & addTrackToPF(Region &r, const PropagatedTrack &tk) const ;
         PFParticle & addCaloToPF(Region &r, const CaloCluster &calo) const ;
         void mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const ;

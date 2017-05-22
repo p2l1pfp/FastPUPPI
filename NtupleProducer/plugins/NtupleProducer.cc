@@ -66,6 +66,7 @@ public:
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
   const edm::InputTag L1TrackTag_;
   const std::vector<edm::InputTag> CaloClusterTags_;
+  const std::vector<edm::InputTag> EmClusterTags_;
   const bool correctCaloEnergies_;
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
@@ -92,7 +93,7 @@ private:
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
-  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokCaloClusterTags_;
+  std::vector<edm::EDGetTokenT<L1PFCollection>>   TokCaloClusterTags_, TokEmClusterTags_;
   edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
   double trkPt_;
   bool   metRate_;
@@ -135,6 +136,7 @@ private:
 NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   L1TrackTag_           (iConfig.getParameter<edm::InputTag>("L1TrackTag")),
   CaloClusterTags_      (iConfig.getParameter<std::vector<edm::InputTag>>("CaloClusterTags")),
+  EmClusterTags_        (iConfig.getParameter<std::vector<edm::InputTag>>("EmClusterTags")),
   correctCaloEnergies_  (iConfig.getParameter<bool>("correctCaloEnergies")),
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
@@ -197,6 +199,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
   for (const edm::InputTag &tag : CaloClusterTags_) {
     TokCaloClusterTags_.push_back(consumes<L1PFCollection>(tag));
+  }
+  for (const edm::InputTag &tag : EmClusterTags_) {
+    TokEmClusterTags_.push_back(consumes<L1PFCollection>(tag));
   }
   TokMuonTPTag_    = consumes<L1PFCollection>( MuonTPTag_  );
   produces<unsigned int>("totNL1TK");
@@ -294,12 +299,17 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
 
   /// ----------------Clustered Calo INFO-------------------
-  L1PFCollection calos;
+  L1PFCollection calos, emcalos;
   edm::Handle<L1PFCollection> hcals;
   for (const auto & token : TokCaloClusterTags_) {
       iEvent.getByToken(token, hcals);
       calos.insert(calos.end(), hcals->begin(), hcals->end());
   }
+  for (const auto & token : TokEmClusterTags_) {
+      iEvent.getByToken(token, hcals);
+      emcalos.insert(emcalos.end(), hcals->begin(), hcals->end());
+  }
+
 
   // add uncalibrated (or at least un-recalibrated) calos to rawconnector
   for (const l1tpf::Particle & calo : calos) {
@@ -329,6 +339,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       connector_->addCalo(calo);
       l1regions_.addCalo(calo); 
   }
+  for (const l1tpf::Particle & calo : emcalos) {
+      l1regions_.addEmCalo(calo); 
+  }
+
 
   std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
   std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
