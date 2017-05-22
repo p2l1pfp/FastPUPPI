@@ -101,8 +101,77 @@ int l1pf_calo::Stage1Grid::imove(int ieta, int iphi, int deta, int dphi) {
     return icell;
 }
 
+const float l1pf_calo::FineEcalGrid::towerEtas_[l1pf_calo::FineEcalGrid::nTowerEta_+1] = {0,0.087,0.174,0.261,0.348,0.435,0.522,0.609,0.696,0.783,0.870,0.957,1.044,1.131,1.218,1.305,1.392,1.479};
+
+l1pf_calo::FineEcalGrid::FineEcalGrid() :
+            Grid(2*nEta_*nPhi_)
+{
+    int icell = 0;
+    for (int ie = -nEta_; ie <= nEta_; ++ie) {
+        if (ie == 0) continue;
+        int absie = std::abs(ie);
+        int absieTower  = (absie-1)/5+1;
+        int absieWithin = (absie-1) % 5;
+        for (int iph = 1; iph <= nPhi_; ++iph) {
+            ieta_[icell] = ie;
+            iphi_[icell] = iph;
+            etaWidth_[icell] = 0.2*(towerEtas_[absieTower] - towerEtas_[absieTower-1]);
+            phiWidth_[icell] = 2*M_PI/nPhi_;
+            eta_[icell]      = (absieWithin+0.5)*etaWidth_[icell] + towerEtas_[absieTower-1];
+            phi_[icell]      = (iph-1)*2*M_PI/nPhi_ + 0.5*phiWidth_[icell];
+            if (phi_[icell] > M_PI) phi_[icell] -= 2*M_PI;
+            std::fill(neighbours_[icell].begin(), neighbours_[icell].end(), -1);
+            assert(icell == (ie < 0 ? ie + nEta_ : ie - 1 + nEta_)*nPhi_ + (iph-1));
+            icell++;
+        }
+    }
+    assert(unsigned(icell) == ncells_);
+    // now link the cells
+    for (icell = 0; icell < int(ncells_); ++icell) {
+        int ie = ieta_[icell], iph = iphi_[icell];
+        int ineigh = 0;
+        for (int deta = -1; deta <= +1; ++deta) {
+            for (int dphi = -1; dphi <= +1; ++dphi) {
+                if (deta == 0 && dphi == 0) continue;
+                neighbours_[icell][ineigh++] = imove(ie, iph, deta, dphi);
+            }
+        }
+    } 
+}
+
+int l1pf_calo::FineEcalGrid::find_cell(float eta, float phi) const {
+    int ieta = (eta != 0) ? std::distance(towerEtas_, std::lower_bound(towerEtas_, towerEtas_+nTowerEta_, std::abs(eta))) : 1;
+    assert(ieta > 0 && ieta < nTowerEta_);
+    if (eta < 0) ieta = -ieta;
+    if (phi > 2*M_PI) phi -= 2*M_PI;
+    if (phi < 0) phi += 2*M_PI;
+    int iphi = std::floor(phi * nPhi_/(2*M_PI))+1;
+    if (phi >= 2*M_PI) iphi = nPhi_; // fix corner case due to roundings etc
+    assert(iphi >= 1 && iphi <= nPhi_);
+    return ifind_cell(ieta,iphi);
+}
+
+int l1pf_calo::FineEcalGrid::imove(int ieta, int iphi, int deta, int dphi) {
+    int ie = ieta + deta;
+    if      ((ieta < 0) && (ie >= 0)) ie++;
+    else if ((ieta > 0) && (ie <= 0)) ie--;
+    assert(ie != 0);
+    if (std::abs(ie) > nEta_) return 0;
+    int iph = iphi + dphi;
+    if      (iph <= 0)    iph += nPhi_;
+    else if (iph > nPhi_) iph -= nPhi_;
+    return ifind_cell(ie,iph);
+}
+
+l1pf_calo::Grid * l1pf_calo::makeGrid(const std::string & type) 
+{
+    if (type == "stage1") return new Stage1Grid();
+    else if (type == "ebCrystals") return new FineEcalGrid();
+    else throw cms::Exception("Configuration") << "Unsupported grid type '" << type  << "'\n";
+}
+
 l1pf_calo::SingleCaloClusterer::SingleCaloClusterer(const edm::ParameterSet &pset) :
-    grid_(new Stage1Grid()),
+    grid_(pset.existsAs<std::string>("grid") ? makeGrid(pset.getParameter<std::string>("grid")) : new Stage1Grid()),
     rawet_(*grid_),
     precluster_(*grid_),
     cluster_(*grid_),
