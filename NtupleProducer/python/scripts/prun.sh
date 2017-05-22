@@ -1,5 +1,5 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517
+MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517
 PREFIX="inputs_17D"
 
 INPUT=$1; shift
@@ -9,7 +9,11 @@ if [[ "$1" != "" ]]; then
 else
     OUTPUT="${INPUT}";
 fi;
-if [[ "$1" == "--phil" ]]; then
+
+if [[ "$1" == "--01" ]]; then
+    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517
+    shift;
+elif [[ "$1" == "--phil" ]]; then
     MAIN=/eos/cms/store/cmst3/user/pharris/L1PF/inputs/$INPUT/
     PREFIX=""
     shift;
