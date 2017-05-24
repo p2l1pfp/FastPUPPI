@@ -68,10 +68,11 @@ public:
   const std::vector<edm::InputTag> CaloClusterTags_;
   const std::vector<edm::InputTag> EmClusterTags_;
   const bool correctCaloEnergies_;
+  const float rawCaloPtMin_, rawEmCaloPtMin_;
   const edm::InputTag MuonTPTag_;
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
-  const std::string Corrector2Tag_;
+  const unsigned int CorrectorEmfBins_;
   const std::string ECorrectorTag_;
   const std::string TrackResTag_;
   const std::string EleResTag_;
@@ -102,6 +103,9 @@ private:
   double vtxRes_;
   corrector* corrector_;
   corrector* ecorrector_;
+  // simplified corrections
+  l1tpf::SimpleCorrEm simpleCorrEm_;
+  l1tpf::SimpleCorrHad simpleCorrHad_;
   combiner * connector_;
   combiner * rawconnector_;
   metanalyzer* metanalyzer_;
@@ -138,9 +142,12 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   CaloClusterTags_      (iConfig.getParameter<std::vector<edm::InputTag>>("CaloClusterTags")),
   EmClusterTags_        (iConfig.getParameter<std::vector<edm::InputTag>>("EmClusterTags")),
   correctCaloEnergies_  (iConfig.getParameter<bool>("correctCaloEnergies")),
+  rawCaloPtMin_         (correctCaloEnergies_   ? iConfig.getParameter<double>("rawCaloPtMin") : 0.0), 
+  rawEmCaloPtMin_       (correctCaloEnergies_ && !EmClusterTags_.empty() ? iConfig.getParameter<double>("rawEmCaloPtMin") : 0.0), 
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
+  CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
   TrackResTag_          (getFilePath(iConfig,"trackres")),
   EleResTag_            (getFilePath(iConfig,"eleres")),
@@ -151,6 +158,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
   puppiDr_              (iConfig.getParameter<double>       ("puppiDr")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
+  simpleCorrEm_         (iConfig, "simpleCorrEm"),
+  simpleCorrHad_        (iConfig, "simpleCorrHad"),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
@@ -160,7 +169,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fTrkInfoTree          (0)
 {
   //now do what ever other initialization is needed
-  corrector_  = new corrector(CorrectorTag_,11,fDebug);
+  corrector_  = new corrector(CorrectorTag_,CorrectorEmfBins_,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
   connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_,fDebug);
   rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_);
@@ -193,6 +202,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("Puppi");
   produces<PFOutputCollection>("L1TK");
   produces<PFOutputCollection>("L1Calo");
+  if (!EmClusterTags_.empty()) {
+    produces<PFOutputCollection>("L1EmCalo");
+  }
   produces<PFOutputCollection>("L1PF");
   produces<PFOutputCollection>("L1Puppi");
   TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
@@ -303,11 +315,15 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   edm::Handle<L1PFCollection> hcals;
   for (const auto & token : TokCaloClusterTags_) {
       iEvent.getByToken(token, hcals);
-      calos.insert(calos.end(), hcals->begin(), hcals->end());
+      for (const auto & c : *hcals) { 
+          if (c.pt() > rawCaloPtMin_) calos.push_back(c); 
+      }
   }
   for (const auto & token : TokEmClusterTags_) {
       iEvent.getByToken(token, hcals);
-      emcalos.insert(emcalos.end(), hcals->begin(), hcals->end());
+      for (const auto & c : *hcals) { 
+          if (c.pt() > rawEmCaloPtMin_) emcalos.push_back(c); 
+      }
   }
 
 
@@ -316,10 +332,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       rawconnector_->addCalo(calo);
   }
 
-  // ccalibrate and do the rest
+  // calibrate and do the rest
   for (l1tpf::Particle &calo : calos) {
       if (correctCaloEnergies_) {
-          float ptcorr = corrector_->correct(calo.pt(), calo.emEt(), calo.iEta(), calo.iPhi());
+          float ptcorr = simpleCorrHad_.empty() ? corrector_->correct(calo.pt(), calo.emEt(), calo.iEta(), calo.iPhi()) :
+                                                  simpleCorrHad_(calo.pt(), std::abs(calo.eta()), calo.emEt()/calo.pt());
           calo.setPt(ptcorr);
       }
       if (simpleResolEm_.empty() || simpleResolHad_.empty()) {
@@ -332,6 +349,19 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
                   simpleResolHad_(calo.pt(), std::abs(calo.eta())) );
           if (fDebug > 1) printf("calo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
       }
+  }
+  for (l1tpf::Particle &calo : emcalos) {
+      if (correctCaloEnergies_) {
+          float ptcorr = simpleCorrEm_.empty() ? ecorrector_->correct(0, calo.pt(), calo.iEta(), calo.iPhi()) :
+                                                 simpleCorrEm_(calo.pt(), std::abs(calo.eta()));
+          calo.setPt(ptcorr);
+      }
+      if (simpleResolEm_.empty()) {
+          calo.setSigma(connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()));
+      } else {
+          calo.setSigma(simpleResolEm_(calo.pt(), std::abs(calo.eta())));
+      }
+      if (fDebug > 1) printf("emcalo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
   }
 
   // pass to the PF algo
@@ -357,7 +387,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   // Now we run the discretized version
   // First, get a copy of the discretized inputs (for reference later)
-  std::vector<combiner::Particle> ll1CaloCands = l1regions_.fetchCalo();
+  std::vector<combiner::Particle> ll1EmCands   = l1regions_.fetchCalo(0.1, true);
+  std::vector<combiner::Particle> ll1CaloCands = l1regions_.fetchCalo(0.1);
   std::vector<combiner::Particle> ll1TkCands   = l1regions_.fetchTracks();
   // then get global inputs
   float z0 = connector_->dZ();
@@ -380,6 +411,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   std::vector<combiner::Particle> ll1PFCands   = l1regions_.fetch(false);
   std::vector<combiner::Particle> ll1PupCands  = l1regions_.fetch(true);
   addPF(ll1CaloCands,"L1Calo" ,iEvent);
+  if (!EmClusterTags_.empty()) {
+    addPF(ll1EmCands,"L1EmCalo" ,iEvent);
+  }
   addPF(ll1TkCands,  "L1TK"   ,iEvent);
   addPF(ll1PFCands,  "L1PF"   ,iEvent);
   addPF(ll1PupCands, "L1Puppi",iEvent);

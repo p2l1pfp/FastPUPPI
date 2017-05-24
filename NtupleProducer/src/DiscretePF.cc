@@ -93,15 +93,15 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin) const 
     return ret;
 }
 
-std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin) const {
+std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin, bool emcalo) const {
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
-        for (const CaloCluster & p : r.calo) {
+        for (const CaloCluster & p : (emcalo ? r.emcalo : r.calo)) {
             if (regions_.size() > 1) {
                 if (!r.fiducial(p.floatEta(), p.floatPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, p.isEM ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH );
+                ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, (p.isEM || emcalo) ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH );
             }
         }
     }

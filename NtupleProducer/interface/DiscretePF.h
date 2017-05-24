@@ -200,7 +200,7 @@ namespace l1tpf_int {
         std::vector<Region> & regions() { return regions_; }
 
         std::vector<l1tpf::Particle> fetch(bool puppi=true, float ptMin=0.01) const ;
-        std::vector<l1tpf::Particle> fetchCalo(float ptMin=0.01) const ;
+        std::vector<l1tpf::Particle> fetchCalo(float ptMin=0.01, bool emcalo=false) const ;
         std::vector<l1tpf::Particle> fetchTracks(float ptMin=0.01) const ;
     protected:
         std::vector<Region> regions_;

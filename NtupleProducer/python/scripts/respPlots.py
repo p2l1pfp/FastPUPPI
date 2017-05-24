@@ -70,10 +70,10 @@ def doPtProf(oname, tree, name, expr, cut):
     prof = ROOT.TProfile(name,name,len(ptbins),array('f',[0]+ptbins))
     tree.Draw(expr+":mc_pt>>"+name, cut, "PROF");
     return prof;
-def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", fitopt="WQ0C EX0 ROB=0.95"):
+def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999)):
     ptbins = ptBins(oname)
     ys = [[] for ipt in ptbins]
-    npoints = tree.Draw("("+expr+")/("+mcpt+"):"+mcpt, cut, "");
+    npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "");
     if npoints <= 0: return (None,None)
     graph = ROOT.gROOT.FindObject("Graph");
     xi, yi = graph.GetX(), graph.GetY()
@@ -101,8 +101,8 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", fitopt="WQ0C EX0 ROB=0.
             resols.append((ptc,ptd,(hi-lo)/2,0))
             #print "for %s %s at pt ~ %6.1f  reco pt ~ %6.1f  [ %6.1f , %6.1f ]" % (oname,name, ptc, median, lo, hi)
     if ret.GetN() <= 3: return (None,None)
-    tf1 = ROOT.TF1(name+"_f1","1/x++1", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
-    ret.Fit(tf1, fitopt)
+    tf1 = ROOT.TF1(name+"_f1","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    ret.Fit(tf1, fitopt, "", fitrange[0], fitrange[1])
     ret.fit = tf1
     ## Now we do the approximate response corrected resolution
     scale = ret.fit.GetParameter(1)
@@ -203,6 +203,7 @@ if __name__ == "__main__":
     parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
     parser.add_option("-m", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
+    parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     options, args = parser.parse_args()
     selparticles = options.particle.split(",") if options.particle else []
@@ -292,6 +293,7 @@ if __name__ == "__main__":
                         p.SetMarkerStyle(msty); p.SetMarkerSize(msiz)
                         ps.append((name,p))
                 for plots,ptype,pfix in (resps,"response",""),(resols,"resolution","_res"):
+                    if ptype == "resolution" and options.noResol: continue
                     if not plots: 
                         if "_pt" in oname and ptype == "resolution" and ptdef.startswith("pt"): continue # not implemented
                         print "No ",ptype," plot for ", oname, ptdef 

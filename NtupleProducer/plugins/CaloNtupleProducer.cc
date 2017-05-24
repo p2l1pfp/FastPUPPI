@@ -65,6 +65,7 @@ public:
   const std::vector<edm::InputTag> HcalTPTags_;
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
+  const unsigned int CorrectorEmfBins_;
   const std::string ECorrectorTag_;
 
 private:
@@ -121,8 +122,9 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   HcalTPTags_           (!ecalOnly_ ? iConfig.getParameter<std::vector<edm::InputTag>>("HcalTPTags") : std::vector<edm::InputTag>()),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
+  CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
-  corrector_            (new corrector(CorrectorTag_,11,iConfig.getUntrackedParameter<int>("debug",0))),
+  corrector_            (new corrector(CorrectorTag_,CorrectorEmfBins_,iConfig.getUntrackedParameter<int>("debug",0))),
   ecorrector_           (new corrector(ECorrectorTag_,1,iConfig.getUntrackedParameter<int>("debug",0))),
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
