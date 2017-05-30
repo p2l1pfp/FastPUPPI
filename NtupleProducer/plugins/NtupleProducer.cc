@@ -119,6 +119,7 @@ private:
   l1tpf_int::PFAlgo       l1pfalgo_;
   // debug flag
   int fDebug;
+  float fDebugEta, fDebugPhi, fDebugR;
      
   // declare variables for output file
   std::string           fOutputName;
@@ -165,6 +166,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
+  fDebugEta             (iConfig.getUntrackedParameter<double>("debugEta",0)),
+  fDebugPhi             (iConfig.getUntrackedParameter<double>("debugPhi",0)),
+  fDebugR               (iConfig.getUntrackedParameter<double>("debugR",-1)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -494,6 +498,7 @@ void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string 
     if(iCandidates[i0].pdgId() == combiner::Particle::CH || iCandidates[i0].pdgId() == combiner::Particle::EL)  pCharge = 1;
     if(iCandidates[i0].pdgId() == combiner::Particle::MU)  pCharge = iCandidates[i0].charge();
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
+    pCand.setStatus(iCandidates[i0].status());
     corrCandidates->push_back(pCand);
   }
   //Fill!

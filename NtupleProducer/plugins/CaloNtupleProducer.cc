@@ -94,7 +94,10 @@ private:
   // new calo clusterer (float)
   l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
   l1pf_calo::SimpleCaloLinker caloLinker_;
-     
+
+  // debug
+  int fDebug;
+ 
   // declare variables for output file
   std::string fOutputName;
   TFile *fOutputFile;
@@ -133,6 +136,7 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
   hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
   caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
+  fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -273,8 +277,8 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               return simpleCorrHad_(c.et, std::abs(c.eta), c.ecal_et/c.et); 
               } );
   }
-  // write debug output tree
-  if (!fOutputName.empty()) {
+  // write debug output tree and/or standard output
+  if (!fOutputName.empty() || fDebug) {
       const auto & clusters = caloLinker_.clusters();
       unsigned int nh = 0;
       for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
@@ -302,6 +306,9 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               hcal_genId   = float(lGenVars[3]);
               hcal_dr = reco::deltaR( hcal_genEta, hcal_genPhi, hcal_clust_eta,hcal_clust_phi );
           }
+          if (fDebug) printf("Linked cluster et %7.2f eta %+5.2f phi %+5.2f  raw et %7.2f ecal %7.2f hcal %7.2f   gen pt %7.2f dr %.2f\n",
+                                    clusters[i].et_corr, clusters[i].eta, clusters[i].phi, clusters[i].et, clusters[i].ecal_et, clusters[i].hcal_et, hcal_genPt, hcal_dr);
+          if (fOutputName.empty()) continue;
           if (zeroSuppress_) {
               if(hcal_genPt > 1.) fHcalInfoTree->Fill();      
           } else {

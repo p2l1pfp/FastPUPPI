@@ -19,7 +19,8 @@ namespace edm { class ParameterSet; }
 namespace l1tpf_int { 
 
   struct CaloCluster {
-      int16_t hwPt;   
+      int16_t  hwPt;   
+      int16_t  hwEmPt;   
       int16_t  hwPtErr;   
       int16_t  hwEta;   
       int16_t  hwPhi;   
@@ -32,8 +33,9 @@ namespace l1tpf_int {
       // sorting
       bool operator<(const CaloCluster &other) const { return hwPt > other.hwPt; }
       // filling from floating point
-      void fill(float pt, float ptErr, float eta, float phi, bool em, unsigned int flags) {
+      void fill(float pt, float emPt, float ptErr, float eta, float phi, bool em, unsigned int flags) {
           hwPt  = round(pt  * CaloCluster::PT_SCALE);
+          hwEmPt  = round(emPt  * CaloCluster::PT_SCALE);
           hwPtErr = round(ptErr  * CaloCluster::PT_SCALE);
           hwEta = round(eta * CaloCluster::ETAPHI_SCALE);
           hwPhi = int16_t(round(phi * CaloCluster::ETAPHI_SCALE)) % CaloCluster::PHI_WRAP;
@@ -42,10 +44,13 @@ namespace l1tpf_int {
           hwFlags = flags;
       }
       float floatPt() const { return float(hwPt) / CaloCluster::PT_SCALE; }
+      float floatEmPt() const { return float(hwEmPt) / CaloCluster::PT_SCALE; }
       float floatPtErr() const { return float(hwPtErr) / CaloCluster::PT_SCALE; }
+      static float minFloatPt() { return float(1.0) / CaloCluster::PT_SCALE; }
       float floatEta() const { return float(hwEta) / CaloCluster::ETAPHI_SCALE; }
       float floatPhi() const { return float(hwPhi) / CaloCluster::ETAPHI_SCALE; }
       void  setFloatPt(float pt) { hwPt  = round(pt  * CaloCluster::PT_SCALE); }
+      void  setFloatEmPt(float emPt) { hwEmPt  = round(emPt  * CaloCluster::PT_SCALE); }
   };
 
   // https://twiki.cern.ch/twiki/bin/view/CMS/L1TriggerPhase2InterfaceSpecifications
@@ -136,6 +141,7 @@ namespace l1tpf_int {
       PropagatedTrack track;
       bool            chargedPV;
       uint16_t        hwPuppiWeight;
+      uint16_t        hwStatus; // for debugging
       static constexpr float PUPPI_SCALE = 100;
       // sorting
       bool operator<(const PFParticle &other) const { return hwPt > other.hwPt; }
@@ -159,6 +165,7 @@ namespace l1tpf_int {
     std::vector<Muon>             muon;
     std::vector<PFParticle>       pf;
     std::vector<PFParticle>       puppi;
+    std::vector<PFParticle>       pfdiscarded; // for debugging
     unsigned int caloOverflow, emcaloOverflow, trackOverflow, muonOverflow, pfOverflow, puppiOverflow;
 
     const float etaMin, etaMax, phiCenter, phiHalfWidth;
@@ -199,7 +206,7 @@ namespace l1tpf_int {
         void clear() { for (Region & r : regions_) r.zero(); }
         std::vector<Region> & regions() { return regions_; }
 
-        std::vector<l1tpf::Particle> fetch(bool puppi=true, float ptMin=0.01) const ;
+        std::vector<l1tpf::Particle> fetch(bool puppi=true, float ptMin=0.01, bool discarded = false) const ;
         std::vector<l1tpf::Particle> fetchCalo(float ptMin=0.01, bool emcalo=false) const ;
         std::vector<l1tpf::Particle> fetchTracks(float ptMin=0.01) const ;
     protected:
@@ -221,12 +228,24 @@ namespace l1tpf_int {
         void initRegion(Region &r) const ;
         void muonTrackLink(Region &r) const ;
         void caloTrackLink(Region &r) const ;
-        PFParticle & addTrackToPF(Region &r, const PropagatedTrack &tk) const ;
-        PFParticle & addCaloToPF(Region &r, const CaloCluster &calo) const ;
         void mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const ;
         void makeChargedPV(Region &r, float z0) const ;
         void computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
         void fillPuppi(Region &r) const ;
+        PFParticle & addTrackToPF(Region &r, const PropagatedTrack &tk) const { return addTrackToPF(r.pf, tk); }
+        PFParticle & addCaloToPF(Region &r, const CaloCluster &calo) const { return addCaloToPF(r.pf, calo); }
+        PFParticle & discardTrack(Region &r, const PropagatedTrack &tk, int status) const { 
+            PFParticle & ret = addTrackToPF(r.pfdiscarded, tk); 
+            ret.hwStatus = status;
+            return ret;
+        }
+        PFParticle & discardCalo(Region &r, const CaloCluster &calo, int status) const { 
+            PFParticle & ret = addCaloToPF(r.pfdiscarded, calo); 
+            ret.hwStatus = status;
+            return ret;
+        }
+        PFParticle & addTrackToPF(std::vector<PFParticle> &pfs, const PropagatedTrack &tk) const ;
+        PFParticle & addCaloToPF(std::vector<PFParticle> &pfs, const CaloCluster &calo) const ;
   };
 
 } // end namespace

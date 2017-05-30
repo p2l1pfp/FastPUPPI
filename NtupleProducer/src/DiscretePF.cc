@@ -60,7 +60,7 @@ void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
 
 void RegionMapper::addCalo( const l1tpf::Particle &p ) { 
     CaloCluster calo;
-    calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
+    calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
         if (r.contains(p.eta(), p.phi())) {
             r.calo.push_back(calo);
@@ -69,7 +69,7 @@ void RegionMapper::addCalo( const l1tpf::Particle &p ) {
 }
 void RegionMapper::addEmCalo( const l1tpf::Particle &p ) { 
     CaloCluster calo;
-    calo.fill(p.pt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
+    calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
         if (r.contains(p.eta(), p.phi())) {
             r.emcalo.push_back(calo);
@@ -78,15 +78,16 @@ void RegionMapper::addEmCalo( const l1tpf::Particle &p ) {
 }
 
 
-std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin) const {
+std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin, bool discarded) const {
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
-        for (const PFParticle & p : (puppi ? r.puppi : r.pf)) {
+        for (const PFParticle & p : (puppi ? r.puppi : (discarded ? r.pfdiscarded : r.pf ))) {
             if (regions_.size() > 1) {
                 if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
                 ret.emplace_back( p.floatPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
+                ret.back().setStatus(p.hwStatus);
             }
         }
     }
@@ -168,6 +169,7 @@ void PFAlgo::runPF(Region &r) const {
 void PFAlgo::initRegion(Region &r) const {
     r.inputSort();
     r.pf.clear(); r.puppi.clear();
+    r.pfdiscarded.clear();
     for (auto & c : r.calo) c.used = false;
     for (auto & c : r.emcalo) c.used = false;
     for (auto & t : r.track) { t.used = false; t.muonLink = false; }
@@ -247,7 +249,7 @@ void PFAlgo::caloTrackLink(Region &r) const {
     }
     
 }
-PFParticle & PFAlgo::addTrackToPF(Region &r, const PropagatedTrack &tk) const {
+PFParticle & PFAlgo::addTrackToPF(std::vector<PFParticle> &pfs, const PropagatedTrack &tk) const {
     PFParticle pf;
     pf.hwPt = tk.hwPt;
     pf.hwEta = tk.hwEta;
@@ -257,10 +259,11 @@ PFParticle & PFAlgo::addTrackToPF(Region &r, const PropagatedTrack &tk) const {
     pf.track = tk;
     pf.cluster.hwPt = 0;
     pf.hwId = (tk.muonLink ? l1tpf::Particle::MU : l1tpf::Particle::CH);
-    r.pf.push_back(pf);
-    return r.pf.back();
+    pf.hwStatus = 0;
+    pfs.push_back(pf);
+    return pfs.back();
 }
-PFParticle & PFAlgo::addCaloToPF(Region &r, const CaloCluster &calo) const {
+PFParticle & PFAlgo::addCaloToPF(std::vector<PFParticle> &pfs, const CaloCluster &calo) const {
     PFParticle pf;
     pf.hwPt = calo.hwPt;
     pf.hwEta = calo.hwEta;
@@ -270,8 +273,9 @@ PFParticle & PFAlgo::addCaloToPF(Region &r, const CaloCluster &calo) const {
     pf.track.hwPt = 0;
     pf.cluster = calo;
     pf.hwId = (calo.isEM ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH);
-    r.pf.push_back(pf);
-    return r.pf.back();
+    pf.hwStatus = 0;
+    pfs.push_back(pf);
+    return pfs.back();
 }
 
 void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const {
