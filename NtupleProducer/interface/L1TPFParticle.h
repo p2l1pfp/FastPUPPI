@@ -19,11 +19,13 @@ namespace l1tpf {
                 caloSigma_(-999),
                 quality_(iQuality),
                 isPV_(iIsPV),
-                hOverE_(0.), chi2n_(0),
+                hOverE_(0.), rawEmEt_(-1), chi2n_(0),
                 alphaF_(alphaF),
                 alphaC_(alphaC),
                 puppiWeight_(puppiWeight) {}
 
+            virtual Particle *clone() const { return new Particle(*this); }
+    
             float dz() const { return dZ_; }
             float sigma() const { return sigma_; }  
             float caloEta() const { return caloEta_ == -999 ? eta() : caloEta_; }
@@ -49,6 +51,10 @@ namespace l1tpf {
                 if (hOverE_ == -1) return 0;
                 return pt() / ( 1 + hOverE_ );
             }
+            float rawEmEt() const { 
+                return rawEmEt_ == -1 ? emEt() : rawEmEt_;
+            }
+
             // for L1Tk
             float normalizedChi2() const { return chi2n_; }
 
@@ -71,6 +77,7 @@ namespace l1tpf {
             /// -1 if E is zero.
             void setHOverE(float hOverE) { hOverE_ = hOverE; }
 
+            void setRawEmEt(float rawEmEt) { rawEmEt_ = rawEmEt; }
             // for L1Tk
             void setNormalizedChi2(float normalizedChi2) { chi2n_ = normalizedChi2; }
 
@@ -92,7 +99,7 @@ namespace l1tpf {
             float caloEta_, caloPhi_, caloSigma_;
             float quality_;
             int isPV_;
-            float hOverE_, chi2n_;
+            float hOverE_, rawEmEt_, chi2n_;
             float alphaF_, alphaC_, puppiWeight_;
     }; // class
 } // namespace
