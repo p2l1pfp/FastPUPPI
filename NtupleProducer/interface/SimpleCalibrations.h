@@ -16,18 +16,35 @@ namespace l1tpf {
                     etas.insert(etas.end(), etaBins.begin(), etaBins.end());
                     scales.insert(scales.end(), scale.begin(), scale.end());
                     offsets.insert(offsets.end(), offset.begin(), offset.end());
+                    if (cpset.existsAs<std::vector<double>>("ptMin")) {
+                        std::vector<double> ptMin = cpset.getParameter<std::vector<double>>("ptMin");
+                        ptMins.insert(ptMins.end(), ptMin.begin(), ptMin.end());
+                    } else {
+                        float ptMin = cpset.existsAs<double>("ptMin") ? cpset.getParameter<double>("ptMin") : 0;
+                        ptMins = std::vector<float>(etaBins.size(), ptMin);
+                    }
+                    if (cpset.existsAs<std::vector<double>>("ptMax")) {
+                        std::vector<double> ptMax = cpset.getParameter<std::vector<double>>("ptMax");
+                        ptMaxs.insert(ptMaxs.end(), ptMax.begin(), ptMax.end());
+                    } else {
+                        ptMaxs = std::vector<float>(etaBins.size(), 1e6);
+                    }
                 }
             }
             
             bool empty() const { return etas.empty(); }
             float operator()(float pt, float abseta) const {
                 for (unsigned int i = 0, n = etas.size(); i < n; ++i) {
-                    if (abseta < etas[i]) return (pt - offsets[i])/scales[i];
+                    if (pt > ptMaxs[i]) continue;
+                    if (abseta < etas[i]) {
+                        if (pt < ptMins[i]) return (pt/ptMins[i])*(ptMins[i] - offsets[i])/scales[i];
+                        return (pt - offsets[i])/scales[i];
+                    }
                 }
                 return pt;
             }
         protected:
-            std::vector<float> etas, scales, offsets;
+            std::vector<float> etas, scales, offsets, ptMins, ptMaxs;
     };
     class SimpleCorrHad {
         public:
@@ -43,12 +60,27 @@ namespace l1tpf {
                     emfs.insert(emfs.end(), emfBins.begin(), emfBins.end());
                     scales.insert(scales.end(), scale.begin(), scale.end());
                     offsets.insert(offsets.end(), offset.begin(), offset.end());
+                    if (cpset.existsAs<std::vector<double>>("ptMin")) {
+                        std::vector<double> ptMin = cpset.getParameter<std::vector<double>>("ptMin");
+                        ptMins.insert(ptMins.end(), ptMin.begin(), ptMin.end());
+                    } else {
+                        float ptMin = cpset.existsAs<double>("ptMin") ? cpset.getParameter<double>("ptMin") : 0;
+                        ptMins = std::vector<float>(etaBins.size(), ptMin);
+                    }
+                    if (cpset.existsAs<std::vector<double>>("ptMax")) {
+                        std::vector<double> ptMax = cpset.getParameter<std::vector<double>>("ptMax");
+                        ptMaxs.insert(ptMaxs.end(), ptMax.begin(), ptMax.end());
+                    } else {
+                        ptMaxs = std::vector<float>(etaBins.size(), 1e6);
+                    }
                 }
             }
             
             bool empty() const { return etas.empty(); }
             float operator()(float pt, float abseta, float emf) const {
                 unsigned int i = 0, n = emfs.size();
+                // step 0 get to the right pt bin
+                while(i < n && pt > ptMaxs[i]) i++;
                 // step 1: find the first emf bin for this eta
                 while (i < n && abseta > etas[i]) i++;
                 if (i == n) {
@@ -63,10 +95,11 @@ namespace l1tpf {
                 } 
                 //printf("for pt %7.2f eta %4.2f emf %4.2f will use bin %d eta [ * , %4.2f ] emf [ * , %4.2f ] offset = %+5.2f scale=%.3f -> corr pt %7.2f\n",
                 //        pt, abseta, emf, i, etas[i], emfs[i], offsets[i], scales[i], (pt-offsets[i])/scales[i]);
-                return (pt-offsets[i])/scales[i]; 
+                if (pt < ptMins[i]) return (pt/ptMins[i])*(ptMins[i] - offsets[i])/scales[i];
+                return (pt - offsets[i])/scales[i];
             } 
         protected:
-            std::vector<float> etas, emfs, scales, offsets;
+            std::vector<float> etas, emfs, scales, offsets, ptMins, ptMaxs;
     };
     class SimpleResol { 
         public:
@@ -80,6 +113,19 @@ namespace l1tpf {
                     etas.insert(etas.end(), etaBins.begin(), etaBins.end());
                     scales.insert(scales.end(), scale.begin(), scale.end());
                     offsets.insert(offsets.end(), offset.begin(), offset.end());
+                    if (cpset.existsAs<std::vector<double>>("ptMin")) {
+                        std::vector<double> ptMin = cpset.getParameter<std::vector<double>>("ptMin");
+                        ptMins.insert(ptMins.end(), ptMin.begin(), ptMin.end());
+                    } else {
+                        float ptMin = cpset.existsAs<double>("ptMin") ? cpset.getParameter<double>("ptMin") : 0;
+                        ptMins = std::vector<float>(etaBins.size(), ptMin);
+                    }
+                    if (cpset.existsAs<std::vector<double>>("ptMax")) {
+                        std::vector<double> ptMax = cpset.getParameter<std::vector<double>>("ptMax");
+                        ptMaxs.insert(ptMaxs.end(), ptMax.begin(), ptMax.end());
+                    } else {
+                        ptMaxs = std::vector<float>(etaBins.size(), 1e6);
+                    }
                     std::string skind = cpset.getParameter<std::string>("kind");
                     if      (skind == "track") kind = Track;
                     else if (skind == "calo")  kind = Calo;
@@ -88,10 +134,14 @@ namespace l1tpf {
             }
             float operator()(const float pt, const float abseta) const { 
                 for (unsigned int i = 0, n = etas.size(); i < n; ++i) {
+                    if (pt > ptMaxs[i]) continue;
                     if (abseta < etas[i]) {
                         switch(kind) {
-                            case Track: return pt * std::min<float>(1.f, std::hypot(pt*scales[i]*0.001,offsets[i])); 
+                            case Track: 
+                                return pt * std::min<float>(1.f, std::hypot(pt*scales[i]*0.001,offsets[i])); 
                             case Calo:  return std::min<float>(pt,pt*scales[i]+offsets[i]); 
+                                if (pt < ptMins[i]) return pt * std::min<float>(1,scales[i]+offsets[i]/ptMins[i]);
+                                return std::min<float>(pt,pt*scales[i]+offsets[i]);
                         }
                     }
                 }
@@ -99,7 +149,7 @@ namespace l1tpf {
             } 
             bool empty() const { return etas.empty(); }
         protected:
-            std::vector<double> etas, offsets, scales; 
+            std::vector<float> etas, offsets, scales, ptMins, ptMaxs; 
             enum Kind { Calo, Track };
             Kind kind;
     };
