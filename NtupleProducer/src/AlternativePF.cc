@@ -17,12 +17,16 @@ PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
     debug_ = iConfig.getUntrackedParameter<int>("altDebug", debug_);
     edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
     drMatchEm_ = linkcfg.getParameter<double>("trackEmDR");
+    ptMinFracMatchEm_ = linkcfg.getParameter<double>("trackEmPtMinFrac");
     drMatchEmHad_ = linkcfg.getParameter<double>("emCaloDR");
     caloReLinkStep_ = linkcfg.getParameter<bool>("caloReLink");
     caloReLinkDr_ = linkcfg.getParameter<double>("caloReLinkDR");
     caloReLinkThreshold_ = linkcfg.getParameter<double>("caloReLinkThreshold");
     sumTkCaloErr2_ = linkcfg.getParameter<bool>("sumTkCaloErr2");
     ecalPriority_ = linkcfg.getParameter<bool>("ecalPriority");
+    tightTrackMinStubs_ = linkcfg.getParameter<unsigned>("tightTrackMinStubs");
+    tightTrackMaxChi2_  = linkcfg.getParameter<double>("tightTrackMaxChi2");
+    tightTrackMaxInvisiblePt_ = linkcfg.getParameter<double>("tightTrackMaxInvisiblePt");
 }
 
 void PFAlgo3::runPF(Region &r) const {
@@ -37,8 +41,8 @@ void PFAlgo3::runPF(Region &r) const {
         printf("ALT \t N(track) %3lu   N(em) %3lu   N(calo) %3lu\n", r.track.size(), r.emcalo.size(), r.calo.size());
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             const auto & tk = r.track[itk]; 
-            printf("ALT \t track %3d: pt %7.2f +- %5.2f  vtx eta %+5.2f  vtx phi %+5.2f  calo eta %+5.2f  calo phi %+5.2f calo ptErr %7.2f\n", 
-                                itk, tk.floatPt(), tk.floatPtErr(), tk.floatVtxEta(), tk.floatVtxPhi(), tk.floatEta(), tk.floatPhi(), tk.floatCaloPtErr());
+            printf("ALT \t track %3d: pt %7.2f +- %5.2f  vtx eta %+5.2f  vtx phi %+5.2f  calo eta %+5.2f  calo phi %+5.2f calo ptErr %7.2f stubs %2d chi2 %7.1f\n", 
+                                itk, tk.floatPt(), tk.floatPtErr(), tk.floatVtxEta(), tk.floatVtxPhi(), tk.floatEta(), tk.floatPhi(), tk.floatCaloPtErr(), int(tk.hwStubs), tk.hwChi2*0.1f);
         }
         for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
             const auto & em = r.emcalo[iem];
@@ -72,10 +76,11 @@ void PFAlgo3::runPF(Region &r) const {
         float drbest = drMatchEmHad_;
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
             const auto & calo = r.calo[ic]; 
+            if (calo.floatEmPt() < ptMinFracMatchEm_*em.floatPt()) continue;
             float dr = floatDR(calo, em);
             if (dr < drbest) { em2calo[iem] = ic; drbest = dr; }
         }
-        if (debug_ && em2calo[iem] != -1) printf("ALT \t EM    %3d (pt %7.2f) matches to calo %3d (pt %7.2f) with dr %.3f\n", iem, em.floatPt(), em2calo[iem], em2calo[iem] == -1 ? 0.0 : r.calo[em2calo[iem]].floatPt(), drbest );
+        if (debug_ && em2calo[iem] != -1) printf("ALT \t EM    %3d (pt %7.2f) matches to calo %3d (pt %7.2f, empt %7.2f) with dr %.3f\n", iem, em.floatPt(), em2calo[iem], em2calo[iem] == -1 ? 0.0 : r.calo[em2calo[iem]].floatPt(), em2calo[iem] == -1 ? 0.0 : r.calo[em2calo[iem]].floatEmPt(), drbest );
     }
 
     /// ------------- next step (needs the previous) ----------------
@@ -155,17 +160,22 @@ void PFAlgo3::runPF(Region &r) const {
     }
 
     // subtract EM component from Calo clusters for all photons and electrons (within tracker coverage)
-    // kill clusters that end up below their own uncertainty, or that loose 90% of the energy
+    // kill clusters that end up below their own uncertainty, or that loose 90% of the energy,
+    // unless they still have live EM clusters pointing to them
     for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
         auto & calo = r.calo[ic]; 
         float pt0 = calo.floatPt(), ept0 = calo.floatEmPt(), pt = pt0, ept = ept0;
+        bool keepme = false;
         for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
             if (em2calo[iem] == ic) {
                 const auto & em = r.emcalo[iem];
                 if (em.isEM) {
-                    if (debug_) printf("ALT \t EM    %3d (pt %7.2f) subtracted from calo %3d (pt %7.2f)\n", iem, em.floatPt(), ic, calo.floatPt());
+                    if (debug_) printf("ALT \t EM    %3d (pt %7.2f) is  subtracted from calo %3d (pt %7.2f)\n", iem, em.floatPt(), ic, calo.floatPt());
                     pt  -= em.floatPt();
                     ept -= em.floatPt();
+                } else {
+                    keepme = true;
+                    if (debug_) printf("ALT \t EM    %3d (pt %7.2f) not subtracted from calo %3d (pt %7.2f), and calo marked to be kept after EM subtraction\n", iem, em.floatPt(), ic, calo.floatPt());
                 }
             }
         }
@@ -173,7 +183,7 @@ void PFAlgo3::runPF(Region &r) const {
             if (debug_) printf("ALT \t calo  %3d (pt %7.2f +- %7.2f) has a subtracted pt of %7.2f, empt %7.2f -> %7.2f\n", ic, calo.floatPt(), calo.floatPtErr(), pt, ept0, ept);
             calo.setFloatPt(pt);
             calo.setFloatEmPt(ept);
-            if (pt < calo.floatPtErr() || pt < 0.1*pt0 || (calo.isEM && ept < 0.1*ept0)) {
+            if (!keepme && (pt < calo.floatPtErr() || pt < 0.1*pt0 || (calo.isEM && ept < 0.1*ept0))) {
                 if (debug_) printf("ALT \t calo  %3d (pt %7.2f)    ----> discarded\n", ic, calo.floatPt());
                 calo.used = true;
                 calo.setFloatPt(pt0); discardCalo(r, calo, 1);  // log this as discarded, for debugging
@@ -198,6 +208,17 @@ void PFAlgo3::runPF(Region &r) const {
             if (dr < drbest) { tk2calo[itk] = ic; drbest = dr; }
         }
         if (debug_ && tk2calo[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to calo %3d (pt %7.2f) with dr %.3f\n", itk, tk.floatPt(), tk2calo[itk], tk2calo[itk] == -1 ? 0.0 : r.calo[tk2calo[itk]].floatPt(), drbest );
+        // now we re-do this for debugging sake, it may be done for real later
+        if (debug_ && tk2calo[itk] == -1) {
+            int ibest = -1; drbest = 0.3;
+            for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
+                auto & calo = r.calo[ic]; 
+                if (calo.used) continue;
+                float dr = floatDR(tk, calo);
+                if (dr < drbest) { ibest = ic; drbest = dr; }
+            }
+            if (ibest != -1) printf("ALT \t track %3d (pt %7.2f) would match to calo %3d (pt %7.2f) with dr %.3f if the pt min and dr requirement had been relaxed\n", itk, tk.floatPt(), ibest, r.calo[ibest].floatPt(), drbest );
+        }
     }
 
     /// ------------- next step (needs the previous) ----------------
@@ -226,13 +247,15 @@ void PFAlgo3::runPF(Region &r) const {
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         auto & tk = r.track[itk]; 
         if (tk2calo[itk] != -1 || tk.muonLink || tk.used) continue;
-        if (tk.floatPt() < maxInvisiblePt_) {
+        float maxPt = (tk.hwStubs >= tightTrackMinStubs_ && tk.hwChi2 > 0.1*tightTrackMaxChi2_) ? tightTrackMaxInvisiblePt_ : maxInvisiblePt_;
+        if (tk.floatPt() < maxPt) {
             if (debug_) printf("ALT \t track %3d (pt %7.2f) not matched to calo, kept as charged hadron\n", itk, tk.floatPt());
-            addTrackToPF(r, tk);
+            auto &p = addTrackToPF(r, tk);
+            p.hwStatus = GoodTK_NoCalo;
             tk.used = true;
         } else {
             if (debug_) printf("ALT \t track %3d (pt %7.2f) not matched to calo, dropped\n", itk, tk.floatPt());
-            discardTrack(r, tk, 1); // log this as discarded, for debugging
+            discardTrack(r, tk, BadTK_NoCalo); // log this as discarded, for debugging
         }
     }
 
@@ -337,21 +360,25 @@ void PFAlgo3::runPF(Region &r) const {
         if (calo.hwFlags == 1) {
             // can do weighted average if there's just one track
             if (calo2ntk[tk2calo[itk]] == 1) { 
+                p.hwStatus = GoodTK_Calo_TkPt;
                 float ptavg = tk.floatPt();
                 if (tk.floatPtErr() > 0) {
                     float wcalo = 1.0/std::pow(tk.floatCaloPtErr(), 2);
                     float wtk   = 1.0/std::pow(tk.floatPtErr(), 2);
                     ptavg = ( calo.floatPt() * wcalo + tk.floatPt() * wtk ) / (wcalo + wtk );
+                    p.hwStatus = GoodTK_Calo_TkCaloPt;
                 }
                 p.setFloatPt(ptavg);
                 if (debug_) printf("ALT \t track %3d (pt %7.2f +- %7.2f) combined with calo %3d (pt %7.2f +- %7.2f (from tk) yielding candidate of pt %7.2f\n", 
                                     itk, tk.floatPt(), tk.floatPtErr(), tk2calo[itk], calo.floatPt(), tk.floatCaloPtErr(), ptavg );
             } else {
+                p.hwStatus = GoodTK_Calo_TkPt;
                 if (debug_) printf("ALT \t track %3d (pt %7.2f) linked to calo %3d promoted to charged hadron\n", itk, tk.floatPt(), tk2calo[itk]);
             }
         } else if (calo.hwFlags == 2) {
             // must rescale
             p.setFloatPt(tk.floatPt() * calo2alpha[tk2calo[itk]]); 
+            p.hwStatus = GoodTk_Calo_CaloPt;
             if (debug_) printf("ALT \t track %3d (pt %7.2f) linked to calo %3d promoted to charged hadron with pt %7.2f after rescaling\n", itk, tk.floatPt(), tk2calo[itk], p.floatPt());
         }
     }

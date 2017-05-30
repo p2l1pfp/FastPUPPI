@@ -326,12 +326,10 @@ if __name__ == "__main__":
             sels.append(("%s_eta_%02.0f_%02.0f" % (particle,10*etamin,10*etamax), "abs(mc_eta) > %s && abs(mc_eta) < %s && %s" % (etamin,etamax,pdgIdCut)))
 
     tree = ROOT.TChain("ntuple/tree")
-    print args
     for a in args[:]:
         if a.endswith(".root"): 
             tree.Add(a)
             args.remove(a)
-    print args
     odir = args[0] # "plots/910pre2/test"
     os.system("mkdir -p "+odir)
     os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));

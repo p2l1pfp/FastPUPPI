@@ -64,7 +64,8 @@ for iev,event in enumerate(events):
     print "Gen jets in the event:"
     for j in allGenJ:
         if abs(j.eta()) > 2.5: continue
-        if j.mcId != 1 or j.pt() < 20: continue
+        #if j.mcId != 1 or j.pt() < 20: continue
+        if j.pt() < 20: continue
         print "------------------------"     
         print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
         daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
