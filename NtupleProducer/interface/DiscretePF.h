@@ -60,6 +60,7 @@ namespace l1tpf_int {
       int32_t  hwVtxPhi;
       bool     hwCharge;
       int16_t  hwZ0;
+      uint16_t hwChi2, hwStubs;
       uint16_t hwFlags;
       static constexpr float INVPT_SCALE   = 2E4;    // 1%/pt @ 100 GeV is 2 bits 
       static constexpr float VTX_PHI_SCALE = 1/2.5E-6; // 5 micro rad is 2 bits

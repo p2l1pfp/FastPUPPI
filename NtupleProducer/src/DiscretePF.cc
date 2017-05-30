@@ -39,6 +39,9 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
     PropagatedTrack prop;
     prop.fillInput(t.pt(), t.eta(), t.phi(), t.charge(), t.dz(), 0);
     prop.fillPropagated(t.pt(), t.sigma(), t.caloSigma(), t.caloEta(), t.caloPhi(), 0);
+    float ndf = 2*t.quality()-4;
+    prop.hwChi2  = round(t.normalizedChi2()*ndf*10);
+    prop.hwStubs = round(t.quality());
     for (Region &r : regions_) {
         if (r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi())) {
             r.track.push_back(prop);
@@ -59,6 +62,7 @@ void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
 }
 
 void RegionMapper::addCalo( const l1tpf::Particle &p ) { 
+    if (p.pt() == 0) return;
     CaloCluster calo;
     calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
@@ -68,6 +72,7 @@ void RegionMapper::addCalo( const l1tpf::Particle &p ) {
     } 
 }
 void RegionMapper::addEmCalo( const l1tpf::Particle &p ) { 
+    if (p.pt() == 0) return;
     CaloCluster calo;
     calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
