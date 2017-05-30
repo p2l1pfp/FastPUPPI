@@ -76,12 +76,14 @@ corrector::corrector(const std::string iFile, int iNFrac, double iFracMax, int d
   if (debug) std::cout << "Read " << ngraphs << " graphs from " << iFile << " in " << timer.realTime() << " s"  << std::endl; 
 }
 double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) { 
+  assert(iPhi >= 1 && iPhi <= 72);
   if(fNFrac == 1  && iEcal       < 0.5 ) return 0;
   if(fNFrac >  1  && iTotal      < 1.0 ) return 0; 
   double fEcal  = 0; if(iEcal  > 0) fEcal  = iEcal; 
   double fTotal = 0; if(iTotal > 0) fTotal = iTotal; 
   if(iEcal < 0) fEcal = 0;
-  if(abs(iEta) > fNEta/2-1 || iPhi < 1 || iPhi > fNPhi-1) return fTotal; //overflow
+  //std::cout << "for iTotal = " << iTotal << " iEcal = " << iEcal << " iEta " << iEta << " iPhi " << iPhi << std::endl;
+  if(abs(iEta) > fNEta/2-1) return fTotal; //overflow
   if(fEcal > fTotal) fTotal = fEcal;
   double lFrac = fEcal/(fTotal); 
   int    lIFrac=int(floor(lFrac*(fNFrac-1)));
@@ -95,6 +97,7 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
     throw cms::Exception("RuntimeError") << "Error trying to read calibration [" << lIEta << "][" << lIPhi << "][" << lIFrac << "] for iTotal = " << iTotal << " iEcal = " << iEcal << " iEta " << iEta << " iPhi " << iPhi << std::endl;
   }
   double fPtCorr = (fGraph[lIEta][lIPhi][lIFrac])->Eval(fTotal);
+  //std::cout << "      got " << fPtCorr << std::endl;
   fPtCorr = std::min(4.*(fTotal),fPtCorr); // Just in case there is a bug don't go overboard
   if(fPtCorr < (iTotal > 0 ? 1. : 0.5)) fPtCorr = 0;
   ///======> Tuned parameters for optimal MET resolution
