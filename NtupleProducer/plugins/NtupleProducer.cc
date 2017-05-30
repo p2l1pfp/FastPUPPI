@@ -73,6 +73,7 @@ public:
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
   const unsigned int CorrectorEmfBins_;
+  const double CorrectorEmfMax_;
   const std::string ECorrectorTag_;
   const std::string TrackResTag_;
   const std::string EleResTag_;
@@ -148,6 +149,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
   CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
+  CorrectorEmfMax_      (iConfig.getParameter<double>("correctorEmfMax")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
   TrackResTag_          (getFilePath(iConfig,"trackres")),
   EleResTag_            (getFilePath(iConfig,"eleres")),
@@ -169,8 +171,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fTrkInfoTree          (0)
 {
   //now do what ever other initialization is needed
-  corrector_  = new corrector(CorrectorTag_,CorrectorEmfBins_,fDebug);
-  ecorrector_ = new corrector(ECorrectorTag_,1,fDebug);
+  corrector_  = new corrector(CorrectorTag_,CorrectorEmfBins_,CorrectorEmfMax_,fDebug);
+  ecorrector_ = new corrector(ECorrectorTag_,1,1.0,fDebug);
   connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_,fDebug);
   rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_);
   simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm");
@@ -254,10 +256,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   rawconnector_->clear();
   l1regions_.clear(); 
   /// ----------------TRACK INFO-------------------
-  edm::Handle<std::vector<l1tpf::Particle>> l1tks;
-  iEvent.getByLabel(L1TrackTag_, l1tks);
+  edm::Handle<std::vector<l1tpf::Particle>> hl1tks;
+  iEvent.getByLabel(L1TrackTag_, hl1tks);
+  std::vector<l1tpf::Particle> l1tks(*hl1tks);
   trkNum = 0;
-  for (l1tpf::Particle tk : *l1tks) { // no const & since we modify it to set the sigma
+  for (l1tpf::Particle & tk : l1tks) { // no const & since we modify it to set the sigma
       // the combiner knows the sigma, the track producer doesn't
       if (simpleResolTrk_.empty()) {
           tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); 
@@ -301,9 +304,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   }
   
   /// ----------------Muon INFO-------------------
-  edm::Handle<std::vector<l1tpf::Particle>> l1mus;
-  iEvent.getByToken(TokMuonTPTag_, l1mus);
-  for (l1tpf::Particle mu : *l1mus) { // no const & since we modify it to set the sigma
+  edm::Handle<std::vector<l1tpf::Particle>> hl1mus;
+  iEvent.getByToken(TokMuonTPTag_, hl1mus);
+  std::vector<l1tpf::Particle> l1mus(*hl1mus);
+  for (l1tpf::Particle & mu : l1mus) { // no const & since we modify it to set the sigma
       mu.setSigma(connector_->getTrkRes(mu.pt(), mu.eta(), mu.phi()));  // this needs to be updated with the muon resolutions!      
       connector_->addMuon(mu);
       l1regions_.addMuon(mu);

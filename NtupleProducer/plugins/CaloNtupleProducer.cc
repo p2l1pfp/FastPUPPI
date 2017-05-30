@@ -66,6 +66,7 @@ public:
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
   const unsigned int CorrectorEmfBins_;
+  const double CorrectorEmfMax_;
   const std::string ECorrectorTag_;
 
 private:
@@ -123,9 +124,10 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
   CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
+  CorrectorEmfMax_      (iConfig.getParameter<double>("correctorEmfMax")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
-  corrector_            (new corrector(CorrectorTag_,CorrectorEmfBins_,iConfig.getUntrackedParameter<int>("debug",0))),
-  ecorrector_           (new corrector(ECorrectorTag_,1,iConfig.getUntrackedParameter<int>("debug",0))),
+  corrector_            (new corrector(CorrectorTag_,CorrectorEmfBins_,CorrectorEmfMax_,iConfig.getUntrackedParameter<int>("debug",0))),
+  ecorrector_           (new corrector(ECorrectorTag_,1,1.0,iConfig.getUntrackedParameter<int>("debug",0))),
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),

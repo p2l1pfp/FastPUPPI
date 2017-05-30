@@ -17,6 +17,7 @@ CaloInfoOut = cms.EDProducer('CaloNtupleProducer',
          corrector   = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
          ecorrector  = cms.string("FastPUPPI/NtupleProducer/data/ecorr.root"),
          correctorEmfBins = cms.uint32(11),
+         correctorEmfMax  = cms.double(0.8),
          caloClusterer = cms.PSet(
             ecal = cms.PSet(
                 zsEt = cms.double(0.4),

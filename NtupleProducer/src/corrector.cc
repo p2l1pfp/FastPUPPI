@@ -13,10 +13,11 @@
 #include <unordered_map>
 #include <cassert>
 
-corrector::corrector(const std::string iFile, int iNFrac, int debug) :
+corrector::corrector(const std::string iFile, int iNFrac, double iFracMax, int debug) :
     fNEta(l1tpf::towerNEta()),
     fNPhi(l1tpf::towerNPhi(1)),
-    fNFrac(iNFrac)
+    fNFrac(iNFrac),
+    fFracMax(iFracMax)
 {
   TFile *lFile = TFile::Open(iFile.c_str());
   assert(lFile);
@@ -50,10 +51,10 @@ corrector::corrector(const std::string iFile, int iNFrac, int debug) :
       fGraph[i0][i1] = new TGraph*[fNFrac];
       for(int i2 = 0; i2 < fNFrac; i2++) { 
         if (etaAxis) {
-            float eta = std::abs(l1tpf::towerEta(i0-fNEta/2));
+            float eta = std::min(std::abs(l1tpf::towerEta(i0-fNEta/2)), 4.999f);
             int   etaBin = std::min(std::max(etaAxis->FindBin(eta), 1), index->GetNbinsX());
             if (emfAxis) {
-                float emf = 0.1*i2;
+                float emf = i2/float(fNFrac-1);
                 int   emfBin = std::min(std::max(emfAxis->FindBin(emf), 1), index->GetNbinsY());
                 if (eta > 3.0) emfBin = 1; // no EMF bins in HF
                 snprintf(buff, 1022, "eta_bin%d_emf_bin%d", etaBin, emfBin);
@@ -83,7 +84,7 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   if(abs(iEta) > fNEta/2-1 || iPhi < 1 || iPhi > fNPhi-1) return fTotal; //overflow
   if(fEcal > fTotal) fTotal = fEcal;
   double lFrac = fEcal/(fTotal); 
-  int    lIFrac=int(lFrac*(fNFrac-1));
+  int    lIFrac=int(floor(lFrac*(fNFrac-1)));
   int lIEta = iEta+fNEta/2;
   int lIPhi = iPhi-1;
   if(lIFrac > fNFrac-1) lIFrac = 0; 
@@ -95,9 +96,9 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   }
   double fPtCorr = (fGraph[lIEta][lIPhi][lIFrac])->Eval(fTotal);
   fPtCorr = std::min(4.*(fTotal),fPtCorr); // Just in case there is a bug don't go overboard
-  if(fPtCorr < 1.) fPtCorr = 0;
+  if(fPtCorr < (iTotal > 0 ? 1. : 0.5)) fPtCorr = 0;
   ///======> Tuned parameters for optimal MET resolution
-  if(iTotal > 0 && lFrac > 0.8) return fTotal;   //Use just Ecal correction for Hi Ecal composition
+  if(iTotal > 0 && lFrac > fFracMax) return fTotal;   //Use just Ecal correction for Hi Ecal composition
   //if(fabs(l1tpf::towerEta(iEta)) > 3.0) fPtCorr *= 0.66;//
   //if(fabs(l1tpf::towerEta(iEta)) > 2.853 && fabs(l1tpf::towerEta(iEta)) < 3.1 && iHcal > 4.) fPtCorr = 0;
   return fPtCorr;
