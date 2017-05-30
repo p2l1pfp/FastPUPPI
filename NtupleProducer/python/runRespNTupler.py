@@ -108,6 +108,57 @@ def useClusters():
             process.CaloInfoOut.caloClusterer.linker.useCorrectedEcal = False
             process.InfoOut.CaloClusterTags = [ cms.InputTag('CaloInfoOut','uncalibrated'), cms.InputTag('l1tPFHGCalProducerFrom3DTPs') ]
             process.InfoOut.correctCaloEnergies = False # to become True when calibration will be available
+def haveFun():
+    process.CaloInfoOutBackup = process.CaloInfoOut.clone()
+    process.InfoOutBackup = process.InfoOut.clone()
+    process.l1tPFHGCalProducerFrom3DTPsEM = cms.EDProducer('GetEMPart',
+            src = cms.InputTag('l1tPFHGCalProducerFrom3DTPs'),
+    )
+    process.ntuple.objects.TPEcal  = [ cms.InputTag('l1tPFHGCalProducerFrom3DTPsEM'),cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters'), ]
+    process.CaloInfoOut.EcalTPTags = [ cms.InputTag('l1tPFHGCalProducerFrom3DTPsEM'),cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters'), ]
+    process.InfoOut.CaloClusterTags = [ cms.InputTag('CaloInfoOut','uncalibrated'), ]
+    process.InfoOut.EmClusterTags   = [ cms.InputTag('l1tPFHGCalProducerFrom3DTPsEM'),cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters'), ]
+    process.InfoOut.linking.trackEmDR = cms.double(0.1)
+    process.InfoOut.linking.emCaloDR  = cms.double(0.1)
+    process.InfoOut.linking.altAlgo = cms.string("PFAlgo3")
+    process.InfoOut.linking.caloReLink  = cms.bool(False)
+    process.InfoOut.linking.caloReLinkDR = cms.double(0.3)
+    process.InfoOut.linking.caloReLinkThreshold = cms.double(0.5)
+    process.InfoOut.linking.sumTkCaloErr2 = cms.bool(True)
+    process.InfoOut.linking.ecalPriority = cms.bool(True)
+    process.InfoOut.linking.trackCaloNSigmaHigh = 1.2
+    process.AltPFCharged = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPF"), cut = cms.string("charge != 0"))
+    process.AltPFPhoton  = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPF"), cut = cms.string("pdgId == 22"))
+    process.ntuple.objects.AltEcal = cms.VInputTag("InfoOut:L1EmCalo",)
+    process.ntuple.objects.AltPF = cms.VInputTag("InfoOut:AltPF",)
+    process.ntuple.objects.AltPuppi = cms.VInputTag("InfoOut:AltPuppi",)
+    process.ntuple.objects.AltPFCharged = cms.VInputTag("AltPFCharged",)
+    process.ntuple.objects.AltPFPhoton = cms.VInputTag("AltPFPhoton",)
+    process.AltPFDiscTrack = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge != 0 && status == 1"))
+    process.AltPFDiscCaloT = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 0"))
+    process.AltPFDiscCaloG = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 1"))
+    process.AltPFDiscEm    = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 2"))
+    process.ntuple.objects.AltPFDiscTrack = cms.VInputTag("AltPFDiscTrack",)
+    process.ntuple.objects.AltPFDiscCaloT = cms.VInputTag("AltPFDiscCaloT",)
+    process.ntuple.objects.AltPFDiscCaloG = cms.VInputTag("AltPFDiscCaloG",)
+    process.ntuple.objects.AltPFDiscEm = cms.VInputTag("AltPFDiscEm",)
+    process.p.replace(process.CaloInfoOut, process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut)
+    process.p.replace(process.ntuple, process.AltPFCharged + process.AltPFPhoton + process.ntuple)
+    process.p.replace(process.ntuple, process.AltPFDiscTrack + process.AltPFDiscCaloT + process.AltPFDiscCaloG + process.AltPFDiscEm + process.ntuple)
+    for M in process.InfoOut, process.CaloInfoOut:
+        if hasattr(M, 'simpleCorrEm'):  del M.simpleCorrEm
+        if hasattr(M, 'simpleCorrHad'): del M.simpleCorrHad
+        #M.correctorEmfMax  = 0.875
+        #M.correctorEmfBins = 9
+        M.correctorEmfMax  = 1.0
+        M.correctorEmfBins = 11
+    process.InfoOut.correctCaloEnergies = True
+    process.InfoOut.rawEmCaloPtMin = cms.double(0.5)
+    process.InfoOut.rawCaloPtMin   = cms.double(1.0)
+def addBH():
+    process.ntuple.objects.TPHcal += [ 'l1tPFHGCalBHProducerFromOfflineRechits:towers' ] 
+    process.ntuple.objects.TPCalo += [ 'l1tPFHGCalBHProducerFromOfflineRechits:towers' ] 
+    process.CaloInfoOut.HcalTPTags += [ 'l1tPFHGCalBHProducerFromOfflineRechits:towers' ]
 def goRegional(inParallel=False):
     regions = cms.VPSet(
             cms.PSet(
@@ -135,20 +186,56 @@ def goRegional(inParallel=False):
     else:
         process.InfoOut.regions = regions
 if False:
+    process.CaloInfoOutBackup = process.CaloInfoOut.clone()
+    process.InfoOutBackup = process.InfoOut.clone()
+    process.p.replace(process.CaloInfoOut, process.CaloInfoOutBackup + process.CaloInfoOut)
+    process.p.replace(process.InfoOut, process.InfoOutBackup + process.InfoOut)
     #goGun(); 
-    tmpCalib(); tmpResol(); newLink();
-    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion0_NoPU_job42.root']
-    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_SinglePion_NoPU_job42.root']
-    process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517/inputs_17D_TTbar_NoPU_job1.root']
+    haveFun(); 
+    addBH();
+    #tmpCalib(); tmpResol(); newLink();
+    #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_SinglePion0_PU0_job42.root']
+    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_SinglePion_PU0_job42.root']
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root']
+    #process.source.fileNames = ['/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_SingleTau_PU0_job42.root']
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),
     )
     process.e = cms.EndPath(process.out)
-    process.maxEvents.input = 50
+    #process.source.skipEvents = cms.untracked.uint32(10)
+    process.maxEvents.input = 10
     process.MessageLogger.cerr.FwkReport.reportEvery = 1
-    if False:
-        #process.source.fileNames = [ 'file:l1pf_remade.root' ]
+    process.InfoOut.altDebug = cms.untracked.int32(1)
+    #process.InfoOutNRL = process.InfoOut.clone()
+    #process.InfoOutNRL.linking.caloReLink  = cms.bool(False)
+    #process.p.replace(process.InfoOut, process.InfoOutNRL + process.InfoOut)
+    if True:
+        #process.CaloInfoOut.debug = cms.untracked.int32(1)
         process.TFileService.fileName = cms.string("respTupleNew_1.root")
         process.out.fileName = cms.untracked.string("l1pf_remade_1.root")
-        process.source.eventsToProcess = cms.untracked.VEventRange("1:6315:307280")
-    process.InfoOut.debug = 1
+        process.source.eventsToProcess = cms.untracked.VEventRange("1:71:2999",)
+        process.InfoOut.debugEta = cms.untracked.double(-1.1)
+        process.InfoOut.debugPhi = cms.untracked.double(+0.7)
+        process.InfoOut.debugR   = cms.untracked.double(0.5)
+    if False:
+        process.InfoOut.regions = cms.VPSet(
+                cms.PSet(
+                    etaBoundaries = cms.vdouble(-5.5,-3),
+                    phiSlices = cms.uint32(1),
+                    etaExtra = cms.double(0.2),
+                    phiExtra = cms.double(0.2),
+                ),
+                cms.PSet(
+                    etaBoundaries = cms.vdouble(-3,-1.3,1.3,3),
+                    phiSlices = cms.uint32(3),
+                    etaExtra = cms.double(0.2),
+                    phiExtra = cms.double(0.2),
+                ),
+                cms.PSet(
+                    etaBoundaries = cms.vdouble(3,5.5),
+                    phiSlices = cms.uint32(1),
+                    etaExtra = cms.double(0.2),
+                    phiExtra = cms.double(0.2),
+                ),
+        )
+

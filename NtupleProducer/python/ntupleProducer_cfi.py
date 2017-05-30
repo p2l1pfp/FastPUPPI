@@ -36,8 +36,10 @@ InfoOut = cms.EDProducer('NtupleProducer',
 if True:
     InfoOut.simpleResolHad = cms.PSet(
             etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
-            offset  = cms.vdouble( 3.522,  0.078,  2.071,  1.708,  1.148, -0.265),
-            scale   = cms.vdouble( 0.124,  0.494,  0.183,  0.257,  0.162,  0.428),
+            offset  = cms.vdouble( 3.749,  3.026,  2.611,  1.638,  1.231,  1.817),
+            scale   = cms.vdouble( 0.122,  0.269,  0.138,  0.246,  0.213,  0.219),
+            ptMin   = cms.vdouble( 10.00,  10.00,  10.00,  10.00,  10.00,  10.00),
+            ptMax   = cms.vdouble(999999, 999999, 999999, 999999, 999999, 999999),
             kind    = cms.string('calo'),
             )
     InfoOut.simpleResolEm = cms.PSet(
