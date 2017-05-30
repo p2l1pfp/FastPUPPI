@@ -42,7 +42,7 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 #include <FastPUPPI/NtupleProducer/interface/L1TPFUtils.h>
-//#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 //#include "CommonTools/Utils/interface/StringObjectFunction.h"
 
 #include <cstdint>
@@ -59,13 +59,16 @@ namespace {
     class MultiCollection {
         public:
             MultiCollection(const edm::ParameterSet &iConfig, const std::string &name, edm::ConsumesCollector && coll) :
-                name_(name),prop_(false)
+                name_(name),prop_(false),sel_("")
             {
                 if      (name.find("Ecal") != std::string::npos) prop_ = true;
                 else if (name.find("Hcal") != std::string::npos) prop_ = true;
                 else if (name.find("Calo") != std::string::npos) prop_ = true;
                 const std::vector<edm::InputTag> & tags = iConfig.getParameter< std::vector<edm::InputTag>>(name);
                 for (const auto & tag : tags) tokens_.push_back(coll.consumes<reco::CandidateView>(tag));
+                if (iConfig.existsAs<std::string>(name+"_sel")) {
+                    sel_ = StringCutObjectSelector<reco::Candidate>(iConfig.getParameter<std::string>(name+"_sel"), true);
+                }
             }
             const std::string & name() const { return name_; }
             bool  prop() const { return prop_; }
@@ -74,7 +77,7 @@ namespace {
                 for (const auto & token : tokens_) {
                     iEvent.getByToken(token, handle);
                     for (const reco::Candidate & c : *handle) {
-                        objects_.emplace_back(c.pt(), c.eta(), c.phi());
+                        if (sel_(c)) objects_.emplace_back(c.pt(), c.eta(), c.phi());
                     }
                 }
                 std::sort(objects_.begin(), objects_.end());
@@ -85,6 +88,7 @@ namespace {
             std::string name_;
             bool prop_;
             std::vector<edm::EDGetTokenT<reco::CandidateView>> tokens_;
+            StringCutObjectSelector<reco::Candidate> sel_;
             std::vector<SimpleObject> objects_;
     };
     class InCone {

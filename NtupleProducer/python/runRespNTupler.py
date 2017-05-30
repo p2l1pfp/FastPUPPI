@@ -86,16 +86,14 @@ if True:
     process.ntuple.objects.ChGenAcc = cms.VInputTag(cms.InputTag("chGenInAcceptance"))
     process.ntuple.objects.PhGenAcc = cms.VInputTag(cms.InputTag("phGenInAcceptance"))
     process.p = cms.Path(process.genInAcceptance + process.chGenInAcceptance + process.phGenInAcceptance + process.p._seq)
-    process.L1PFCharged  = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:PF"),   cut = cms.string("charge != 0"))
-    process.L1IPFCharged = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:L1PF"), cut = cms.string("charge != 0"))
-    process.L1PFPhoton  = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:PF"),   cut = cms.string("pdgId == 22"))
-    process.L1IPFPhoton = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:L1PF"), cut = cms.string("pdgId == 22"))
-    process.ntuple.objects.L1PFCharged = cms.VInputTag("L1PFCharged",)
-    process.ntuple.objects.L1IPFCharged = cms.VInputTag("L1IPFCharged",)
-    process.ntuple.objects.L1PFPhoton = cms.VInputTag("L1PFPhoton",)
-    process.ntuple.objects.L1IPFPhoton = cms.VInputTag("L1IPFPhoton",)
-    process.p.replace(process.ntuple, process.L1PFCharged + process.L1IPFCharged + process.L1PFPhoton + process.L1IPFPhoton + process.ntuple)
-
+    process.ntuple.objects.L1PFCharged = cms.VInputTag("InfoOut:PF",)
+    process.ntuple.objects.L1PFCharged_sel = cms.string("charge != 0")
+    process.ntuple.objects.L1PFPhoton = cms.VInputTag("InfoOut:PF",)
+    process.ntuple.objects.L1PFPhoton_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.L1IPFCharged = cms.VInputTag("InfoOut:L1PF",)
+    process.ntuple.objects.L1IPFCharged_sel = cms.string("charge != 0")
+    process.ntuple.objects.L1IPFPhoton = cms.VInputTag("InfoOut:L1PF",)
+    process.ntuple.objects.L1IPFPhoton_sel = cms.string("pdgId == 22")
 def goGun():
     process.ntuple.isParticleGun = True
 def useClusters():
@@ -114,6 +112,7 @@ def haveFun():
     process.l1tPFHGCalProducerFrom3DTPsEM = cms.EDProducer('GetEMPart',
             src = cms.InputTag('l1tPFHGCalProducerFrom3DTPs'),
     )
+    process.p.replace(process.CaloInfoOut, process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut)
     process.ntuple.objects.TPEcal  = [ cms.InputTag('l1tPFHGCalProducerFrom3DTPsEM'),cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters'), ]
     process.CaloInfoOut.EcalTPTags = [ cms.InputTag('l1tPFHGCalProducerFrom3DTPsEM'),cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters'), ]
     process.InfoOut.CaloClusterTags = [ cms.InputTag('CaloInfoOut','uncalibrated'), ]
@@ -127,24 +126,23 @@ def haveFun():
     process.InfoOut.linking.sumTkCaloErr2 = cms.bool(True)
     process.InfoOut.linking.ecalPriority = cms.bool(True)
     process.InfoOut.linking.trackCaloNSigmaHigh = 1.2
-    process.AltPFCharged = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPF"), cut = cms.string("charge != 0"))
-    process.AltPFPhoton  = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPF"), cut = cms.string("pdgId == 22"))
     process.ntuple.objects.AltEcal = cms.VInputTag("InfoOut:L1EmCalo",)
     process.ntuple.objects.AltPF = cms.VInputTag("InfoOut:AltPF",)
     process.ntuple.objects.AltPuppi = cms.VInputTag("InfoOut:AltPuppi",)
-    process.ntuple.objects.AltPFCharged = cms.VInputTag("AltPFCharged",)
-    process.ntuple.objects.AltPFPhoton = cms.VInputTag("AltPFPhoton",)
-    process.AltPFDiscTrack = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge != 0 && status == 1"))
-    process.AltPFDiscCaloT = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 0"))
-    process.AltPFDiscCaloG = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 1"))
-    process.AltPFDiscEm    = cms.EDFilter("CandViewSelector", src = cms.InputTag("InfoOut:AltPFDiscarded"), cut = cms.string("charge == 0 && status == 2"))
-    process.ntuple.objects.AltPFDiscTrack = cms.VInputTag("AltPFDiscTrack",)
-    process.ntuple.objects.AltPFDiscCaloT = cms.VInputTag("AltPFDiscCaloT",)
-    process.ntuple.objects.AltPFDiscCaloG = cms.VInputTag("AltPFDiscCaloG",)
-    process.ntuple.objects.AltPFDiscEm = cms.VInputTag("AltPFDiscEm",)
-    process.p.replace(process.CaloInfoOut, process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut)
-    process.p.replace(process.ntuple, process.AltPFCharged + process.AltPFPhoton + process.ntuple)
-    process.p.replace(process.ntuple, process.AltPFDiscTrack + process.AltPFDiscCaloT + process.AltPFDiscCaloG + process.AltPFDiscEm + process.ntuple)
+    process.ntuple.objects.AltPFCharged = cms.VInputTag("InfoOut:AltPF",)
+    process.ntuple.objects.AltPFPhoton  = cms.VInputTag("InfoOut:AltPF",)
+    process.ntuple.objects.AltPFCharged_sel = cms.string("charge != 0")
+    process.ntuple.objects.AltPFPhoton_sel  = cms.string("pdgId == 22")
+    process.ntuple.objects.AltPFChargedScaled = cms.VInputTag("InfoOut:AltPF",)
+    process.ntuple.objects.AltPFChargedScaled_sel = cms.string("charge != 0 && status == 2")
+    process.ntuple.objects.AltPFDiscTrack = cms.VInputTag("InfoOut:AltPFDiscarded",)
+    process.ntuple.objects.AltPFDiscCaloT = cms.VInputTag("InfoOut:AltPFDiscarded",)
+    process.ntuple.objects.AltPFDiscCaloG = cms.VInputTag("InfoOut:AltPFDiscarded",)
+    process.ntuple.objects.AltPFDiscEm    = cms.VInputTag("InfoOut:AltPFDiscarded",)
+    process.ntuple.objects.AltPFDiscTrack_sel = cms.string("charge != 0 && status == 1")
+    process.ntuple.objects.AltPFDiscCaloT_sel = cms.string("charge == 0 && status == 0")
+    process.ntuple.objects.AltPFDiscCaloG_sel = cms.string("charge == 0 && status == 1")
+    process.ntuple.objects.AltPFDiscEm_sel    = cms.string("charge == 0 && status == 2")
     for M in process.InfoOut, process.CaloInfoOut:
         if hasattr(M, 'simpleCorrEm'):  del M.simpleCorrEm
         if hasattr(M, 'simpleCorrHad'): del M.simpleCorrHad
