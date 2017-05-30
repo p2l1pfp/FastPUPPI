@@ -40,6 +40,7 @@ if __name__ == "__main__":
     parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
     parser.add_option("--xpt", "--xpt", dest="xpt",  default=("mc_pt","p_{T}^{gen}"), nargs=2)
     parser.add_option("--coarse-eta", dest="coarseEta", default=False, action="store_true")
+    parser.add_option("--semicoarse-eta", dest="semiCoarseEta", default=False, action="store_true")
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
@@ -47,6 +48,7 @@ if __name__ == "__main__":
     parser.add_option("--fitrange", dest="fitrange", nargs=2, default=(0,999), type="float")
     parser.add_option("--emf-slices", dest="emfSlices", nargs=2, default=None)
     parser.add_option("-r","--resolution", dest="resolution", default=False, action="store_true")
+    parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
     options, args = parser.parse_args()
     selparticles = options.particle.split(",") if options.particle else []
     sels = []; 
@@ -80,6 +82,9 @@ if __name__ == "__main__":
         elif options.coarseEta:
             etas = [ 1.5, 3.0, 5.0 ]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+        elif options.semiCoarseEta:
+            etas = [ 1.5, 3.0, 3.5, 3.8, 4.2, 4.4, 4.7, 5.0 ]
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
@@ -87,7 +92,7 @@ if __name__ == "__main__":
                 etas = [ 1.3, 1.7, 2.5, 3.0, 4.0, 5.0 ]
             else:
                 etas = [ 1.3, 1.7, 2.8, 3.2, 4.0, 5.0 ]
-            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) ]
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         else: 
             for ieta in range(0,50,5):
                 if ieta*0.1 >= options.etaMax: break
@@ -141,7 +146,9 @@ if __name__ == "__main__":
         print "Plotting ",oname
         if "electron" in oname or "muon" in oname or "pi" in oname:
             cut += " && abs(mc_iso04) < 0.05" # isolated
-        prof, pres = doRespPt(oname,tree,options.what,options.expr,cut,mcpt=options.mcpt,xpt=options.xpt[0],fitopt="WQ0C EX0",fitrange=(ptmin,ptmax))
+        prof, pres = doRespPt(oname,tree,options.what,options.expr,cut,mcpt=options.mcpt,xpt=options.xpt[0],fitopt="WNQ0C EX0",fitrange=(ptmin,ptmax))
+        profg = getattr(prof,'gaus',None) if prof and options.gauss else None
+        presg = getattr(pres,'gaus',None) if pres and options.gauss else None
         if options.resolution:
             if not pres or not getattr(pres,'fit',None):
                 offsets.append(8.0)
@@ -159,70 +166,112 @@ if __name__ == "__main__":
                 offsets.append(prof.fit.GetParameter(0))
                 scales.append(prof.fit.GetParameter(1))
                 if scales[-1] == 0: scales[-1] = 1
-        for p in prof, pres:
+        for p in prof, pres, profg, presg:
             if not p: continue
             if getattr(p,'fit',None):
                 p.fit.SetLineWidth(2); p.fit.SetLineColor(2)
                 if options.ptbins:
                     p.fit.SetRange(ptmin,ptmax)
             p.SetLineWidth(3); p.SetLineColor(1);  p.SetMarkerColor(1)
-        for plot,ptype,pfix in (prof,"response","_resp"),(pres,"resolution","_resol"):
+        for plot,ptype,pfix in (prof,"response","_resp"),(pres,"resolution","_resol"),(profg,"response","_resp_gaus"),(presg,"resolution","_resol_gaus"):
                 if not plot: continue
                 frame = ROOT.TH1F("stk","stk",100,0.0,250.0 if "jet" in oname else 100.0)
                 frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                 frame.GetYaxis().SetDecimals(True)
                 if "resolution" in ptype:
                     frame.GetYaxis().SetTitle("#sigma_{eff}(p_{T}^{corr})/p_{T}^{corr}")
-                    frame.GetYaxis().SetRangeUser(0.008,10.0)
-                    c1.SetLogy(True)
+                    frame.SetMaximum(1.0)
+                    #frame.GetYaxis().SetRangeUser(0.008,2.0)
+                    #c1.SetLogy(True)
                 else:
                     frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
-                    frame.GetYaxis().SetRangeUser(0,1.6)
-                    c1.SetLogy(False)
+                    #frame.GetYaxis().SetRangeUser(0,1.6)
+                    frame.SetMaximum(1.6)
+                    #c1.SetLogy(False)
                 frame.Draw()
+                line = ROOT.TLine()
+                line.SetLineStyle(7)
                 if "resolution" not in ptype:
-                    line = ROOT.TLine()
-                    line.SetLineStyle(7)
                     line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),1)
                     line.DrawLine(0.0,.25,frame.GetXaxis().GetXmax(),0.25)
-                    if ptmin > 0:   line.DrawLine(ptmin,0.0,ptmin,1.6)
-                    if ptmax < 999: line.DrawLine(ptmax,0.0,ptmax,1.6)
+                if ptmin > 0:   line.DrawLine(ptmin,0.0,ptmin,frame.GetMaximum())
+                if ptmax < 999: line.DrawLine(ptmax,0.0,ptmax,frame.GetMaximum())
                 plot.Draw("P SAME" if "TGraph" in plot.ClassName() else "SAME")
                 if hasattr(plot,'fit'): plot.fit.Draw("SAME")
                 if options.ptbins: pfix += "_ptbin%d" % (iptbin+1)
                 out = odir+'/'+oname+pfix+"-"+options.what+".png"
                 c1.Print(out)
-                del frame
                 if options.rootfile and ptype == "response":
+                    tfout.WriteTObject(plot.Clone(oname),oname)
                     etaval = 0.999*etas[ipoint][1]
                     etabin = tfout.index.GetXaxis().FindBin(etaval)
                     if options.emfSlices:
                         emfval = 0.999*emfbins[ipoint] if etaval < 3.0 else 0
                         emfbin = tfout.index.GetYaxis().FindBin(emfval)
-                        print "%s is in eta bin %d (%.2f, %.2f) emf bin %d (%.2f, %.2f)" % (out, etabin, tfout.index.GetXaxis().GetBinLowEdge(etabin), tfout.index.GetXaxis().GetBinUpEdge(etabin), emfbin, tfout.index.GetYaxis().GetBinLowEdge(emfbin),  tfout.index.GetYaxis().GetBinUpEdge(emfbin))
-                        pclone = plot.Clone("eta_bin%d_emf_bin%d" % (etabin,emfbin))
+                        pname = "eta_bin%d_emf_bin%d" % (etabin,emfbin)
                     else:
-                        print "%s is in eta bin %d (%.2f, %.2f)" % (out, etabin, tfout.index.GetXaxis().GetBinLowEdge(etabin), tfout.index.GetXaxis().GetBinUpEdge(etabin))
-                        pclone = plot.Clone("eta_bin%d" % etabin)
-                    ## simple inversion, computed with reco pt, doesn't close well
-                    #for i in xrange(pclone.GetN()):
-                    #    ratio = pclone.GetY()[i]
-                    #    corr = 1 if ratio == 0 else 1/ratio
-                    #    if   corr > 4:   corr = 4
-                    #    elif corr < 0.5: corr = 0.5
-                    #    pclone.SetPoint(i, pclone.GetX()[i], corr);
-                    ## more fancy inversion
-                    # make a clean reco vs gen plot
-                    for i in xrange(pclone.GetN()):
-                        pclone.SetPoint(i, pclone.GetX()[i], pclone.GetX()[i]*pclone.GetY()[i]);
-                    # invert the plot
-                    for i in xrange(pclone.GetN()):
-                        pclone.SetPoint(i, pclone.GetY()[i], pclone.GetX()[i]);
+                        pname = "eta_bin%d" % etabin
+                   ### simple inversion
+                   # pclone = plot.Clone(pname)
+                   # # make a reco vs gen plot
+                   # for i in xrange(pclone.GetN()):
+                   #     pclone.SetPoint(i, pclone.GetX()[i], pclone.GetX()[i]*pclone.GetY()[i]);
+                   # # invert the plot
+                   # for i in xrange(pclone.GetN()):
+                   #     pclone.SetPoint(i, pclone.GetY()[i], pclone.GetX()[i]);
+                   ### fancy inversion
+                    pclone = ROOT.TGraph(); pclone.SetName(pname)
+                    points = []
+                    for i in xrange(150,0,-1):
+                        genpt = i+ 1.5
+                        if genpt > options.fitrange[0]: corr = plot.fit.Eval(genpt)
+                        elif genpt > plot.GetX()[0]:    corr = plot.Eval(genpt)
+                        else:                           corr = plot.GetY()[0]
+                        recopt = genpt * max(0.25, corr)
+                        if len(points) and recopt > points[-1][0]: 
+                            continue # avoid going backwards
+                        points.append((recopt,genpt))    
+                    pclone = ROOT.TGraph(len(points)); pclone.SetName(pname)
+                    for i,(recopt,genpt) in enumerate(points):
+                        pclone.SetPoint(i, recopt, genpt)
                     pclone.Sort()
-                    #for i in xrange(pclone.GetN()):
-                    #    corr = pclone.GetY()[i]/pclone.GetX()[i] if pclone.GetX()[i] else 1
-                    #    pclone.SetPoint(i, pclone.GetX()[i], );
                     tfout.WriteTObject(pclone)
+                    presp = pclone.Clone()
+                    for i in xrange(presp.GetN()):
+                        presp.SetPoint(i, presp.GetX()[i], min(presp.GetY()[i]/presp.GetX()[i] if presp.GetX()[i] > 0 else 1.0, 4));
+                    frame.GetXaxis().SetTitle("p_{T}^{rec} (GeV)")
+                    frame.GetYaxis().SetTitle("p_{T}^{corr}/p_{T}^{rec}")
+                    frame.GetYaxis().SetRangeUser(0,4.0)
+                    frame.Draw()
+                    presp.SetMarkerStyle(7); presp.SetLineWidth(2);
+                    presp.Draw("PLX SAME")
+                    line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),1)
+                    out = odir+'/'+oname+pfix+"-"+options.what+"_corr.png"
+                    c1.Print(out)
+                    frame.GetYaxis().SetTitle("p_{T}^{corr} (GeV)")
+                    frame.GetYaxis().SetRangeUser(0.0, 150.0)
+                    frame.Draw() 
+                    pextra = ROOT.TGraph(199)
+                    for i in xrange(200):
+                        pextra.SetPoint(i, 0.5*(i+1), pclone.Eval(0.5*(i+1)))
+                    pextra.SetLineColor(ROOT.kGray+1); pextra.SetMarkerColor(ROOT.kGray+1) 
+                    pextra.SetLineWidth(2); pextra.SetMarkerStyle(6); pextra.Draw("PXL SAME")
+                    pclone.SetMarkerStyle(8); pclone.Draw("PX SAME")
+                    tf1 = ROOT.TF1("_p1","pol1", 0, 100)
+                    pclone.Fit(tf1, "WNQ0C EX0", "", 20, 100)
+                    tf1.SetRange(0, 100)
+                    tf1.SetLineWidth(3)
+                    tf1.SetLineColor(ROOT.kGreen+2)
+                    tf1.Draw("SAME")
+                    out = odir+'/'+oname+pfix+"-"+options.what+"_corr1.png"
+                    c1.Print(out)
+                    frame.GetYaxis().SetRangeUser(0.0, 15.0)
+                    frame.GetXaxis().SetRangeUser(0.0, 7.0)
+                    out = odir+'/'+oname+pfix+"-"+options.what+"_corr1z.png"
+                    
+                    c1.Print(out)
+                del frame
+ 
     if options.ptbins:
         # convert to string
         sptMins = ["% 6.2f" % b[0] for b in ptbins]

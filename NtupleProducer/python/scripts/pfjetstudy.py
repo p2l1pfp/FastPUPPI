@@ -24,6 +24,7 @@ events = Events(args[0])
 
 ihpf = Handle("std::vector<l1tpf::Particle>")
 hpf  = Handle("std::vector<reco::PFCandidate>")
+hop  = Handle("edm::OwnVector<reco::Candidate>")
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 
@@ -75,6 +76,8 @@ for iev,event in enumerate(events):
             print "        dau pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum) 
         print "   total pt from charged particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() != 0 and d.pt() > 2 and abs(d.eta()) < 2.5)
         print "   total pt from neutral particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pt() > 1)
+        print "   total pt from photons           in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() == 22 and d.pt() > 1)
+        print "   total pt from other neutrals    in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() != 22 and d.pt() > 1)
         print "   total pt from any     particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.pt() > (2 if d.charge() != 0 else 1))
         print ""
         
@@ -83,7 +86,9 @@ for iev,event in enumerate(events):
         a_tomatch = c_tomatch + n_tomatch
 
         for a in args[1:]:
-            h = ihpf if a.startswith("l1t") else hpf
+            if a.startswith("l1t"): h = ihpf
+            elif "InfoOut" in a: h = hpf
+            else: h = hop
             event.getByLabel(a, h)
             print "   --> ",a
             matches = [ p for p in h.product() if deltaR(p,j) < 0.5 ]
@@ -116,6 +121,11 @@ for iev,event in enumerate(events):
                 for g in gen_notused:
                     d, dr2 = bestMatch(g, rematch)
                     if dr2 < 0.01: mcmatch[d].append(g) 
+            elif "Calo" in a: 
+                mcmatch =  dict((d,[]) for d in matches )
+                for g in a_tomatch:
+                    d, dr2 = bestMatch(g, matches)
+                    if dr2 < 0.02: mcmatch[d].append(g)
             for d in matches:
                 if d.dr < 0.4: ptsum += d.pt()
                 print "        cand  pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum),
@@ -123,7 +133,7 @@ for iev,event in enumerate(events):
                     g, dr2 = bestMatch(d, c_tomatch)
                     if (dr2 < .01): print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
                     else:           print " --> unmatched",
-                elif "PF" in a:
+                elif "PF" in a or "Calo" in a:
                         incone = mcmatch[d]
                         if len(incone) == 0:
                             print " --> unmatched",
@@ -139,6 +149,8 @@ for iev,event in enumerate(events):
             if "PF" in a:
                 print "   total charged pt within 0.4: %7.2f" % sum(d.pt() for d in charged if d.dr < 0.4)
                 print "   total neutral pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4)
+                print "   total photon  pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4 and d.pdgId() == 22)
+                print "   total neu had pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4 and d.pdgId() != 22)
 
             print ""
     print "\n========================\n"     

@@ -13,11 +13,18 @@ fi;
 if [[ "$1" == "--01" ]]; then
     MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/010517
     shift;
+elif [[ "$1" == "--21" ]]; then
+    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/210517
+    shift;
 elif [[ "$1" == "--phil" ]]; then
     MAIN=/eos/cms/store/cmst3/user/pharris/L1PF/inputs/$INPUT/
     PREFIX=""
     shift;
 fi;
+clean=true
+if [[ "$1" == "--noclean" ]]; then
+    clean=false;
+fi
 
 #~gpetrucc/pl/cmsSplit.pl --files "$MAIN/${INPUT}/inputs_17D*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh && bash ${CODE}_${OUTPUT}_cleanup.sh
-~gpetrucc/pl/cmsSplit.pl --files "$MAIN/${PREFIX}*${INPUT}*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh && bash ${CODE}_${OUTPUT}_cleanup.sh
+~gpetrucc/pl/cmsSplit.pl --files "$MAIN/${PREFIX}*${INPUT}*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh && $clean && bash ${CODE}_${OUTPUT}_cleanup.sh

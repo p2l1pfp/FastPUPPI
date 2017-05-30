@@ -30,9 +30,9 @@ def quantiles(yswz):
         l68 = median - rms
     return (median,l68,u68)
 
-def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0):
+def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0, maxEntries=999999999):
     ys = [[] for ieta in xrange(etabins)]
-    npoints = tree.Draw("("+expr+")/mc_pt:abs(mc_eta)", cut, "");
+    npoints = tree.Draw("("+expr+")/mc_pt:abs(mc_eta)", cut, "", maxEntries);
     if npoints <= 0: return None
     graph = ROOT.gROOT.FindObject("Graph");
     xi, yi = graph.GetX(), graph.GetY()
@@ -52,28 +52,28 @@ def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0):
         #ret.SetPointError(ieta, 0.5*etamax/etabins, 0.5*etamax/etabins, (median-lo),(hi-median))
         ret.SetPointError(ipoint, 0.5*etamax/etabins, 0.5*etamax/etabins, (median-lo)/sqrt(len(ys[ieta])),(hi-median)/sqrt(len(ys[ieta])))
     return ret
-def doEtaProf(oname, tree, name, expr, cut):
-    tree.Draw(expr+":abs(mc_eta)>>"+name+"(20,0,5.0)", cut, "PROF");
+def doEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
+    tree.Draw(expr+":abs(mc_eta)>>"+name+"(20,0,5.0)", cut, "PROF", maxEntries);
     return ROOT.gROOT.FindObject(name);
-def doRespEtaProf(oname, tree, name, expr, cut):
-    return doEtaProf("("+expr+")/mc_pt");
+def doRespEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
+    return doEtaProf("("+expr+")/mc_pt", maxEntries=maxEntries);
 def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250]
     else:
         return [2.5,5,7.5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100]
-def doPtProf(oname, tree, name, expr, cut):
+def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     ptbins = ptBins(oname)
     ROOT.gROOT.cd()
     prof = ROOT.gROOT.FindObject(name)
     if prof: del prof
     prof = ROOT.TProfile(name,name,len(ptbins),array('f',[0]+ptbins))
-    tree.Draw(expr+":mc_pt>>"+name, cut, "PROF");
+    tree.Draw(expr+":mc_pt>>"+name, cut, "PROF", maxEntries);
     return prof;
-def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999)):
+def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=False, fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999), maxEntries=999999999):
     ptbins = ptBins(oname)
     ys = [[] for ipt in ptbins]
-    npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "");
+    npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "", maxEntries);
     if npoints <= 0: return (None,None)
     graph = ROOT.gROOT.FindObject("Graph");
     xi, yi = graph.GetX(), graph.GetY()
@@ -85,7 +85,9 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
                 break
     ret = ROOT.TGraphAsymmErrors()
     ret.SetName(name)
-    resols = []
+    retg = ROOT.TGraphAsymmErrors()
+    retg.SetName(name+"_gauss")
+    resols, resolsg = [], []
     for ipt,ptmax in enumerate(ptbins):
         if len(ys[ipt]) == 0: continue
         ptmin = ptbins[ipt-1] if ipt else 0
@@ -97,13 +99,30 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
         ret.Set(ipoint+1)
         ret.SetPoint(ipoint, ptc, median)
         ret.SetPointError(ipoint, ptd, ptd, (median-lo)/sqrt(len(ys[ipt])),(hi-median)/sqrt(len(ys[ipt])))
+        ## Now we also try an approximate Gaussian fit
+        avg = median; rms2 = (hi - lo);
+        for niter in xrange(3):
+            truncated = [y for y in ys[ipt] if abs(y-avg) < rms2]
+            if len(truncated) <= 2: break
+            avg = sum(truncated)/len(truncated)
+            rms2 = 2*sqrt(sum((t-avg)**2 for t in truncated)/(len(truncated)-1))
+        retg.Set(ipoint+1)
+        retg.SetPoint(ipoint, ptc, avg)
+        retg.SetPointError(ipoint, ptd, ptd, 0.5*rms2/sqrt(len(ys[ipt])), 0.5*rms2/sqrt(len(ys[ipt])))
         if median > 0.2:
             resols.append((ptc,ptd,(hi-lo)/2,0))
             #print "for %s %s at pt ~ %6.1f  reco pt ~ %6.1f  [ %6.1f , %6.1f ]" % (oname,name, ptc, median, lo, hi)
+        if avg >  0.2:
+            resolsg.append((ptc,ptd,0.5*rms2,0))
     if ret.GetN() <= 3: return (None,None)
     tf1 = ROOT.TF1(name+"_f1","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    #tf1 = ROOT.TF1(name+"_f1","1/x++1++1/(x*x)", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
     ret.Fit(tf1, fitopt, "", fitrange[0], fitrange[1])
     ret.fit = tf1
+    tf1g = ROOT.TF1(name+"_f1g","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    retg.Fit(tf1g, fitopt, "", fitrange[0], fitrange[1])
+    retg.fit = tf1
+    ret.gaus = retg
     ## Now we do the approximate response corrected resolution
     scale = ret.fit.GetParameter(1)
     if scale < 0.1 or len(resols) < 3: return (ret,None)
@@ -113,12 +132,23 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
         resol.SetPoint(ipoint, ptc, res/scale)
         resol.SetPointError(ipoint, ptd, ptd, 0, 0)
     if ("Trk" in name or "TK" in name) and "jet" not in oname and "ele" not in oname:
-        rtf1 = ROOT.TF1(name+"_rf1","sqrt([0]*[0]+[1]*[1]*(x/1000)*(x/1000))", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+        rtf1 = ROOT.TF1(name+"_rf1","sqrt([0]*[0]+[1]*[1]*(x/1000)*(x/1000))", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
         rtf1.SetParameters(0.01, 1)
     else:
-        rtf1 = ROOT.TF1(name+"_rf1","1/x++1", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
-    resol.Fit(rtf1, fitopt+"W")
+        rtf1 = ROOT.TF1(name+"_rf1","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    resol.Fit(rtf1, fitopt+"W", "", fitrange[0], fitrange[1])
     resol.fit = rtf1
+    if len(resolsg) > 3:
+        resolg = ROOT.TGraphAsymmErrors(len(resolsg))
+        resolg.SetName(name+"_gauss_res")
+        for ipoint,(ptc,ptd,res,err) in enumerate(resolsg):
+            resolg.SetPoint(ipoint, ptc, res/scale)
+            resolg.SetPointError(ipoint, ptd, ptd, 0, 0)
+        resol.gaus = resolg
+        rtf1g = rtf1.Clone(name+"_rf1g")
+        resolg.Fit(rtf1g, fitopt+"W", "", fitrange[0], fitrange[1])
+        resolg.fit = rtf1g
+
     return (ret,resol)
 
 whats = [
@@ -150,8 +180,8 @@ whats = [
         ("L1C", "L1RawCaloC$", ROOT.kViolet+1, 34, 1.5),
     ]),
     ('OfflineInputs',[
-        ("Had",  "Hcal$+HGCalH$+HF$", ROOT.kAzure+1,  25, 2.0),
-        ("Em",   "Em$", ROOT.kGreen+2,  21, 1.5),
+        ("Had",  "Hcal$", ROOT.kAzure+1,  25, 2.0),
+        ("Em",   "Ecal$", ROOT.kGreen+2,  21, 1.5),
         ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
     ]),
     ('TPs',[
@@ -163,6 +193,7 @@ whats = [
     ('l1pf',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
+        ("Ecal",       "L1Ecal$",    ROOT.kGreen+1,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
@@ -185,7 +216,7 @@ whats = [
         ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+3,  20, 1.2),
         ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
         ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
-        ("PFPh",       "L1PFPhoton$",          ROOT.kGreen+1,  34, 1.2),
+        ("PFPh",       "L1PFPhoton$",           ROOT.kGreen+2,  34, 1.2),
         ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kGreen+3,  34, 1.2),
     ]),
     ('il1pf',[
@@ -195,6 +226,60 @@ whats = [
         ("iPF",         "L1IPF$",      ROOT.kOrange+7, 34, 1.2),
         ("iPuppi",      "L1IPuppi$",   ROOT.kGray+2, 25, 1.4),
     ]),
+    ('altpf',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
+        ("Ecal",       "AltEcal$",   ROOT.kGreen+1,  21, 1.7),
+        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
+        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
+        ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
+        #("PF",         "L1PF$",      ROOT.kGray+1, 34, 1.2),
+        ("APF",        "AltPF$",     ROOT.kOrange+7, 34, 1.2),
+        #("Puppi",      "L1Puppi$",   ROOT.kBlue+0, 25, 1.4),
+        ("APuppi",     "AltPuppi$",  ROOT.kBlue+2, 25, 1.4),
+    ]),
+    ('altpfdebug',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
+        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
+        ("TK",         "L1TK$",                 ROOT.kRed+1,    20, 1.2),
+        ("APF",         "AltPF$",                 ROOT.kOrange+7, 34, 1.2),
+        ("APFCh",       "AltPFCharged$",          ROOT.kGreen+1,  34, 1.2),
+        ("APFNh",       "AltPF$-AltPFCharged$",    ROOT.kGreen+3,  34, 1.2),
+    ]),
+    ('altpfdebug2',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
+        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
+        ("APF",         "AltPF$",                 ROOT.kOrange+7, 34, 1.2),
+        ("APFPh",       "AltPFPhoton$",          ROOT.kGreen+1,  34, 1.2),
+        ("APFNh",       "AltPF$-AltPFCharged$-AltPFPhoton$",    ROOT.kGreen+3,  34, 1.2),
+    ]),
+    ('altpfdebug3c',[
+        ("CH #times Acc",  "ChGenAcc$",      ROOT.kAzure+2,  20, 1.2),
+        ("TK",             "L1TK$",          ROOT.kRed+1,    20, 1.2),
+        ("APFCh",          "AltPFCharged$",  ROOT.kGreen+1,  34, 1.2),
+    ]),
+    ('altpfdebug3n',[
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+1,  20, 1.2),
+        ("APFNh",       "AltPF$-AltPFCharged$", ROOT.kGreen+3,  34, 1.2),
+        ("APFPh",       "AltPFPhoton$",          ROOT.kGreen+1,  34, 1.2),
+        ("APFNh",       "AltPF$-AltPFCharged$-AltPFPhoton$",    ROOT.kGreen+2,  34, 1.2),
+    ]),
+    ('altpfdebugD',[
+        ("D Track", "AltPFDiscTrack$",               ROOT.kViolet+1, 34, 1.5),
+        ("D Calo T",         "AltPFDiscCaloT$",                 ROOT.kOrange+7, 34, 1.2),
+        ("D Calo #gamma",       "AltPFDiscCaloG$",          ROOT.kGreen+1,  34, 1.2),
+        ("D Em",       "AltPFDiscEm$",    ROOT.kGreen+3,  34, 1.2),
+    ]),
+
+
+
+
 ]
 
 if __name__ == "__main__":
@@ -202,9 +287,16 @@ if __name__ == "__main__":
     parser = OptionParser("%(prog) infile [ src [ dst ] ]")
     parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
-    parser.add_option("-m", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
+    parser.add_option("--ptdef", dest="ptdef", default=None, help="Pt definition")
+    parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
+    parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
+    parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
+    parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
+    parser.add_option("-M", "--max-entries", dest="maxEntries",  default=999999999, type=int)
+    parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
+    parser.add_option("--xpt", "--xpt", dest="xpt",  default=("mc_pt","p_{T}^{gen}"), nargs=2)
     options, args = parser.parse_args()
     selparticles = options.particle.split(",") if options.particle else []
 
@@ -222,9 +314,13 @@ if __name__ == "__main__":
         ]:
         if options.particle and (particle not in selparticles): 
             continue
-        sels.append(("%s_pt_%2d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
+        if options.extracut:
+            particle += "_"+options.extracut[0]
+            pdgIdCut += " && ("+options.extracut[1]+")"
+        #sels.append(("%s_pt_%2d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
         etas = [ (0.0,1.3), (1.3,1.7), (1.7,2.5), (2.5,3.0), (3.0,5.0) ]
+        if options.eta: etas = [ options.eta ]
         for etamin, etamax in etas:
             if etamax > options.etaMax: break
             sels.append(("%s_eta_%02.0f_%02.0f" % (particle,10*etamin,10*etamax), "abs(mc_eta) > %s && abs(mc_eta) < %s && %s" % (etamin,etamax,pdgIdCut)))
@@ -261,8 +357,9 @@ if __name__ == "__main__":
                 ptdefs = [ "pt02", "pthighest" ]   
             if options.more:
                 ptdefs += [ "ptbest", "mindr025", "n025", "n010" ]
+            if options.ptdef: ptdefs = [ options.ptdef ]
             for ptdef in ptdefs:
-                resps = []; resols = [] 
+                resps = []; resols = []; gresps = []; gresols = [] 
                 for name,expr,col,msty,msiz in things:
                     exprptdef = expr.replace("$","_"+ptdef)
                     cutptdef = cut
@@ -276,26 +373,34 @@ if __name__ == "__main__":
                     if "Gen" in name and  "jet" not in oname: continue
                     if ptdef.startswith("pt"):
                         if "pt" in oname:
-                            prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef), None
+                            prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
                         else:
-                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef)
+                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries)
                     else:
                         if "pt" in oname:
-                            prof, pres = doEtaProf(oname,tree,name,exprptdef,cutptdef), None
+                            prof, pres = doEtaProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
                         else:
-                            prof, pres = doPtProf(oname,tree,name,exprptdef,cutptdef), None
+                            prof, pres = doPtProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
                         #print oname, kind, ptdef, name, prof, pres
-                    for (p,ps) in (prof,resps), (pres,resols):
+                    allplots = [(prof,resps), (pres,resols)]
+                    if options.gauss:
+                        if prof: allplots.append( (getattr(prof,'gaus',None),gresps) )
+                        if pres: allplots.append( (getattr(pres,'gaus',None),gresols) )
+                    for (p,ps) in allplots:
                         if not p: continue
                         if getattr(p,'fit',None):
                             p.fit.SetLineWidth(2); p.fit.SetLineColor(col)
                         p.SetLineWidth(3); p.SetLineColor(col);  p.SetMarkerColor(col)
                         p.SetMarkerStyle(msty); p.SetMarkerSize(msiz)
                         ps.append((name,p))
-                for plots,ptype,pfix in (resps,"response",""),(resols,"resolution","_res"):
-                    if ptype == "resolution" and options.noResol: continue
+                allplots = [ (resps,"response",""),(resols,"resolution","_res") ]
+                if options.gauss:
+                    allplots += [ (gresps, "response_gauss", "_gauss") ]
+                    allplots += [ (gresols, "resolution_gauss", "_res_gauss") ]
+                for plots,ptype,pfix in allplots:
+                    if "resolution" in ptype  and options.noResol: continue
                     if not plots: 
-                        if "_pt" in oname and ptype == "resolution" and ptdef.startswith("pt"): continue # not implemented
+                        if "_pt" in oname and ("resolution" in ptype) and ptdef.startswith("pt"): continue # not implemented
                         print "No ",ptype," plot for ", oname, ptdef 
                         continue
                     if "pt" in oname: 
@@ -320,7 +425,7 @@ if __name__ == "__main__":
                             else:
                                 frame.GetYaxis().SetTitle("< "+ptdef+" >")
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
-                        frame.GetXaxis().SetTitle("p_{T} (GeV)")
+                        frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                         leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.05*(len(plots)+0.5))
                         leg.SetTextSize(0.04);
                         leg.SetNColumns(2)
