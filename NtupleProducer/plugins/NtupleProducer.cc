@@ -41,6 +41,7 @@
 #include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
+#include "FastPUPPI/NtupleProducer/interface/AlternativePF.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -117,6 +118,8 @@ private:
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
   l1tpf_int::PFAlgo       l1pfalgo_;
+  // alternatives
+  std::unique_ptr<l1tpf_int::PFAlgo> altpfalgo_;
   // debug flag
   int fDebug;
   float fDebugEta, fDebugPhi, fDebugR;
@@ -190,6 +193,12 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
                                 linkcfg.getParameter<bool>("useTrackCaloSigma"),
                                 linkcfg.getParameter<bool>("rescaleUnmatchedTrack"),
                                 linkcfg.getParameter<double>("maxInvisiblePt"));
+    if (linkcfg.existsAs<std::string>("altAlgo")) {
+        auto algo = linkcfg.getParameter<std::string>("altAlgo");
+        if (algo == "PFAlgo3") {
+            altpfalgo_.reset(new l1tpf_int::PFAlgo3(iConfig));
+        }
+    }
   }
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;
@@ -232,6 +241,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<unsigned int>("maxNL1Calo");
   produces<unsigned int>("maxNL1PF");
   produces<unsigned int>("maxNL1Puppi");
+  if (altpfalgo_.get()) {
+      produces<PFOutputCollection>("AltPF");
+      produces<PFOutputCollection>("AltPFDiscarded");
+      produces<PFOutputCollection>("AltPuppi");
+  }
 }
 
 NtupleProducer::~NtupleProducer()
@@ -484,6 +498,39 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       isoanalyzer_->fill();
   }
 
+  if (altpfalgo_.get()) {
+      l1regions_.clear(); 
+      if (fDebugR <= 0) {
+          for (const l1tpf::Particle & tk : l1tks) { if(tk.pt() > trkPt_) l1regions_.addTrack(tk);  }
+          for (const l1tpf::Particle & mu : l1mus) { l1regions_.addMuon(mu); }
+          for (const l1tpf::Particle & calo : calos) { l1regions_.addCalo(calo); }
+          for (const l1tpf::Particle & calo : emcalos) { l1regions_.addEmCalo(calo); }
+      } else {
+          // pick only inputs in the debug cone
+          for (const l1tpf::Particle & tk : l1tks) { 
+            if(tk.pt() > trkPt_ && deltaR(tk.caloEta(),tk.caloPhi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addTrack(tk);  
+          }
+          for (const l1tpf::Particle & mu : l1mus) { l1regions_.addMuon(mu); }
+          for (const l1tpf::Particle & calo : calos) { if (deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addCalo(calo); }
+          for (const l1tpf::Particle & calo : emcalos) { if (deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addEmCalo(calo); }
+      }
+
+    
+      // run alternative PFs in each region
+      for (auto & l1region : l1regions_.regions()) {
+          altpfalgo_->runPF(l1region);
+          altpfalgo_->runPuppi(l1region, z0, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
+      }
+      std::vector<combiner::Particle> lAltPFCands   = l1regions_.fetch(false);
+      std::vector<combiner::Particle> lAltPupCands  = l1regions_.fetch(true);
+      addPF(lAltPFCands,  "AltPF"   ,iEvent);
+      addPF(lAltPupCands, "AltPuppi",iEvent);
+
+      std::vector<combiner::Particle> lAltPFDisc   = l1regions_.fetch(false,0.01,true);
+      addPF(lAltPFDisc,  "AltPFDiscarded"   ,iEvent);
+  }
+
+
 }
 void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string &iLabel, edm::Event& iEvent) { 
   std::unique_ptr<PFOutputCollection > corrCandidates( new PFOutputCollection );
@@ -497,6 +544,9 @@ void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string 
     if(iCandidates[i0].pdgId() == combiner::Particle::MU) id = reco::PFCandidate::ParticleType::mu;
     if(iCandidates[i0].pdgId() == combiner::Particle::CH || iCandidates[i0].pdgId() == combiner::Particle::EL)  pCharge = 1;
     if(iCandidates[i0].pdgId() == combiner::Particle::MU)  pCharge = iCandidates[i0].charge();
+    if (pCharge == 0 && (id !=  reco::PFCandidate::ParticleType::h0 && id != reco::PFCandidate::ParticleType::gamma)) {
+        std::cout << "ERROR for " << iLabel << " candidate id " << iCandidates[i0].pdgId()  << ", pt " << iCandidates[i0].pt()  << ", eta " << iCandidates[i0].eta() << " has charge zero" << std::endl;
+    }
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
     pCand.setStatus(iCandidates[i0].status());
     corrCandidates->push_back(pCand);
