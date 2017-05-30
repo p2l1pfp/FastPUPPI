@@ -423,6 +423,7 @@ std::unique_ptr<std::vector<l1tpf::Particle>> l1pf_calo::SimpleCaloLinker::fetch
                 ret->emplace_back(corrected ? cluster_[i].et_corr : cluster_[i].et, cluster_[i].eta, cluster_[i].phi, 0.0, photon ? 3 : 2);  
                 ret->back().setCaloEtaPhi(cluster_[i].eta, cluster_[i].phi);
                 ret->back().setHOverE( cluster_[i].ecal_et > 0 ? cluster_[i].hcal_et / cluster_[i].ecal_et : -1 );
+                ret->back().setRawEmEt( cluster_[i].ecal_et );
             }
         }
     }
