@@ -223,6 +223,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   }
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("TKVtx");
+  produces<float>("z0");
   produces<PFOutputCollection>("RawCalo");
   produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
@@ -447,6 +448,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(lTKVtxCands,"TKVtx" ,iEvent);
   addPF(lCands   ,"PF"      ,iEvent);
   addPF(lPupCands,"Puppi"   ,iEvent);
+  iEvent.put(std::make_unique<float>(z0), "z0");
 
   std::vector<combiner::Particle> ll1PFCands   = l1regions_.fetch(false);
   std::vector<combiner::Particle> ll1PupCands  = l1regions_.fetch(true);
@@ -567,6 +569,10 @@ void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string 
     }
     reco::PFCandidate pCand(pCharge,iCandidates[i0].p4(),id);
     pCand.setStatus(iCandidates[i0].status());
+    if (pCharge != 0) {
+        pCand.setVertex(reco::Particle::Point(0,0,iCandidates[i0].dz()));
+    }
+    pCand.set_mva_Isolated(iCandidates[i0].puppiWeight());
     corrCandidates->push_back(pCand);
   }
   //Fill!

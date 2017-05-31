@@ -93,6 +93,7 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin, bool d
             if (p.floatPt() > ptMin) {
                 ret.emplace_back( p.floatPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
                 ret.back().setStatus(p.hwStatus);
+                ret.back().setPuppiWeight(p.floatPuppiW());
             }
         }
     }

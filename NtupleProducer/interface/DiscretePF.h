@@ -153,6 +153,7 @@ namespace l1tpf_int {
       float floatVtxEta() const { return (track.hwPt > 0 ? track.floatVtxEta() : float(hwVtxEta) / CaloCluster::ETAPHI_SCALE); }
       float floatVtxPhi() const { return (track.hwPt > 0 ? track.floatVtxPhi() : float(hwVtxPhi) / CaloCluster::ETAPHI_SCALE); }
       float floatDZ() const { return float(track.hwZ0) / InputTrack::Z0_SCALE; }
+      float floatPuppiW() const { return float(hwPuppiWeight) / PUPPI_SCALE; }
       int intCharge()     const { return (track.hwPt > 0 ? track.intCharge() : 0); }
       void setPuppiW(float w) {
             hwPuppiWeight = std::round(w * PUPPI_SCALE);
