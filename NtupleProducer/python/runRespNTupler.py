@@ -107,8 +107,6 @@ def useClusters():
             process.InfoOut.CaloClusterTags = [ cms.InputTag('CaloInfoOut','uncalibrated'), cms.InputTag('l1tPFHGCalProducerFrom3DTPs') ]
             process.InfoOut.correctCaloEnergies = False # to become True when calibration will be available
 def haveFun():
-    process.CaloInfoOutBackup = process.CaloInfoOut.clone()
-    process.InfoOutBackup = process.InfoOut.clone()
     process.l1tPFHGCalProducerFrom3DTPsEM = cms.EDProducer('GetEMPart',
             src = cms.InputTag('l1tPFHGCalProducerFrom3DTPs'),
     )

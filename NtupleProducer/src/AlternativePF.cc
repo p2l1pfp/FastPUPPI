@@ -264,6 +264,7 @@ void PFAlgo3::runPF(Region &r) const {
     /// OPTIONAL STEP: try to recover split hadron showers (v1.0): 
     //     take hadrons that are not track matched, close by a hadron which has an excess of track pt vs calo pt 
     //     add this pt to the calo pt of the other cluster 
+    //     off by default, as it seems to not do much in jets even if it helps remove tails in single-pion events
     if (caloReLinkStep_) {
         std::vector<float> addtopt(r.calo.size(), 0);
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
