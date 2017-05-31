@@ -225,20 +225,14 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
 }
 
 void combiner::doVertexing(VertexAlgo algo, bool adaptiveCut){
-  // std::vector<Particle> fTkParticlesWVertexing;
   int lNBins = int(40./fVtxRes);
   if (algo == TPVtxAlgo) lNBins *= 3;
-  TH1F *h_dz = new TH1F("h_dz","h_dz",lNBins,-20,20); // 1cm binning
+  TH1F *h_dz = new TH1F("h_dz","h_dz",lNBins,-20,20); // 1 sigma binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
-  int ntracks = 0;
-  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
-    if (fParticles[i0].charge() == 0) continue;
-    ntracks++;
-    //if(fParticles[i0].quality() < 7) continue;
-    float curdz  = fParticles[i0].dz();
-    float curbin = h_dz->GetXaxis()->FindBin(curdz);
-    h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + std::min(fParticles[i0].pt(),50.) );
-   }
+  for (auto & particle : fTkParticles) {
+      if (particle.charge() == 0) continue;
+      h_dz->Fill( particle.dz(), std::min(particle.pt(),50.) );
+  }
   float pvdz = 0;
   switch(algo) {
     case OldVtxAlgo: {
@@ -255,7 +249,7 @@ void combiner::doVertexing(VertexAlgo algo, bool adaptiveCut){
       }; break;
   }
   fDZ = pvdz;
-  for (auto & particle : fParticles) {
+  for (auto & particle : fTkParticles) {
     if (particle.charge() == 0) continue;
     float ddz = std::abs(particle.dz() - pvdz);
     float sigmas = 1.5;
