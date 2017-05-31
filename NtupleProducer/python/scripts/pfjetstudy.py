@@ -27,6 +27,8 @@ hpf  = Handle("std::vector<reco::PFCandidate>")
 hop  = Handle("edm::OwnVector<reco::Candidate>")
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
+geno  = Handle("math::XYZPointF")
+recf  = Handle("float")
 
 for iev,event in enumerate(events):
     if iev >= options.events: break
@@ -59,7 +61,14 @@ for iev,event in enumerate(events):
         #nhall = sum(d.pt() for d in daus if d.charge() ==0 and d.pdgId() != 22)
         #nhpt1 = sum(d.pt() for d in daus if d.charge() ==0 and d.pdgId() != 22)
     allGenJ.sort(key = lambda j : - j.pt())
-    
+    event.getByLabel("genParticles:xyz0", geno)
+    gen_Z0 = geno.product().Z()
+   
+    rec_Z0 = 0;
+    event.getByLabel("InfoOut:z0", recf)
+    if recf.isValid():
+        rec_Z0 = recf.product()[0];
+        print "PV  generated %+7.3f  reconstructed %+7.3f  diff %+5.3f " % (gen_Z0, rec_Z0, rec_Z0-gen_Z0)
 
     print "Gen jets in the event:"
     for j in allGenJ:
@@ -97,7 +106,7 @@ for iev,event in enumerate(events):
             matches.sort(key = lambda p : p.dr)
             ptsum = 0
             # OK, try some MC matching for them
-            if "PF" in a: 
+            if "PF" in a or "Puppi" in a: 
                 mcmatch =  dict((d,[]) for d in matches )
                 # first, match and remove the charged
                 charged = [d for d in matches if d.charge() != 0]
@@ -131,10 +140,13 @@ for iev,event in enumerate(events):
                 if d.dr < 0.4: ptsum += d.pt()
                 print "        cand  pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum),
                 if "Track" in a or "TK" in a:
+                    print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0),
                     g, dr2 = bestMatch(d, c_tomatch)
                     if (dr2 < .01): print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
                     else:           print " --> unmatched",
-                elif "PF" in a or "Calo" in a:
+                elif "PF" in a or "Puppi" in a or "Calo" in a:
+                        if "Calo" not in a:
+                            print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0 if d.charge() else 0),
                         incone = mcmatch[d]
                         if len(incone) == 0:
                             print " --> unmatched",
@@ -147,7 +159,7 @@ for iev,event in enumerate(events):
                                 print "%+d[pt %.1f, dr %.2f]" % (g.pdgId(), g.pt(), deltaR(g,d)),
                 print ""
             print "   total pt within 0.4: %7.2f" %ptsum
-            if "PF" in a:
+            if "PF" in a or "Puppi" in a:
                 print "   total charged pt within 0.4: %7.2f" % sum(d.pt() for d in charged if d.dr < 0.4)
                 print "   total neutral pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4)
                 print "   total photon  pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4 and d.pdgId() == 22)

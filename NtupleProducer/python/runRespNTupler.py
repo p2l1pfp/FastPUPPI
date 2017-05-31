@@ -96,6 +96,8 @@ if True:
     process.ntuple.objects.L1IPFPhoton_sel = cms.string("pdgId == 22")
 def goGun():
     process.ntuple.isParticleGun = True
+def goRandom():
+    process.ntuple.doRandom = True
 def useClusters():
         process.ntuple.objects.TPEcal = cms.VInputTag('l1tPFEcalProducerFromTPDigis:crystals', 'l1tPFHGCalProducerFrom3DTPs',)
         process.ntuple.objects.TPHcal = cms.VInputTag('l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFrom3DTPs',)
@@ -134,11 +136,13 @@ def haveFun():
     process.InfoOut.linking.ecalPriority  = cms.bool(True)
     process.ntuple.objects.AltEcal = cms.VInputTag("InfoOut:L1EmCalo",)
     process.ntuple.objects.AltPF = cms.VInputTag("InfoOut:AltPF",)
-    process.ntuple.objects.AltPuppi = cms.VInputTag("InfoOut:AltPuppi",)
     process.ntuple.objects.AltPFCharged = cms.VInputTag("InfoOut:AltPF",)
     process.ntuple.objects.AltPFPhoton  = cms.VInputTag("InfoOut:AltPF",)
     process.ntuple.objects.AltPFCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.AltPFPhoton_sel  = cms.string("pdgId == 22")
+    process.ntuple.objects.AltPuppi = cms.VInputTag("InfoOut:AltPuppi",)
+    process.ntuple.objects.AltPuppiCharged = cms.VInputTag("InfoOut:AltPuppi",)
+    process.ntuple.objects.AltPuppiCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.AltPFChargedScaled = cms.VInputTag("InfoOut:AltPF",)
     process.ntuple.objects.AltPFChargedScaled_sel = cms.string("charge != 0 && status == 2")
     process.ntuple.objects.AltPFDiscTrack = cms.VInputTag("InfoOut:AltPFDiscarded",)

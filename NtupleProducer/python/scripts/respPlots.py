@@ -7,11 +7,9 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 from math import ceil, floor, sqrt
 from array import array
 
-def doRespEta(oname, tree, name, expr, cut):
-    return doRespEtaMedian(oname, tree, name, expr, cut)
 
-def quantiles(yswz):
-    ys = [y for y in yswz if y > 0]
+def quantiles(yswz, zeroSuppress=True):
+    ys = [y for y in yswz if y > 0] if zeroSuppress else yswz[:]
     if len(ys) < 3: return (0,0,0)
     ys.sort()
     ny = len(ys)
@@ -30,9 +28,14 @@ def quantiles(yswz):
         l68 = median - rms
     return (median,l68,u68)
 
-def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0, maxEntries=999999999):
+def doRespEta(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
+    if oname.startswith("null"):
+        return doRespEtaProf(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
+    return doRespEtaMedian(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
+def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=10, etamax=5.0, maxEntries=999999999):
     ys = [[] for ieta in xrange(etabins)]
-    npoints = tree.Draw("("+expr+")/mc_pt:abs(mc_eta)", cut, "", maxEntries);
+    npoints = tree.Draw("("+expr+")/"+mcpt+":abs(mc_eta)", cut, "", maxEntries);
+    #print "Draw(("+expr+")/"+mcpt+":abs(mc_eta), "+cut+") --> ",npoints
     if npoints <= 0: return None
     graph = ROOT.gROOT.FindObject("Graph");
     xi, yi = graph.GetX(), graph.GetY()
@@ -45,7 +48,8 @@ def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0, maxEnt
     ret.SetName(name)
     for ieta in xrange(etabins):
         if len(ys[ieta]) == 0: continue
-        (median,lo,hi) = quantiles(ys[ieta])
+        (median,lo,hi) = quantiles(ys[ieta], zeroSuppress=not(oname.startswith("null")))
+        if not median: continue
         ipoint = ret.GetN()
         ret.Set(ipoint+1)
         ret.SetPoint(ipoint, (ieta+0.5)*etamax/etabins, median)
@@ -53,10 +57,11 @@ def doRespEtaMedian(oname, tree, name, expr, cut, etabins=10, etamax=5.0, maxEnt
         ret.SetPointError(ipoint, 0.5*etamax/etabins, 0.5*etamax/etabins, (median-lo)/sqrt(len(ys[ieta])),(hi-median)/sqrt(len(ys[ieta])))
     return ret
 def doEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
-    tree.Draw(expr+":abs(mc_eta)>>"+name+"(20,0,5.0)", cut, "PROF", maxEntries);
+    npoints = tree.Draw(expr+":abs(mc_eta)>>"+name+"(20,0,5.0)", cut, "PROF", maxEntries);
+    #print "Draw("+expr+":abs(mc_eta), "+cut+") --> ",npoints
     return ROOT.gROOT.FindObject(name);
-def doRespEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
-    return doEtaProf("("+expr+")/mc_pt", maxEntries=maxEntries);
+def doRespEtaProf(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
+    return doEtaProf(oname, tree, name, "("+expr+")/"+mcpt, cut, maxEntries=maxEntries);
 def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250]
@@ -258,9 +263,11 @@ whats = [
         ("APFNh",       "AltPF$-AltPFCharged$-AltPFPhoton$",    ROOT.kGreen+3,  34, 1.2),
     ]),
     ('altpfdebug3c',[
-        ("CH #times Acc",  "ChGenAcc$",      ROOT.kAzure+2,  20, 1.2),
-        ("TK",             "L1TK$",          ROOT.kRed+1,    20, 1.2),
-        ("APFCh",          "AltPFCharged$",  ROOT.kGreen+1,  34, 1.2),
+        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("TK",             "L1TK$",             ROOT.kRed+1,    20, 1.2),
+        ("TK #Deltaz",     "L1TKV$",            ROOT.kRed+2, 20, 1.2),
+        ("APFCh",          "AltPFCharged$",     ROOT.kGreen+1,  34, 1.2),
+        ("APuppiCh",       "AltPuppiCharged$",  ROOT.kBlue+2, 25, 1.4),
     ]),
     ('altpfdebug3n',[
         ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
@@ -276,7 +283,17 @@ whats = [
         ("D Calo #gamma",       "AltPFDiscCaloG$",          ROOT.kGreen+1,  34, 1.2),
         ("D Em",       "AltPFDiscEm$",    ROOT.kGreen+3,  34, 1.2),
     ]),
-
+    ('altpuppidebug',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
+        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("APF",         "AltPF$",                  ROOT.kOrange+7, 34, 1.2),
+        ("APFCh",       "AltPFCharged$",           ROOT.kRed+2,    34, 1.2),
+        ("APFNh",       "AltPF$-AltPFCharged$",    ROOT.kOrange-3, 34, 1.2),
+        ("APuppi",         "AltPuppi$",                  ROOT.kGreen+1, 21, 1.1),
+        ("APuppiCh",       "AltPuppiCharged$",           ROOT.kGreen+3, 21, 1.1),
+        ("APuppiNh",       "AltPuppi$-AltPuppiCharged$", ROOT.kGreen+1, 21, 1.1),
+    ]),
 
 
 
@@ -317,7 +334,7 @@ if __name__ == "__main__":
         if options.extracut:
             particle += "_"+options.extracut[0]
             pdgIdCut += " && ("+options.extracut[1]+")"
-        #sels.append(("%s_pt_%2d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
+        sels.append(("%s_pt_%02d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
         etas = [ (0.0,1.3), (1.3,1.7), (1.7,2.5), (2.5,3.0), (3.0,5.0) ]
         if options.eta: etas = [ options.eta ]
@@ -340,6 +357,8 @@ if __name__ == "__main__":
     c1 = ROOT.TCanvas("c1","c1")
     for oname,cut in sels:
         print "Plotting ",oname
+        isNeutrino = oname.startswith("null")
+        if isNeutrino and options.mcpt == "mc_pt": options.mcpt = "1"
         if "electron" in oname or "muon" in oname or "pi" in oname:
             cut = cut + " && abs(mc_iso04) < 0.05" # isolated
         for kind,things in whats:
@@ -351,6 +370,8 @@ if __name__ == "__main__":
                 ptdefs = [ "pt" ]
             elif "muon" in oname:
                 ptdefs = [ "pthighest" ]
+            elif isNeutrino:
+                ptdefs = [ "pthighest", "pt", "ptbest" ]
             else:
                 ptdefs = [ "pt02", "pthighest" ]   
             if options.more:
@@ -371,7 +392,7 @@ if __name__ == "__main__":
                     if "Gen" in name and  "jet" not in oname: continue
                     if ptdef.startswith("pt"):
                         if "pt" in oname:
-                            prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
+                            prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,maxEntries=options.maxEntries), None
                         else:
                             prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries)
                     else:
@@ -404,10 +425,20 @@ if __name__ == "__main__":
                     if "pt" in oname: 
                         frame = ROOT.TH1F("stk","stk",100,0.0,5.0)
                         frame.GetXaxis().SetTitle("|#eta|")
-                        leg = ROOT.TLegend(0.6,0.99,0.95,0.99-0.05*len(things))
+                        ymax = 2.2
+                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.025*len(things))
+                        leg.SetTextSize(0.04);
+                        leg.SetNColumns(2)
                         if ptdef.startswith("pt"):
                             frame.GetYaxis().SetRangeUser(0,2.2)
                             frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
+                            if isNeutrino:
+                                if "TGraph" in plots[0][1].ClassName():
+                                    ymax = 1.3*max(max(p.GetY(i) for i in xrange(p.GetN())) for (n,p) in plots)
+                                else:
+                                    ymax = 1.3*max(p.GetMaximum() for (n,p) in plots)
+                                frame.GetYaxis().SetRangeUser(0,ymax)
+                                frame.GetYaxis().SetTitle("mean p_{T}^{rec} (GeV)") 
                         else:
                             frame.GetYaxis().SetTitle("< "+ptdef+" >")
                             frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
@@ -420,12 +451,14 @@ if __name__ == "__main__":
                             if ptdef.startswith("pt"):
                                 frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                                 frame.GetYaxis().SetRangeUser(0,2.2)
+                                if "PU140" in odir and "jet" in oname:
+                                    frame.GetYaxis().SetRangeUser(0,2.7)
                             else:
                                 frame.GetYaxis().SetTitle("< "+ptdef+" >")
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
                         frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
-                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.05*(len(plots)+0.5))
-                        leg.SetTextSize(0.04);
+                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.042*(len(plots)+0.5))
+                        leg.SetTextSize(0.035);
                         leg.SetNColumns(2)
                     frame.GetYaxis().SetDecimals(True)
                     frame.Draw()
@@ -434,9 +467,9 @@ if __name__ == "__main__":
                     if "resolution" not in ptype and ptdef.startswith("pt"):
                         line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),1)
                     if "pt" in oname: 
-                        line.DrawLine(1.5,0,1.5,2.2)
-                        line.DrawLine(2.5,0,2.5,2.2)
-                        line.DrawLine(3.0,0,3.0,2.2)
+                        line.DrawLine(1.5,0,1.5,ymax)
+                        line.DrawLine(2.5,0,2.5,ymax)
+                        line.DrawLine(3.0,0,3.0,ymax)
                     for n,p in plots: 
                         p.Draw("P SAME" if "TGraph" in p.ClassName() else "SAME")
                         if hasattr(p,'fit'): p.fit.Draw("SAME")
