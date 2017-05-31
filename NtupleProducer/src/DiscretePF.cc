@@ -3,6 +3,13 @@
 #include "DataFormats/Math/interface/deltaR.h"
 #include "Math/ProbFunc.h"
 
+namespace { 
+    std::vector<float> vd2vf(const std::vector<double> & vd) {
+        std::vector<float> ret;
+        ret.insert(ret.end(), vd.begin(), vd.end());
+        return ret;
+    }
+}
 using namespace l1tpf_int;
 
 RegionMapper::RegionMapper( const edm::ParameterSet& iConfig) 
@@ -135,8 +142,9 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     skipMuons_(iConfig.getParameter<bool>("metRate")),
     etaCharged_(iConfig.getParameter<double>("etaCharged")),
     puppiDr_(iConfig.getParameter<double>("puppiDr")),
-    puppiPtCutC_(1*iConfig.getParameter<double>("puppiPtCut")),
-    puppiPtCutF_(2*iConfig.getParameter<double>("puppiPtCut")),
+    puppiEtaCuts_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiEtaCuts"))),
+    puppiPtCuts_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiPtCuts"))),
+    puppiPtCutsPhotons_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiPtCutsPhotons"))),
     vtxCut_(iConfig.getParameter<double>("vtxRes")),
     vtxAdaptiveCut_(iConfig.getParameter<bool>("vtxAdaptiveCut")),
     drMatch_(0.2), ptMatchLow_(2.0), ptMatchHigh_(2.0), maxInvisiblePt_(20.0),
@@ -159,6 +167,15 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     intMaxInvisiblePt_ = std::round(maxInvisiblePt_ * CaloCluster::PT_SCALE);
 
     intDrMuonMatchBox_ = std::ceil(0.20 * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
+
+    if (puppiEtaCuts_.size() != puppiPtCuts_.size() || puppiPtCuts_.size() != puppiPtCutsPhotons_.size()) {
+        throw cms::Exception("Configuration", "Bad PUPPI config");
+    }
+    for (unsigned int i = 0, n = puppiEtaCuts_.size(); i < n; ++i) {
+        intPuppiEtaCuts_.push_back( std::round(puppiEtaCuts_[i] * CaloCluster::ETAPHI_SCALE) );
+        intPuppiPtCuts_.push_back( std::round(puppiPtCuts_[i] * CaloCluster::PT_SCALE) );
+        intPuppiPtCutsPhotons_.push_back( std::round(puppiPtCutsPhotons_[i] * CaloCluster::PT_SCALE) );
+    }
 }
 
 void PFAlgo::runPF(Region &r) const {
@@ -312,12 +329,11 @@ void PFAlgo::mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & cal
     } 
 }
 
-void PFAlgo::runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {
-    makeChargedPV(r, z0);
+void PFAlgo::runPuppi(Region &r, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {
     computePuppiWeights(r, alphaCMed, alphaCRms, alphaFMed, alphaFRms);
     fillPuppi(r);
 }
-void PFAlgo::makeChargedPV(Region &r, float z0) const {
+void PFAlgo::runChargedPV(Region &r, float z0) const {
     int16_t iZ0 = round(z0 * InputTrack::Z0_SCALE);
     int16_t iDZ  = round(1.5 * vtxCut_ * InputTrack::Z0_SCALE);
     int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxCut_ * InputTrack::Z0_SCALE) : iDZ;
@@ -333,6 +349,7 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
         // charged
         if (p.hwId <= 1) {
             p.setPuppiW(p.chargedPV ? 1.0 : 0); 
+            if (debug_) printf("PUPPI \t charged id %1d pt %7.2f eta %+5.2f phi %+5.2f  alpha %+6.2f x2 %+6.2f --> puppi weight %.3f   puppi pt %7.2f \n", p.hwId, p.floatPt(), p.floatEta(), p.floatPhi(), 0., 0., p.floatPuppiW(), p.floatPt()*p.floatPuppiW());
             continue;
         }
         // neutral
@@ -345,31 +362,80 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
                 if (p2.chargedPV) alphaC += w;
             }
         }
+        float alpha = -99, x2 = -99;
         if (std::abs(p.hwEta) < ietacut) {
             if (alphaC > 0) {
-                float alpha = std::log(alphaC);
-                float x2 = (alpha - alphaCMed) * std::abs(alpha - alphaCMed) / std::pow(alphaCRms,2);
+                alpha = std::log(alphaC);
+                x2 = (alpha - alphaCMed) * std::abs(alpha - alphaCMed) / std::pow(alphaCRms,2);
                 p.setPuppiW( ROOT::Math::chisquared_cdf(x2,1) );
             } else {
                 p.setPuppiW(0);
             }
         } else {
             if (alphaF > 0) {
-                float alpha = std::log(alphaF);
-                float x2 = (alpha - alphaFMed) * std::abs(alpha - alphaFMed) / std::pow(alphaFRms,2);
+                alpha = std::log(alphaF);
+                x2 = (alpha - alphaFMed) * std::abs(alpha - alphaFMed) / std::pow(alphaFRms,2);
                 p.setPuppiW( ROOT::Math::chisquared_cdf(x2,1) );
             } else {
                 p.setPuppiW(0);
             }
         }
+        if (debug_) printf("PUPPI \t neutral id %1d pt %7.2f eta %+5.2f phi %+5.2f  alpha %+6.2f x2 %+6.2f --> puppi weight %.3f   puppi pt %7.2f \n", p.hwId, p.floatPt(), p.floatEta(), p.floatPhi(), alpha, x2, p.floatPuppiW(), p.floatPt()*p.floatPuppiW());
     }
 }
 
-void PFAlgo::fillPuppi(Region &r) const {
+void PFAlgo::computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed, float &alphaCRms, float &alphaFMed, float &alphaFRms) const {
+    std::vector<float> alphaFs;
+    std::vector<float> alphaCs;
     int16_t ietacut = std::round(etaCharged_ * CaloCluster::ETAPHI_SCALE);
-    int16_t iptcutC = std::round(puppiPtCutC_ * CaloCluster::PT_SCALE);
-    int16_t iptcutF = std::round(puppiPtCutF_ * CaloCluster::PT_SCALE);
+    float puppiDr2 = std::pow(puppiDr_,2);
+    for (const Region & r : rs) {
+        for (const PFParticle & p : r.pf) {
+            if (std::abs(p.hwEta) < ietacut) {
+                if (p.hwId > 1 || p.chargedPV) continue;
+            }
+            float alphaC = 0, alphaF = 0;
+            for (const PFParticle & p2 : r.pf) {
+                float dr2 = ::deltaR2(p.floatEta(), p.floatPhi(), p2.floatEta(), p2.floatPhi());
+                if (dr2 > 0 && dr2 < puppiDr2) {
+                    float w = std::pow(p2.floatPt(),2) / dr2;
+                    alphaF += w;
+                    if (p2.chargedPV) alphaC += w;
+                }
+            }
+            if (std::abs(p.hwEta) < ietacut) {
+                if (alphaC > 0) alphaCs.push_back(std::log(alphaC));
+            } else {
+                if (alphaF > 0) alphaFs.push_back(std::log(alphaF));
+            }
+        }
+    }
+  std::sort(alphaCs.begin(),alphaCs.end());
+  std::sort(alphaFs.begin(),alphaFs.end());
+
+  if (alphaCs.size() > 1){
+      alphaCMed = alphaCs[alphaCs.size()/2+1];
+      double sum = 0.0;
+      for (float alpha : alphaCs) sum += std::pow(alpha-alphaCMed,2);
+      alphaCRms = std::sqrt(float(sum)/alphaCs.size());
+  } else {
+      alphaCMed = 8.; alphaCRms = 8.;
+  }
+
+  if (alphaFs.size() > 1){
+      alphaFMed = alphaFs[alphaFs.size()/2+1];
+      double sum = 0.0;
+      for (float alpha : alphaFs) sum += std::pow(alpha-alphaFMed,2);
+      alphaFRms = std::sqrt(float(sum)/alphaFs.size());
+  } else {
+      alphaFMed = 6.; alphaFRms = 6.;
+  }
+  if (debug_) printf("PUPPI \t alphaC = %+6.2f +- %6.2f (%4lu), alphaF = %+6.2f +- %6.2f (%4lu)\n", alphaCMed, alphaCRms, alphaCs.size(), alphaFMed, alphaFRms, alphaFs.size());
+}
+
+void PFAlgo::fillPuppi(Region &r) const {
     constexpr uint16_t PUPPIW_0p01 = std::round(0.01 * PFParticle::PUPPI_SCALE);
+    r.puppi.clear();
     for (PFParticle & p : r.pf) {
         if (p.hwId == l1tpf::Particle::MU) {
             r.puppi.push_back(p);
@@ -382,7 +448,14 @@ void PFAlgo::fillPuppi(Region &r) const {
                 // FIXME would work better with PUPPI_SCALE being a power of two, to do the shift
                 // FIXME done with floats
                 int16_t hwPt = ( float(p.hwPt) * float(p.hwPuppiWeight) / float(PFParticle::PUPPI_SCALE) );
-                if (hwPt > (std::abs(p.hwEta) < ietacut ? iptcutC : iptcutF)) {
+                int16_t hwPtCut = 0, hwAbsEta = std::abs(p.hwEta);
+                for (unsigned int ietaBin = 0, nBins = intPuppiEtaCuts_.size(); ietaBin < nBins; ++ietaBin) {
+                    if (hwAbsEta < intPuppiEtaCuts_[ietaBin]) {
+                        hwPtCut = (p.hwId == l1tpf::Particle::GAMMA ? intPuppiPtCutsPhotons_[ietaBin] : intPuppiPtCuts_[ietaBin]);
+                        break;
+                    }
+                }
+                if (hwPt > hwPtCut) {
                     r.puppi.push_back(p);
                     r.puppi.back().hwPt = hwPt;
                 }

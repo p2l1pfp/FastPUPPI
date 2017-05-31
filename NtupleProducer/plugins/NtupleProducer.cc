@@ -439,7 +439,8 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // run PF in each region
   for (auto & l1region : l1regions_.regions()) {
       l1pfalgo_.runPF(l1region);
-      l1pfalgo_.runPuppi(l1region, z0, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
+      l1pfalgo_.runChargedPV(l1region, z0);
+      l1pfalgo_.runPuppi(l1region, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
   }
 
   addPF(lRawCalo ,"RawCalo" ,iEvent);
@@ -539,15 +540,22 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       // run alternative PFs in each region
       for (auto & l1region : l1regions_.regions()) {
           altpfalgo_->runPF(l1region);
-          altpfalgo_->runPuppi(l1region, z0, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
+          altpfalgo_->runChargedPV(l1region, z0);
       }
-      std::vector<combiner::Particle> lAltPFCands   = l1regions_.fetch(false);
-      std::vector<combiner::Particle> lAltPupCands  = l1regions_.fetch(true);
+      // do the Puppi part. get our own alphas first, since our PF candidates may be different
+      float alphaCMed, alphaCRms, alphaFMed, alphaFRms;
+      altpfalgo_->computePuppiMedRMS(l1regions_.regions(), alphaCMed, alphaCRms, alphaFMed, alphaFRms);
+      for (auto & l1region : l1regions_.regions()) altpfalgo_->runPuppi(l1region, -1., alphaCMed, alphaCRms, alphaFMed, alphaFRms);
+
+      std::vector<combiner::Particle> lAltPFCands = l1regions_.fetch(false);
       addPF(lAltPFCands,  "AltPF"   ,iEvent);
-      addPF(lAltPupCands, "AltPuppi",iEvent);
 
       std::vector<combiner::Particle> lAltPFDisc   = l1regions_.fetch(false,0.01,true);
       addPF(lAltPFDisc,  "AltPFDiscarded"   ,iEvent);
+
+      std::vector<combiner::Particle> lAltPupCands  = l1regions_.fetch(true);
+      addPF(lAltPupCands, "AltPuppi",iEvent);
+
   }
 
 

@@ -220,10 +220,15 @@ namespace l1tpf_int {
     public:
         PFAlgo( const edm::ParameterSet& ) ;
         virtual void runPF(Region &r) const ;
-        virtual void runPuppi(Region &r, float z0, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
+        virtual void runChargedPV(Region &r, float z0) const ;
+        virtual void runPuppi(Region &r, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
+        virtual void computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed, float &alphaCRms, float &alphaFMed, float &alphaFRms) const ;
     protected:
         bool skipMuons_;
-        float etaCharged_, puppiDr_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
+        float etaCharged_, puppiDr_; 
+        std::vector<float> puppiEtaCuts_, puppiPtCuts_, puppiPtCutsPhotons_;
+        std::vector<int16_t> intPuppiEtaCuts_, intPuppiPtCuts_, intPuppiPtCutsPhotons_;
+        float vtxCut_;
         bool vtxAdaptiveCut_; 
         float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
         int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;
@@ -233,7 +238,6 @@ namespace l1tpf_int {
         void muonTrackLink(Region &r) const ;
         void caloTrackLink(Region &r) const ;
         void mergeTkCalo(Region &r, const PropagatedTrack &tk, CaloCluster & calo) const ;
-        void makeChargedPV(Region &r, float z0) const ;
         void computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
         void fillPuppi(Region &r) const ;
         PFParticle & addTrackToPF(Region &r, const PropagatedTrack &tk) const { return addTrackToPF(r.pf, tk); }
