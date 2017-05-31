@@ -33,6 +33,8 @@
 #include "DataFormats/ParticleFlowCandidate/interface/PFCandidateFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticleFwd.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
+#include "FWCore/ServiceRegistry/interface/Service.h"
+#include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
 #include "FastPUPPI/NtupleProducer/interface/combiner.hh"
@@ -71,7 +73,7 @@ public:
   const bool correctCaloEnergies_;
   const float rawCaloPtMin_, rawEmCaloPtMin_;
   const edm::InputTag MuonTPTag_;
-  const edm::InputTag GenParTag_;
+  const edm::InputTag GenParTag_, GenOriginTag_;
   const std::string CorrectorTag_;
   const unsigned int CorrectorEmfBins_;
   const double CorrectorEmfMax_;
@@ -95,6 +97,7 @@ private:
   void addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent);
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
+  edm::EDGetTokenT<math::XYZPointF>               TokGenOrigin_;
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
   std::vector<edm::EDGetTokenT<L1PFCollection>>   TokCaloClusterTags_, TokEmClusterTags_;
   edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
@@ -122,6 +125,8 @@ private:
   l1tpf_int::PFAlgo       l1pfalgo_;
   // alternatives
   std::unique_ptr<l1tpf_int::PFAlgo> altpfalgo_;
+  // fill track tree to TFileService
+  int fTrackTree;
   // debug flag
   int fDebug;
   float fDebugEta, fDebugPhi, fDebugR;
@@ -132,11 +137,9 @@ private:
   TH1D                  *fTotalEvents;
 
   TTree                 *fTrkInfoTree;
-  TTree                 *fEcalInfoTree;
-  TTree                 *fHcalInfoTree;
   float runNum, lumiSec, evtNum;
   float trkNum;
-  float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkd0;    
+  float trkPx, trkPz, trkPy, trkPt, trkEta, trkPhi, trkz0, trkdz, trkd0;    
   float trkEcalEta, trkEcalPhi, trkEcalR;
   float genPt, genEta, genPhi, genId;
 };
@@ -153,6 +156,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   rawEmCaloPtMin_       (correctCaloEnergies_ && !EmClusterTags_.empty() ? iConfig.getParameter<double>("rawEmCaloPtMin") : 0.0), 
   MuonTPTag_            (iConfig.getParameter<edm::InputTag>("MuonTPTag")),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
+  GenOriginTag_         (iConfig.getParameter<edm::InputTag>("genOriginTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
   CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
   CorrectorEmfMax_      (iConfig.getParameter<double>("correctorEmfMax")),
@@ -172,6 +176,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
   l1regions_            (iConfig),
   l1pfalgo_             (iConfig),
+  fTrackTree            (iConfig.getUntrackedParameter<int>("fillTrackTree",0)),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fDebugEta             (iConfig.getUntrackedParameter<double>("debugEta",0)),
   fDebugPhi             (iConfig.getUntrackedParameter<double>("debugPhi",0)),
@@ -230,6 +235,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<PFOutputCollection>("L1PF");
   produces<PFOutputCollection>("L1Puppi");
   TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
+  TokGenOrigin_    = consumes<math::XYZPointF>( GenOriginTag_    );
   TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
   for (const edm::InputTag &tag : CaloClusterTags_) {
     TokCaloClusterTags_.push_back(consumes<L1PFCollection>(tag));
@@ -270,12 +276,16 @@ NtupleProducer::~NtupleProducer()
 void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //fOutputFile->cd();
-  if (!fOutputName.empty()) fTotalEvents->Fill(1);  
+  if (fTotalEvents) fTotalEvents->Fill(1);  
   using namespace edm;
 
   edm::Handle<reco::GenParticleCollection> hGenParProduct;
   iEvent.getByToken(TokGenPar_,hGenParProduct);
-  const reco::GenParticleCollection genParticles = *(hGenParProduct.product());  
+  const reco::GenParticleCollection & genParticles = *hGenParProduct;  
+  edm::Handle<math::XYZPointF> hGenOrigin;
+  iEvent.getByToken(TokGenOrigin_,hGenOrigin);
+  const math::XYZPointF & genOrigin = *hGenOrigin;
+  
 
   connector_->clear();
   rawconnector_->clear();
@@ -303,7 +313,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       if(tk.pt() > trkPt_) connector_->addTrack(tk);      
       if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
       /// filling the tree    
-      if (fOutputName.empty()) continue;
+      if (!fTrkInfoTree) continue;
       trkPx  = tk.px();
       trkPz  = tk.py();
       trkPy  = tk.pz();
@@ -311,6 +321,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       trkEta = tk.eta();
       trkPhi = tk.phi();
       trkz0  = tk.vertex().Z();
+      trkdz  = tk.vertex().Z() - genOrigin.Z();
       trkd0  = tk.vertex().Rho();
       trkEcalEta = tk.caloEta();
       trkEcalPhi = tk.caloPhi();
@@ -601,13 +612,19 @@ void NtupleProducer::genMatch(std::vector<double> &iGenVars,int iType,double iEt
 void 
 NtupleProducer::beginJob()
 {
-  if (fOutputName.empty()) return;
+  if (fOutputName.empty() && !fTrackTree) return;
   //
   // Create output file, trees, and histograms
   //
-  fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
-  fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
-  fTrkInfoTree     = new TTree("TrkInfo",   "TrkInfo");
+  if (!fOutputName.empty()) {
+      fOutputFile = new TFile(fOutputName.c_str(), "RECREATE");
+      fTotalEvents = new TH1D("TotalEvents","TotalEvents",1,-10,10);
+      fTrkInfoTree = new TTree("TrkInfo",   "TrkInfo");
+  } else {
+      edm::Service<TFileService> fs;
+      fTotalEvents = fs->make<TH1D>("TotalEvents","TotalEvents",1,-10,10);
+      fTrkInfoTree = fs->make<TTree>("TrkInfo",   "TrkInfo");
+  }
 
   fTrkInfoTree->Branch("runNum",  &runNum,  "runNum/F");
   fTrkInfoTree->Branch("lumiSec", &lumiSec, "lumiSec/F");
@@ -620,6 +637,7 @@ NtupleProducer::beginJob()
   fTrkInfoTree->Branch("trkEta",  &trkEta,  "trkEta/F");
   fTrkInfoTree->Branch("trkPhi",  &trkPhi,  "trkPhi/F");
   fTrkInfoTree->Branch("trkz0",   &trkz0,   "trkz0/F");
+  fTrkInfoTree->Branch("trkdz",   &trkdz,   "trkdz/F");
   fTrkInfoTree->Branch("trkd0",   &trkd0,   "trkd0/F");
   fTrkInfoTree->Branch("trkEcalPhi",  &trkEcalPhi, "trkEcalPhi/F");
   fTrkInfoTree->Branch("trkEcalEta",  &trkEcalEta, "trkEcalEta/F");
