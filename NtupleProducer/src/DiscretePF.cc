@@ -136,7 +136,8 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     puppiDr_(iConfig.getParameter<double>("puppiDr")),
     puppiPtCutC_(1*iConfig.getParameter<double>("puppiPtCut")),
     puppiPtCutF_(2*iConfig.getParameter<double>("puppiPtCut")),
-    vtxCut_(1.5*iConfig.getParameter<double>("vtxRes")),
+    vtxCut_(iConfig.getParameter<double>("vtxRes")),
+    vtxAdaptiveCut_(iConfig.getParameter<bool>("vtxAdaptiveCut")),
     drMatch_(0.2), ptMatchLow_(2.0), ptMatchHigh_(2.0), maxInvisiblePt_(20.0),
     useTrackCaloSigma_(false), rescaleUnmatchedTrack_(false),
     debug_(iConfig.getUntrackedParameter<int>("debug",0))
@@ -317,9 +318,10 @@ void PFAlgo::runPuppi(Region &r, float z0, float npu, float alphaCMed, float alp
 }
 void PFAlgo::makeChargedPV(Region &r, float z0) const {
     int16_t iZ0 = round(z0 * InputTrack::Z0_SCALE);
-    int16_t iDZ = round(vtxCut_ * InputTrack::Z0_SCALE);
+    int16_t iDZ  = round(1.5 * vtxCut_ * InputTrack::Z0_SCALE);
+    int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxCut_ * InputTrack::Z0_SCALE) : iDZ;
     for (PFParticle & p : r.pf) {
-        p.chargedPV = (p.hwId <= 1 && std::abs(p.track.hwZ0 - iZ0) < iDZ);
+        p.chargedPV = (p.hwId <= 1 && std::abs(p.track.hwZ0 - iZ0) < (std::abs(p.track.hwVtxEta) < InputTrack::VTX_ETA_1p3 ? iDZ : iDZ2));
     }
 }
 void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {

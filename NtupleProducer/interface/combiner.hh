@@ -27,7 +27,8 @@ public:
   double correct(double iHcal,double iEcal,int iEta);
   void addTrack(const l1tpf::Particle & particle); 
   void link(bool iMetRate);
-  void doVertexing();  
+  enum VertexAlgo { OldVtxAlgo, TPVtxAlgo };
+  void doVertexing(VertexAlgo algo, bool adaptiveCut);  
   void fetchPuppi();
   void fill();
   void write(){fFile->cd(); fTree->Write(); fFile->Write(); fFile->Close();}

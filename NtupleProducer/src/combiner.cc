@@ -224,10 +224,10 @@ double  combiner::deltaRraw(Particle &iParticle1,Particle &iParticle2) {
   return ::deltaR(iParticle1.eta(),iParticle1.phi(),iParticle2.eta(),iParticle2.phi());
 }
 
-void combiner::doVertexing(){
-  
+void combiner::doVertexing(VertexAlgo algo, bool adaptiveCut){
   // std::vector<Particle> fTkParticlesWVertexing;
   int lNBins = int(40./fVtxRes);
+  if (algo == TPVtxAlgo) lNBins *= 3;
   TH1F *h_dz = new TH1F("h_dz","h_dz",lNBins,-20,20); // 1cm binning
   for (int i = 0; i < h_dz->GetXaxis()->GetNbins(); ++i) h_dz->SetBinContent(i+1,0.); //initialize all to 0.
   int ntracks = 0;
@@ -239,19 +239,33 @@ void combiner::doVertexing(){
     float curbin = h_dz->GetXaxis()->FindBin(curdz);
     h_dz->SetBinContent( curbin, h_dz->GetBinContent(curbin) + std::min(fParticles[i0].pt(),50.) );
    }
-  int imaxbin = h_dz->GetMaximumBin();
-  float pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
-  float binwidth = h_dz->GetXaxis()->GetBinWidth(imaxbin);
-  float pvdz_lo = pvdz - 1.5*binwidth;
-  float pvdz_hi = pvdz + 1.5*binwidth;
+  float pvdz = 0;
+  switch(algo) {
+    case OldVtxAlgo: {
+      int imaxbin = h_dz->GetMaximumBin();
+      pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
+      }; break;
+    case TPVtxAlgo: {
+      float max = 0; int bmax = -1;
+      for (int b = 1; b <= lNBins; ++b) {
+        float sum3 = h_dz->GetBinContent(b) + h_dz->GetBinContent(b+1) + h_dz->GetBinContent(b-1);
+        if (bmax == -1 || sum3 > max) { max = sum3; bmax = b; }
+      }
+      pvdz = h_dz->GetXaxis()->GetBinCenter(bmax); 
+      }; break;
+  }
   fDZ = pvdz;
-  for(unsigned int i0   = 0; i0 < fParticles.size(); i0++) { 
-    float curdz  = fParticles[i0].dz();
-    if(fParticles[i0].charge() != 0) fParticles[i0].setIsPV(0);
-    if (curdz < pvdz_hi && curdz > pvdz_lo){
-      if(fParticles[i0].charge() != 0) fTkParticlesWVertexing.push_back( fParticles[i0] );
-      if(fParticles[i0].charge() != 0) fParticles[i0].setIsPV(1);
-   }
+  for (auto & particle : fParticles) {
+    if (particle.charge() == 0) continue;
+    float ddz = std::abs(particle.dz() - pvdz);
+    float sigmas = 1.5;
+    if (adaptiveCut && std::abs(particle.eta()) > 1.3) sigmas = 4;
+    if (ddz < sigmas*fVtxRes) {
+        particle.setIsPV(1);
+        fTkParticlesWVertexing.push_back( particle );
+    } else {
+        particle.setIsPV(0);
+    }
   }
   delete h_dz;
 }

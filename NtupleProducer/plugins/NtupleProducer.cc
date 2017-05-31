@@ -103,6 +103,8 @@ private:
   double etaCharged_;
   double puppiPtCut_, puppiDr_;
   double vtxRes_;
+  bool   vtxAdaptiveCut_;
+  combiner::VertexAlgo vtxAlgo_;  
   corrector* corrector_;
   corrector* ecorrector_;
   // simplified corrections
@@ -164,6 +166,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
   puppiDr_              (iConfig.getParameter<double>       ("puppiDr")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
+  vtxAdaptiveCut_       (iConfig.getParameter<bool>         ("vtxAdaptiveCut")),
+  vtxAlgo_              (combiner::OldVtxAlgo), 
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
   l1regions_            (iConfig),
@@ -177,6 +181,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fTotalEvents          (0),
   fTrkInfoTree          (0)
 {
+  std::string vtxAlgo = iConfig.getParameter<std::string>("vtxAlgo");
+  if      (vtxAlgo == "TP") vtxAlgo_ = combiner::TPVtxAlgo;
+  else if (vtxAlgo != "old") throw cms::Exception("Configuration") << "Unsupported vtxAlgo " << vtxAlgo << "\n";
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,CorrectorEmfBins_,CorrectorEmfMax_,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,1.0,fDebug);
@@ -401,7 +408,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   connector_->link(metRate_);
   std::vector<combiner::Particle> lCands        = connector_->candidates();
   std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
-  connector_->doVertexing();
+  connector_->doVertexing(vtxAlgo_, vtxAdaptiveCut_);
   std::vector<combiner::Particle> lTKVtxCands   = connector_->tkvtxcandidates();
   connector_->fetchPuppi();
   connector_->fill();

@@ -66,6 +66,7 @@ namespace l1tpf_int {
       static constexpr float VTX_PHI_SCALE = 1/2.5E-6; // 5 micro rad is 2 bits
       static constexpr float VTX_ETA_SCALE = 1/1E-5;   // no idea, but assume it's somewhat worse than phi
       static constexpr float Z0_SCALE      = 20;     // 1mm is 2 bits
+      static constexpr int32_t VTX_ETA_1p3 = ceil(1.3 * InputTrack::VTX_ETA_SCALE);
       // filling from floating point
       void fillInput(float pt, float eta, float phi, int charge, float dz, unsigned int flags) {
           hwInvpt  = round(1/pt  * InputTrack::INVPT_SCALE);
@@ -222,6 +223,7 @@ namespace l1tpf_int {
     protected:
         bool skipMuons_;
         float etaCharged_, puppiDr_, puppiPtCutC_, puppiPtCutF_, vtxCut_;
+        bool vtxAdaptiveCut_; 
         float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
         int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;
         bool useTrackCaloSigma_, rescaleUnmatchedTrack_;
