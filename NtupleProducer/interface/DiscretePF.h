@@ -91,6 +91,7 @@ namespace l1tpf_int {
       int16_t  hwPhi; // at calo
       bool     muonLink;
       bool     used; // note: this flag is not used in the default PF, but is used in alternative algos
+      bool     fromPV;
       // sorting
       bool operator<(const PropagatedTrack &other) const { return hwPt > other.hwPt; }
       void fillPropagated(float pt, float ptErr, float caloPtErr, float eta, float phi, unsigned int flags) {
@@ -211,7 +212,7 @@ namespace l1tpf_int {
 
         std::vector<l1tpf::Particle> fetch(bool puppi=true, float ptMin=0.01, bool discarded = false) const ;
         std::vector<l1tpf::Particle> fetchCalo(float ptMin=0.01, bool emcalo=false) const ;
-        std::vector<l1tpf::Particle> fetchTracks(float ptMin=0.01) const ;
+        std::vector<l1tpf::Particle> fetchTracks(float ptMin=0.01, bool fromPV=false) const ;
     protected:
         std::vector<Region> regions_;
   };
@@ -222,13 +223,16 @@ namespace l1tpf_int {
         virtual void runPF(Region &r) const ;
         virtual void runChargedPV(Region &r, float z0) const ;
         virtual void runPuppi(Region &r, float npu, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const ;
+        /// global operations
+        enum VertexAlgo { OldVtxAlgo, TPVtxAlgo };
+        virtual void doVertexing(std::vector<Region> &rs, VertexAlgo algo, float &vz) const ; // region is not const since it sets the fromPV bit of the tracks
         virtual void computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed, float &alphaCRms, float &alphaFMed, float &alphaFRms) const ;
     protected:
         bool skipMuons_;
         float etaCharged_, puppiDr_; 
         std::vector<float> puppiEtaCuts_, puppiPtCuts_, puppiPtCutsPhotons_;
         std::vector<int16_t> intPuppiEtaCuts_, intPuppiPtCuts_, intPuppiPtCutsPhotons_;
-        float vtxCut_;
+        float vtxRes_;
         bool vtxAdaptiveCut_; 
         float drMatch_, ptMatchLow_, ptMatchHigh_, maxInvisiblePt_;
         int16_t intDrMuonMatchBox_, intDrMatchBox_, intPtMatchLowX4_, intPtMatchHighX4_, intMaxInvisiblePt_;

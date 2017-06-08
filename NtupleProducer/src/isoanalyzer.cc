@@ -65,7 +65,7 @@ void isoanalyzer::setGenMuons(const reco::GenParticleCollection &iGenParticles,i
 
 }
 
-void isoanalyzer::matchMuons(std::vector<combiner::Particle> &iParticle){
+void isoanalyzer::matchMuons(std::vector<l1tpf::Particle> &iParticle){
   
   TLorentzVector gmu1;
   TLorentzVector gmu2;
@@ -79,13 +79,13 @@ void isoanalyzer::matchMuons(std::vector<combiner::Particle> &iParticle){
 
   // first find the muon matched to GEN
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
-    if ((gmu1.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::Particle::MU)){
+    if ((gmu1.Pt() > 0)&&(iParticle[i0].pdgId() == l1tpf::Particle::MU)){
       if (gmu1.DeltaR(iParticle[i0].tp4()) < 0.4){
         // std::cout << "found a matching muon1!" << iParticle[i0].tp4().Pt() << std::endl;
         _mu1 = iParticle[i0].tp4();
       }
     }
-    if ((gmu2.Pt() > 0)&&(iParticle[i0].pdgId() == combiner::Particle::MU)){
+    if ((gmu2.Pt() > 0)&&(iParticle[i0].pdgId() == l1tpf::Particle::MU)){
       if (gmu2.DeltaR(iParticle[i0].tp4()) < 0.4){
         // std::cout << "found a matching muon2!" << iParticle[i0].tp4().Pt() << std::endl;
         _mu2 = iParticle[i0].tp4();        
@@ -103,7 +103,7 @@ void isoanalyzer::matchMuons(std::vector<combiner::Particle> &iParticle){
 
 }
 
-void isoanalyzer::computeIso(std::vector<combiner::Particle> &iParticle, float coneSize, std::string type){
+void isoanalyzer::computeIso(std::vector<l1tpf::Particle> &iParticle, float coneSize, std::string type){
 
   TLorentzVector mu1 = _mu1;
   TLorentzVector mu2 = _mu2;

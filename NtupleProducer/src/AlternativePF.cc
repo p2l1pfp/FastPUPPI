@@ -17,7 +17,7 @@ PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
     debug_ = iConfig.getUntrackedParameter<int>("altDebug", debug_);
     edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
     drMatchEm_ = linkcfg.getParameter<double>("trackEmDR");
-    ptMinFracMatchEm_ = linkcfg.getParameter<double>("trackEmPtMinFrac");
+    ptMinFracMatchEm_ = linkcfg.getParameter<double>("caloEmPtMinFrac");
     drMatchEmHad_ = linkcfg.getParameter<double>("emCaloDR");
     caloReLinkStep_ = linkcfg.getParameter<bool>("caloReLink");
     caloReLinkDr_ = linkcfg.getParameter<double>("caloReLinkDR");

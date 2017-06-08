@@ -37,7 +37,6 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 
 #include "FastPUPPI/NtupleProducer/interface/corrector.hh"
-#include "FastPUPPI/NtupleProducer/interface/combiner.hh"
 #include "FastPUPPI/NtupleProducer/interface/metanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/jetanalyzer.hh"
 #include "FastPUPPI/NtupleProducer/interface/isoanalyzer.hh"
@@ -93,7 +92,7 @@ private:
   virtual void produce(edm::Event&, const edm::EventSetup&) override;
   virtual void endJob() override;
   void genMatch(std::vector<double> &iGenVars, int iType, double iEta, double iPhi, double iPt, const reco::GenParticleCollection &iGenParticles);
-  void addPF(const std::vector<combiner::Particle> &iCandidates, const std::string &iLabel, edm::Event& iEvent);
+  void addPF(const std::vector<l1tpf::Particle> &iCandidates, const std::string &iLabel, edm::Event& iEvent);
   void addUInt(unsigned int value,std::string iLabel,edm::Event& iEvent);
 
   edm::EDGetTokenT<reco::GenParticleCollection>   TokGenPar_;
@@ -107,14 +106,12 @@ private:
   double puppiPtCut_, puppiDr_;
   double vtxRes_;
   bool   vtxAdaptiveCut_;
-  combiner::VertexAlgo vtxAlgo_;  
+  l1tpf_int::PFAlgo::VertexAlgo vtxAlgo_;  
   corrector* corrector_;
   corrector* ecorrector_;
   // simplified corrections
   l1tpf::SimpleCorrEm simpleCorrEm_;
   l1tpf::SimpleCorrHad simpleCorrHad_;
-  combiner * connector_;
-  combiner * rawconnector_;
   metanalyzer* metanalyzer_;
   jetanalyzer* jetanalyzer_;
   isoanalyzer* isoanalyzer_;
@@ -122,9 +119,7 @@ private:
   l1tpf::SimpleResol simpleResolEm_, simpleResolHad_, simpleResolTrk_;
   // discretized version
   l1tpf_int::RegionMapper l1regions_;
-  l1tpf_int::PFAlgo       l1pfalgo_;
-  // alternatives
-  std::unique_ptr<l1tpf_int::PFAlgo> altpfalgo_;
+  std::unique_ptr<l1tpf_int::PFAlgo> l1pfalgo_;
   // fill track tree to TFileService
   int fTrackTree;
   // debug flag
@@ -171,11 +166,11 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   puppiDr_              (iConfig.getParameter<double>       ("puppiDr")),
   vtxRes_               (iConfig.getParameter<double>       ("vtxRes")),
   vtxAdaptiveCut_       (iConfig.getParameter<bool>         ("vtxAdaptiveCut")),
-  vtxAlgo_              (combiner::OldVtxAlgo), 
+  vtxAlgo_              (l1tpf_int::PFAlgo::OldVtxAlgo), 
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
   l1regions_            (iConfig),
-  l1pfalgo_             (iConfig),
+  l1pfalgo_             (nullptr),
   fTrackTree            (iConfig.getUntrackedParameter<int>("fillTrackTree",0)),
   fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fDebugEta             (iConfig.getUntrackedParameter<double>("debugEta",0)),
@@ -187,31 +182,22 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fTrkInfoTree          (0)
 {
   std::string vtxAlgo = iConfig.getParameter<std::string>("vtxAlgo");
-  if      (vtxAlgo == "TP") vtxAlgo_ = combiner::TPVtxAlgo;
+  if      (vtxAlgo == "TP") vtxAlgo_ = l1tpf_int::PFAlgo::TPVtxAlgo;
   else if (vtxAlgo != "old") throw cms::Exception("Configuration") << "Unsupported vtxAlgo " << vtxAlgo << "\n";
   //now do what ever other initialization is needed
   corrector_  = new corrector(CorrectorTag_,CorrectorEmfBins_,CorrectorEmfMax_,fDebug);
   ecorrector_ = new corrector(ECorrectorTag_,1,1.0,fDebug);
-  connector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppi.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_,fDebug);
-  rawconnector_  = new combiner (PionResTag_,EleResTag_,TrackResTag_,!fOutputName.empty() ? "puppiraw.root" : "",etaCharged_,puppiPtCut_,puppiDr_,vtxRes_);
-  simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm");
-  simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad");
-  simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk");
-  if (iConfig.existsAs<edm::ParameterSet>("linking")) {
-    edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
-    connector_->configureLinking(linkcfg.getParameter<double>("trackCaloDR"),
-                                linkcfg.getParameter<double>("trackCaloNSigmaLow"),
-                                linkcfg.getParameter<double>("trackCaloNSigmaHigh"),
-                                linkcfg.getParameter<bool>("useTrackCaloSigma"),
-                                linkcfg.getParameter<bool>("rescaleUnmatchedTrack"),
-                                linkcfg.getParameter<double>("maxInvisiblePt"));
-    if (linkcfg.existsAs<std::string>("altAlgo")) {
-        auto algo = linkcfg.getParameter<std::string>("altAlgo");
-        if (algo == "PFAlgo3") {
-            altpfalgo_.reset(new l1tpf_int::PFAlgo3(iConfig));
-        }
-    }
-  }
+  simpleResolEm_ = l1tpf::SimpleResol(iConfig,"simpleResolEm", true);
+  simpleResolHad_ = l1tpf::SimpleResol(iConfig,"simpleResolHad", true);
+  simpleResolTrk_ = l1tpf::SimpleResol(iConfig,"simpleResolTrk", true);
+  edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+  auto algo = linkcfg.getParameter<std::string>("algo");
+  if (algo == "PFAlgo3") {
+      l1pfalgo_.reset(new l1tpf_int::PFAlgo3(iConfig));
+  } else if (algo == "PFAlgoOld") {
+      l1pfalgo_.reset(new l1tpf_int::PFAlgo(iConfig));
+  } else throw cms::Exception("Configuration", "Unsupported PFAlgo");
+
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;
       jetanalyzer_ = nullptr;
@@ -221,20 +207,18 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
       jetanalyzer_ = new jetanalyzer("JetFile.root");
       isoanalyzer_ = new isoanalyzer("IsoFile.root");
   }
+  produces<PFOutputCollection>("RawEmCalo");
+  produces<PFOutputCollection>("RawCalo");
+  produces<PFOutputCollection>("EmCalo");
+  produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("TK");
   produces<PFOutputCollection>("TKVtx");
-  produces<float>("z0");
-  produces<PFOutputCollection>("RawCalo");
-  produces<PFOutputCollection>("Calo");
   produces<PFOutputCollection>("PF");
+  produces<PFOutputCollection>("PFDiscarded");
   produces<PFOutputCollection>("Puppi");
-  produces<PFOutputCollection>("L1TK");
-  produces<PFOutputCollection>("L1Calo");
-  if (!EmClusterTags_.empty()) {
-    produces<PFOutputCollection>("L1EmCalo");
-  }
-  produces<PFOutputCollection>("L1PF");
-  produces<PFOutputCollection>("L1Puppi");
+  produces<float>("z0");
+  produces<float>("alphaCMed"); produces<float>("alphaCRms"); produces<float>("alphaFMed"); produces<float>("alphaFRms");
+
   TokGenPar_       = consumes<reco::GenParticleCollection>( GenParTag_    );
   TokGenOrigin_    = consumes<math::XYZPointF>( GenOriginTag_    );
   TokL1TrackTPTag_ = consumes<L1PFCollection>( L1TrackTag_  );
@@ -248,18 +232,15 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<unsigned int>("totNL1TK");
   produces<unsigned int>("totNL1Mu");
   produces<unsigned int>("totNL1Calo");
+  produces<unsigned int>("totNL1EmCalo");
   produces<unsigned int>("totNL1PF");
   produces<unsigned int>("totNL1Puppi");
   produces<unsigned int>("maxNL1TK");
   produces<unsigned int>("maxNL1Mu");
   produces<unsigned int>("maxNL1Calo");
+  produces<unsigned int>("maxNL1EmCalo");
   produces<unsigned int>("maxNL1PF");
   produces<unsigned int>("maxNL1Puppi");
-  if (altpfalgo_.get()) {
-      produces<PFOutputCollection>("AltPF");
-      produces<PFOutputCollection>("AltPFDiscarded");
-      produces<PFOutputCollection>("AltPuppi");
-  }
 }
 
 NtupleProducer::~NtupleProducer()
@@ -288,8 +269,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   const math::XYZPointF & genOrigin = *hGenOrigin;
   
 
-  connector_->clear();
-  rawconnector_->clear();
   l1regions_.clear(); 
   /// ----------------TRACK INFO-------------------
   edm::Handle<std::vector<l1tpf::Particle>> hl1tks;
@@ -298,21 +277,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   trkNum = 0;
   for (l1tpf::Particle & tk : l1tks) { // no const & since we modify it to set the sigma
       // the combiner knows the sigma, the track producer doesn't
-      if (simpleResolTrk_.empty()) {
-          tk.setSigma(connector_->getTrkRes(tk.pt(), tk.eta(), tk.phi())); 
-      } else {
-          tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
-      }
-      if (simpleResolHad_.empty()) {
-          tk.setCaloSigma(connector_->getPionRes(tk.pt(), tk.eta(), tk.phi()));
-      } else {
-          tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
-      }
+      tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
+      tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
       if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt());
       // adding objects to PF
       if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
-      if(tk.pt() > trkPt_) connector_->addTrack(tk);      
-      if(tk.pt() > trkPt_) rawconnector_->addTrack(tk);
       /// filling the tree    
       if (!fTrkInfoTree) continue;
       trkPx  = tk.px();
@@ -345,8 +314,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   iEvent.getByToken(TokMuonTPTag_, hl1mus);
   std::vector<l1tpf::Particle> l1mus(*hl1mus);
   for (l1tpf::Particle & mu : l1mus) { // no const & since we modify it to set the sigma
-      mu.setSigma(connector_->getTrkRes(mu.pt(), mu.eta(), mu.phi()));  // this needs to be updated with the muon resolutions!      
-      connector_->addMuon(mu);
+      // possible debug filtering of inputs in some area
+      if (fDebugR > 0 && deltaR(mu.eta(),mu.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
+      // set resolution
+      mu.setSigma(simpleResolTrk_(mu.pt(), std::abs(mu.eta())));  // this needs to be updated with the muon resolutions!
+      // add to inputs
       l1regions_.addMuon(mu);
   }
 
@@ -367,11 +339,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       }
   }
 
-
-  // add uncalibrated (or at least un-recalibrated) calos to rawconnector
-  for (const l1tpf::Particle & calo : calos) {
-      rawconnector_->addCalo(calo);
-  }
+  // make a copy of the uncorrected ones
+  L1PFCollection lRawCalo(calos), lRawEmCalo(emcalos);
+  addPF(lRawCalo,   "RawCalo",   iEvent);
+  addPF(lRawEmCalo, "RawEmCalo", iEvent);
 
   // calibrate and do the rest
   for (l1tpf::Particle &calo : calos) {
@@ -380,16 +351,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
                                                   simpleCorrHad_(calo.pt(), std::abs(calo.eta()), calo.emEt()/calo.pt());
           calo.setPt(ptcorr);
       }
-      if (simpleResolEm_.empty() || simpleResolHad_.empty()) {
-          calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
-                  connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()) :
-                  connector_->getPionRes(calo.pt(), calo.eta(), calo.phi()));
-      } else {
-          calo.setSigma(calo.pdgId() == combiner::Particle::GAMMA ?
-                  simpleResolEm_(calo.pt(), std::abs(calo.eta())) :
-                  simpleResolHad_(calo.pt(), std::abs(calo.eta())) );
-          if (fDebug > 1) printf("calo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
-      }
+      calo.setSigma(calo.pdgId() == l1tpf::Particle::GAMMA ?
+              simpleResolEm_(calo.pt(), std::abs(calo.eta())) :
+              simpleResolHad_(calo.pt(), std::abs(calo.eta())) );
+      if (fDebug > 1) printf("calo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
   }
   for (l1tpf::Particle &calo : emcalos) {
       if (correctCaloEnergies_) {
@@ -397,84 +362,82 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
                                                  simpleCorrEm_(calo.pt(), std::abs(calo.eta()));
           calo.setPt(ptcorr);
       }
-      if (simpleResolEm_.empty()) {
-          calo.setSigma(connector_->getEleRes(calo.pt(), calo.eta(), calo.phi()));
-      } else {
-          calo.setSigma(simpleResolEm_(calo.pt(), std::abs(calo.eta())));
-      }
+      calo.setSigma(simpleResolEm_(calo.pt(), std::abs(calo.eta())));
       if (fDebug > 1) printf("emcalo %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f\n", calo.pt(), calo.eta(), calo.sigma(), calo.sigma()/calo.pt());
   }
 
   // pass to the PF algo
   for (const l1tpf::Particle & calo : calos) {
-      connector_->addCalo(calo);
+      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
       l1regions_.addCalo(calo); 
   }
   for (const l1tpf::Particle & calo : emcalos) {
+      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
       l1regions_.addEmCalo(calo); 
   }
 
-
-  std::vector<combiner::Particle> lRawCalo      = rawconnector_->candidates();
-  std::vector<combiner::Particle> lCorrCalo     = connector_->candidates();
-  connector_->link(metRate_);
-  std::vector<combiner::Particle> lCands        = connector_->candidates();
-  std::vector<combiner::Particle> lTKCands      = connector_->tkcandidates();
-  connector_->doVertexing(vtxAlgo_, vtxAdaptiveCut_);
-  std::vector<combiner::Particle> lTKVtxCands   = connector_->tkvtxcandidates();
-  connector_->fetchPuppi();
-  connector_->fill();
-  std::vector<combiner::Particle> lPupCands     = connector_->puppiFetch();
-
-  // Now we run the discretized version
-  // First, get a copy of the discretized inputs (for reference later)
-  std::vector<combiner::Particle> ll1EmCands   = l1regions_.fetchCalo(0.1, true);
-  std::vector<combiner::Particle> ll1CaloCands = l1regions_.fetchCalo(0.1);
-  std::vector<combiner::Particle> ll1TkCands   = l1regions_.fetchTracks();
-  // then get global inputs
-  float z0 = connector_->dZ();
-  std::pair<float,float> alphaC = connector_->alphaCMedRms(), alphaF = connector_->alphaFMedRms();
-  if (fDebug) std::cout << " z0 = " << z0 << "\t alphaC = " << alphaC.first << " +/- " << alphaC.second << "\t alphaF = " << alphaF.first << " +/- " << alphaF.second << std::endl;
-
-  // run PF in each region
-  for (auto & l1region : l1regions_.regions()) {
-      l1pfalgo_.runPF(l1region);
-      l1pfalgo_.runChargedPV(l1region, z0);
-      l1pfalgo_.runPuppi(l1region, -1., alphaC.first, alphaC.second, alphaF.first, alphaF.second);
-  }
-
-  addPF(lRawCalo ,"RawCalo" ,iEvent);
+  // First, get a copy of the discretized and corrected inputs, and write them out
+  std::vector<l1tpf::Particle> lEmCalo  = l1regions_.fetchCalo(/*ptmin=*/0.1, /*em=*/true);
+  std::vector<l1tpf::Particle> lCorrCalo = l1regions_.fetchCalo(/*ptmin=*/0.1);
+  std::vector<l1tpf::Particle> lTKCands  = l1regions_.fetchTracks();
+  addPF(lEmCalo ,"EmCalo"  ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
-  addPF(lTKVtxCands,"TKVtx" ,iEvent);
-  addPF(lCands   ,"PF"      ,iEvent);
-  addPF(lPupCands,"Puppi"   ,iEvent);
+
+  // then do the vertexing, and save it out
+  float z0;
+  l1pfalgo_->doVertexing(l1regions_.regions(), vtxAlgo_, z0);
   iEvent.put(std::make_unique<float>(z0), "z0");
 
-  std::vector<combiner::Particle> ll1PFCands   = l1regions_.fetch(false);
-  std::vector<combiner::Particle> ll1PupCands  = l1regions_.fetch(true);
-  addPF(ll1CaloCands,"L1Calo" ,iEvent);
-  if (!EmClusterTags_.empty()) {
-    addPF(ll1EmCands,"L1EmCalo" ,iEvent);
+  // then also save the tracks with a vertex cut
+  std::vector<l1tpf::Particle> lTKVtxCands = l1regions_.fetchTracks(/*ptmin=*/0.0, /*frompv=*/true);
+  addPF(lTKVtxCands, "TKVtx", iEvent);
+
+  // then run PF in each region
+  for (auto & l1region : l1regions_.regions()) {
+      l1pfalgo_->runPF(l1region);
+      l1pfalgo_->runChargedPV(l1region, z0);
   }
-  addPF(ll1TkCands,  "L1TK"   ,iEvent);
-  addPF(ll1PFCands,  "L1PF"   ,iEvent);
-  addPF(ll1PupCands, "L1Puppi",iEvent);
-  unsigned int totNL1Calo = 0, totNL1TK = 0, totNL1Mu = 0, totNL1PF = 0, totNL1Puppi = 0;
-  unsigned int maxNL1Calo = 0, maxNL1TK = 0, maxNL1Mu = 0, maxNL1PF = 0, maxNL1Puppi = 0;
+  std::vector<l1tpf::Particle> lCands = l1regions_.fetch(false);
+  addPF(lCands, "PF", iEvent);
+
+  // then get our alphas (globally)
+  float alphaCMed, alphaCRms, alphaFMed, alphaFRms;
+  l1pfalgo_->computePuppiMedRMS(l1regions_.regions(), alphaCMed, alphaCRms, alphaFMed, alphaFRms);
+  iEvent.put(std::make_unique<float>(alphaCMed), "alphaCMed"); iEvent.put(std::make_unique<float>(alphaCRms), "alphaCRms");
+  iEvent.put(std::make_unique<float>(alphaFMed), "alphaFMed"); iEvent.put(std::make_unique<float>(alphaFRms), "alphaFRms");
+
+  // then run puppi (regionally)
+  for (auto & l1region : l1regions_.regions()) {
+      l1pfalgo_->runPuppi(l1region, -1., alphaCMed, alphaCRms, alphaFMed, alphaFRms);
+  }
+  // and save puppi
+  std::vector<l1tpf::Particle> lPupCands = l1regions_.fetch(true);
+  addPF(lPupCands,"Puppi"   ,iEvent);
+
+  // then get and save objects discarted in the PF algo, for debugging
+  std::vector<l1tpf::Particle> lPFDisc = l1regions_.fetch(false,0.01,true);
+  produces<PFOutputCollection>("PFDiscarded");
+
+  // then go do the multiplicities
+  unsigned int totNL1Calo = 0, totNL1EmCalo = 0, totNL1TK = 0, totNL1Mu = 0, totNL1PF = 0, totNL1Puppi = 0;
+  unsigned int maxNL1Calo = 0, maxNL1EmCalo = 0, maxNL1TK = 0, maxNL1Mu = 0, maxNL1PF = 0, maxNL1Puppi = 0;
   for (const auto & r : l1regions_.regions()) {
       totNL1Calo += r.calo.size();
+      totNL1EmCalo += r.emcalo.size();
       totNL1TK += r.track.size();
       totNL1PF += r.pf.size();
       totNL1Mu += r.muon.size();
       totNL1Puppi += r.puppi.size();
       maxNL1Calo = std::max<unsigned>( maxNL1Calo, r.calo.size() );
+      maxNL1EmCalo = std::max<unsigned>( maxNL1EmCalo, r.emcalo.size() );
       maxNL1TK = std::max<unsigned>( maxNL1TK, r.track.size() );
       maxNL1PF = std::max<unsigned>( maxNL1PF, r.pf.size() );
       maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.muon.size() );
       maxNL1Puppi = std::max<unsigned>( maxNL1Puppi, r.puppi.size() );
   }
   addUInt(totNL1Calo, "totNL1Calo", iEvent); addUInt(maxNL1Calo, "maxNL1Calo", iEvent);
+  addUInt(totNL1EmCalo, "totNL1EmCalo", iEvent); addUInt(maxNL1EmCalo, "maxNL1EmCalo", iEvent);
   addUInt(totNL1TK, "totNL1TK", iEvent); addUInt(maxNL1TK, "maxNL1TK", iEvent);
   addUInt(totNL1Mu, "totNL1Mu", iEvent); addUInt(maxNL1Mu, "maxNL1Mu", iEvent);
   addUInt(totNL1PF, "totNL1PF", iEvent); addUInt(maxNL1PF, "maxNL1PF", iEvent);
@@ -482,22 +445,20 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   
   if (metanalyzer_) {
       metanalyzer_->clear();
-      metanalyzer_->setZ(lTKCands,connector_->dZ());
+      metanalyzer_->setZ(lTKCands,z0);
       metanalyzer_->setMETRecoil(2,lTKCands ,false);
       metanalyzer_->setMETRecoil(0,lCands,false);
       metanalyzer_->setMETRecoil(3,lRawCalo ,true);
       metanalyzer_->setMETRecoil(1,lCorrCalo,true);
       metanalyzer_->setMETRecoil(5,lPupCands,false);
       metanalyzer_->setMETRecoil(4,lTKVtxCands ,false);
-      metanalyzer_->setMETRecoil(6,ll1PFCands ,false);
-      metanalyzer_->setMETRecoil(7,ll1PupCands ,false);      
       metanalyzer_->setGenMET(genParticles);
       metanalyzer_->fill();
   }
 
   if (jetanalyzer_) {
       jetanalyzer_->clear();
-      jetanalyzer_->setZ(lTKCands,connector_->dZ());
+      jetanalyzer_->setZ(lTKCands,z0);
       jetanalyzer_->setGenJets(genParticles,1);
       jetanalyzer_->setJets(lCands,0);
       jetanalyzer_->setJets(lTKCands,2);
@@ -519,59 +480,20 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       isoanalyzer_->fill();
   }
 
-  if (altpfalgo_.get()) {
-      l1regions_.clear(); 
-      if (fDebugR <= 0) {
-          for (const l1tpf::Particle & tk : l1tks) { if(tk.pt() > trkPt_) l1regions_.addTrack(tk);  }
-          for (const l1tpf::Particle & mu : l1mus) { l1regions_.addMuon(mu); }
-          for (const l1tpf::Particle & calo : calos) { l1regions_.addCalo(calo); }
-          for (const l1tpf::Particle & calo : emcalos) { l1regions_.addEmCalo(calo); }
-      } else {
-          // pick only inputs in the debug cone
-          for (const l1tpf::Particle & tk : l1tks) { 
-            if(tk.pt() > trkPt_ && deltaR(tk.caloEta(),tk.caloPhi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addTrack(tk);  
-          }
-          for (const l1tpf::Particle & mu : l1mus) { l1regions_.addMuon(mu); }
-          for (const l1tpf::Particle & calo : calos) { if (deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addCalo(calo); }
-          for (const l1tpf::Particle & calo : emcalos) { if (deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) l1regions_.addEmCalo(calo); }
-      }
-
-    
-      // run alternative PFs in each region
-      for (auto & l1region : l1regions_.regions()) {
-          altpfalgo_->runPF(l1region);
-          altpfalgo_->runChargedPV(l1region, z0);
-      }
-      // do the Puppi part. get our own alphas first, since our PF candidates may be different
-      float alphaCMed, alphaCRms, alphaFMed, alphaFRms;
-      altpfalgo_->computePuppiMedRMS(l1regions_.regions(), alphaCMed, alphaCRms, alphaFMed, alphaFRms);
-      for (auto & l1region : l1regions_.regions()) altpfalgo_->runPuppi(l1region, -1., alphaCMed, alphaCRms, alphaFMed, alphaFRms);
-
-      std::vector<combiner::Particle> lAltPFCands = l1regions_.fetch(false);
-      addPF(lAltPFCands,  "AltPF"   ,iEvent);
-
-      std::vector<combiner::Particle> lAltPFDisc   = l1regions_.fetch(false,0.01,true);
-      addPF(lAltPFDisc,  "AltPFDiscarded"   ,iEvent);
-
-      std::vector<combiner::Particle> lAltPupCands  = l1regions_.fetch(true);
-      addPF(lAltPupCands, "AltPuppi",iEvent);
-
-  }
-
-
 }
+
 void NtupleProducer::addPF(const L1PFCollection &iCandidates, const std::string &iLabel, edm::Event& iEvent) { 
   std::unique_ptr<PFOutputCollection > corrCandidates( new PFOutputCollection );
   for(unsigned int i0 = 0; i0 < iCandidates.size(); i0++) { 
     reco::PFCandidate::ParticleType id = reco::PFCandidate::ParticleType::X; 
     int pCharge=0; 
-    if(iCandidates[i0].pdgId() == combiner::Particle::CH) id = reco::PFCandidate::ParticleType::h;
-    if(iCandidates[i0].pdgId() == combiner::Particle::EL) id = reco::PFCandidate::ParticleType::e;
-    if(iCandidates[i0].pdgId() == combiner::Particle::NH) id = reco::PFCandidate::ParticleType::h0;
-    if(iCandidates[i0].pdgId() == combiner::Particle::GAMMA) id = reco::PFCandidate::ParticleType::gamma;
-    if(iCandidates[i0].pdgId() == combiner::Particle::MU) id = reco::PFCandidate::ParticleType::mu;
-    if(iCandidates[i0].pdgId() == combiner::Particle::CH || iCandidates[i0].pdgId() == combiner::Particle::EL)  pCharge = 1;
-    if(iCandidates[i0].pdgId() == combiner::Particle::MU)  pCharge = iCandidates[i0].charge();
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::CH) id = reco::PFCandidate::ParticleType::h;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::EL) id = reco::PFCandidate::ParticleType::e;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::NH) id = reco::PFCandidate::ParticleType::h0;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::GAMMA) id = reco::PFCandidate::ParticleType::gamma;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::MU) id = reco::PFCandidate::ParticleType::mu;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::CH || iCandidates[i0].pdgId() == l1tpf::Particle::EL)  pCharge = 1;
+    if(iCandidates[i0].pdgId() == l1tpf::Particle::MU)  pCharge = iCandidates[i0].charge();
     if (pCharge == 0 && (id !=  reco::PFCandidate::ParticleType::h0 && id != reco::PFCandidate::ParticleType::gamma)) {
         std::cout << "ERROR for " << iLabel << " candidate id " << iCandidates[i0].pdgId()  << ", pt " << iCandidates[i0].pt()  << ", eta " << iCandidates[i0].eta() << " has charge zero" << std::endl;
     }
@@ -670,7 +592,6 @@ NtupleProducer::endJob() {
   // Save to ROOT file
   //
   
-  connector_->write();
   metanalyzer_->write();
   jetanalyzer_->write();
   isoanalyzer_->write();

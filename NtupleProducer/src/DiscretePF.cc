@@ -2,6 +2,7 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "Math/ProbFunc.h"
+#include <TH1F.h>
 
 namespace { 
     std::vector<float> vd2vf(const std::vector<double> & vd) {
@@ -122,10 +123,11 @@ std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin, bool emcalo) c
     return ret;
 }
 
-std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin) const {
+std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin, bool fromPV) const {
     std::vector<l1tpf::Particle> ret;
     for (const Region &r : regions_) {
         for (const PropagatedTrack & p : r.track) {
+            if (fromPV && !p.fromPV) continue;
             if (regions_.size() > 1) {
                 if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
             }
@@ -145,22 +147,21 @@ PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :
     puppiEtaCuts_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiEtaCuts"))),
     puppiPtCuts_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiPtCuts"))),
     puppiPtCutsPhotons_(vd2vf(iConfig.getParameter<std::vector<double>>("puppiPtCutsPhotons"))),
-    vtxCut_(iConfig.getParameter<double>("vtxRes")),
+    vtxRes_(iConfig.getParameter<double>("vtxRes")),
     vtxAdaptiveCut_(iConfig.getParameter<bool>("vtxAdaptiveCut")),
     drMatch_(0.2), ptMatchLow_(2.0), ptMatchHigh_(2.0), maxInvisiblePt_(20.0),
     useTrackCaloSigma_(false), rescaleUnmatchedTrack_(false),
     debug_(iConfig.getUntrackedParameter<int>("debug",0))
 {
-    if (iConfig.existsAs<edm::ParameterSet>("linking")) {
-        edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
-        drMatch_ = linkcfg.getParameter<double>("trackCaloDR");
-        ptMatchLow_ = linkcfg.getParameter<double>("trackCaloNSigmaLow");
-        ptMatchHigh_ = linkcfg.getParameter<double>("trackCaloNSigmaHigh");
-        useTrackCaloSigma_ = linkcfg.getParameter<bool>("useTrackCaloSigma");
-        rescaleUnmatchedTrack_ = linkcfg.getParameter<bool>("rescaleUnmatchedTrack");
-        maxInvisiblePt_  = linkcfg.getParameter<double>("maxInvisiblePt");
-        if (rescaleUnmatchedTrack_) std::cout << "WARNING: rescaleUnmatchedTrack not yet implemented for integer code" << std::endl;
-    }
+    edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+    drMatch_ = linkcfg.getParameter<double>("trackCaloDR");
+    ptMatchLow_ = linkcfg.getParameter<double>("trackCaloNSigmaLow");
+    ptMatchHigh_ = linkcfg.getParameter<double>("trackCaloNSigmaHigh");
+    useTrackCaloSigma_ = linkcfg.getParameter<bool>("useTrackCaloSigma");
+    rescaleUnmatchedTrack_ = linkcfg.getParameter<bool>("rescaleUnmatchedTrack");
+    maxInvisiblePt_  = linkcfg.getParameter<double>("maxInvisiblePt");
+    if (rescaleUnmatchedTrack_) std::cout << "WARNING: rescaleUnmatchedTrack not yet implemented for integer code" << std::endl;
+
     intDrMatchBox_ = std::ceil(drMatch_ * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
     intPtMatchLowX4_ = std::ceil(ptMatchLow_ * 4);
     intPtMatchHighX4_ = std::ceil(ptMatchHigh_ * 4);
@@ -333,14 +334,16 @@ void PFAlgo::runPuppi(Region &r, float npu, float alphaCMed, float alphaCRms, fl
     computePuppiWeights(r, alphaCMed, alphaCRms, alphaFMed, alphaFRms);
     fillPuppi(r);
 }
+
 void PFAlgo::runChargedPV(Region &r, float z0) const {
     int16_t iZ0 = round(z0 * InputTrack::Z0_SCALE);
-    int16_t iDZ  = round(1.5 * vtxCut_ * InputTrack::Z0_SCALE);
-    int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxCut_ * InputTrack::Z0_SCALE) : iDZ;
+    int16_t iDZ  = round(1.5 * vtxRes_ * InputTrack::Z0_SCALE);
+    int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxRes_ * InputTrack::Z0_SCALE) : iDZ;
     for (PFParticle & p : r.pf) {
         p.chargedPV = (p.hwId <= 1 && std::abs(p.track.hwZ0 - iZ0) < (std::abs(p.track.hwVtxEta) < InputTrack::VTX_ETA_1p3 ? iDZ : iDZ2));
     }
 }
+
 void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, float alphaFMed, float alphaFRms) const {
     int16_t ietacut = std::round(etaCharged_ * CaloCluster::ETAPHI_SCALE);
     // FIXME floats for now
@@ -382,6 +385,43 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
         }
         if (debug_) printf("PUPPI \t neutral id %1d pt %7.2f eta %+5.2f phi %+5.2f  alpha %+6.2f x2 %+6.2f --> puppi weight %.3f   puppi pt %7.2f \n", p.hwId, p.floatPt(), p.floatEta(), p.floatPhi(), alpha, x2, p.floatPuppiW(), p.floatPt()*p.floatPuppiW());
     }
+}
+
+void PFAlgo::doVertexing(std::vector<Region> &rs, VertexAlgo algo, float &pvdz) const {
+    int lNBins = int(40./vtxRes_);
+    if (algo == TPVtxAlgo) lNBins *= 3;
+    std::unique_ptr<TH1F> h_dz(new TH1F("h_dz","h_dz",lNBins,-20,20));
+    for (const Region & r : rs) {
+        for (const PropagatedTrack & p : r.track) {
+            if (rs.size() > 1) {
+                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+            }
+            h_dz->Fill( p.floatDZ(), std::min(p.floatPt(), 50.f) );
+        }
+    }
+    switch(algo) {
+        case OldVtxAlgo: {
+                             int imaxbin = h_dz->GetMaximumBin();
+                             pvdz = h_dz->GetXaxis()->GetBinCenter(imaxbin);
+                         }; break;
+        case TPVtxAlgo: {
+                            float max = 0; int bmax = -1;
+                            for (int b = 1; b <= lNBins; ++b) {
+                                float sum3 = h_dz->GetBinContent(b) + h_dz->GetBinContent(b+1) + h_dz->GetBinContent(b-1);
+                                if (bmax == -1 || sum3 > max) { max = sum3; bmax = b; }
+                            }
+                            pvdz = h_dz->GetXaxis()->GetBinCenter(bmax); 
+                        }; break;
+    }
+    int16_t iZ0 = round(pvdz * InputTrack::Z0_SCALE);
+    int16_t iDZ  = round(1.5 * vtxRes_ * InputTrack::Z0_SCALE);
+    int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxRes_ * InputTrack::Z0_SCALE) : iDZ;
+    for (Region & r : rs) {
+        for (PropagatedTrack & p : r.track) {
+            p.fromPV = (std::abs(p.hwZ0 - iZ0) < (std::abs(p.hwVtxEta) < InputTrack::VTX_ETA_1p3 ? iDZ : iDZ2));
+        }
+    }
+
 }
 
 void PFAlgo::computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed, float &alphaCRms, float &alphaFMed, float &alphaFRms) const {
