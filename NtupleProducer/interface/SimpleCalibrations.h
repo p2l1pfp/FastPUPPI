@@ -104,8 +104,8 @@ namespace l1tpf {
     class SimpleResol { 
         public:
             SimpleResol() {}
-            SimpleResol(const edm::ParameterSet &iConfig, const std::string &name) {
-                if (iConfig.existsAs<edm::ParameterSet>(name)) {
+            SimpleResol(const edm::ParameterSet &iConfig, const std::string &name, bool throwIfMissing=false) {
+                if (iConfig.existsAs<edm::ParameterSet>(name) || throwIfMissing) {
                     edm::ParameterSet cpset = iConfig.getParameter<edm::ParameterSet>(name);
                     std::vector<double> etaBins = cpset.getParameter<std::vector<double>>("etaBins");
                     std::vector<double> offset = cpset.getParameter<std::vector<double>>("offset");
