@@ -130,7 +130,7 @@ if False:
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
     process.p.remove(process.ntuple)
     process.TFileService.fileName = cms.string("trackTupleNew.root")
-if True:
+if False:
     #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
     #process.InfoOutBackup = process.InfoOut.clone()
     #process.p.replace(process.CaloInfoOut, process.CaloInfoOutBackup + process.CaloInfoOut)
