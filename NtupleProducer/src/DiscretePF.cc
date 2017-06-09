@@ -22,21 +22,29 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
             float etaExtra = preg.getParameter<double>("etaExtra");
             float phiExtra = preg.getParameter<double>("phiExtra");
             float phiWidth = 2*M_PI/phiSlices;
+            unsigned int ncalomax = 0, nemcalomax = 0, ntrackmax = 0, nmuonmax = 0, npfmax = 0, npuppimax = 0;
+            if (preg.existsAs<uint32_t>("caloNMax")) ncalomax = preg.getParameter<uint32_t>("caloNMax");
+            if (preg.existsAs<uint32_t>("emcaloNMax")) nemcalomax = preg.getParameter<uint32_t>("emcaloNMax");
+            if (preg.existsAs<uint32_t>("trackNMax")) ntrackmax = preg.getParameter<uint32_t>("trackNMax");
+            if (preg.existsAs<uint32_t>("muonNMax")) nmuonmax = preg.getParameter<uint32_t>("muonNMax");
+            if (preg.existsAs<uint32_t>("pfNMax")) npfmax = preg.getParameter<uint32_t>("pfNMax");
+            if (preg.existsAs<uint32_t>("puppiNMax")) npuppimax = preg.getParameter<uint32_t>("puppiNMax");
             for (unsigned int ieta = 0, neta = etaBoundaries.size()-1; ieta < neta; ++ieta) {
                 for (unsigned int iphi = 0; iphi < phiSlices; ++iphi) {
                     float phiCenter = (iphi+0.5)*phiWidth-M_PI;
                     regions_.push_back(Region(
                             etaBoundaries[ieta], etaBoundaries[ieta+1], phiCenter, phiWidth, 
                             phiExtra, etaExtra,
-                            9999,9999,999,9,9999,9999)); 
+                            ncalomax, nemcalomax, ntrackmax, nmuonmax, npfmax, npuppimax)); 
                 }
             }
         }
         std::cout << "L1 RegionMapper: made " << regions_.size() << " regions" << std::endl;
     } else {
         // start off with a dummy region
+        unsigned int ncalomax = 0, nemcalomax = 0, ntrackmax = 0, nmuonmax = 0, npfmax = 0, npuppimax = 0;
         regions_.push_back(Region(-5.5,5.5, 0,2*M_PI, 0.5, 0.5,
-                                 9999,9999,999,9,9999,9999));
+                                 ncalomax, nemcalomax, ntrackmax, nmuonmax, npfmax, npuppimax));
     }
 }
 

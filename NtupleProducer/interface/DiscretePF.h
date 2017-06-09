@@ -192,6 +192,9 @@ namespace l1tpf_int {
         std::sort(emcalo.begin(),  emcalo.end());
         std::sort(track.begin(), track.end());
         std::sort(muon.begin(),  muon.end());
+        if (ncaloMax > 0 && calo.size() > ncaloMax) { caloOverflow = calo.size() - ncaloMax; calo.resize(ncaloMax); }
+        if (nemcaloMax > 0 && emcalo.size() > nemcaloMax) { emcaloOverflow = emcalo.size() - nemcaloMax; emcalo.resize(nemcaloMax); }
+        if (ntrackMax > 0 && track.size() > ntrackMax) { trackOverflow = track.size() - ntrackMax; track.resize(ntrackMax); }
     }
     void outputSort() {
         std::sort(puppi.begin(), puppi.end());
