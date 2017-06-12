@@ -125,7 +125,10 @@ private:
   // debug flag
   int fDebug;
   float fDebugEta, fDebugPhi, fDebugR;
-     
+
+  // Region dump
+  FILE *fRegionDump;
+   
   // declare variables for output file
   std::string           fOutputName;
   TFile                 *fOutputFile;
@@ -176,6 +179,7 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   fDebugEta             (iConfig.getUntrackedParameter<double>("debugEta",0)),
   fDebugPhi             (iConfig.getUntrackedParameter<double>("debugPhi",0)),
   fDebugR               (iConfig.getUntrackedParameter<double>("debugR",-1)),
+  fRegionDump           (nullptr),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -197,6 +201,9 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   } else if (algo == "PFAlgoOld") {
       l1pfalgo_.reset(new l1tpf_int::PFAlgo(iConfig));
   } else throw cms::Exception("Configuration", "Unsupported PFAlgo");
+
+  std::string regionDumpFile = iConfig.getUntrackedParameter<std::string>("regionDumpFileName", "");
+  if (!regionDumpFile.empty()) fRegionDump = fopen(regionDumpFile.c_str(), "wb");
 
   if (fOutputName.empty()) {
       metanalyzer_ = nullptr;
@@ -247,6 +254,7 @@ NtupleProducer::~NtupleProducer()
 {
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
+   if (fRegionDump) fclose(fRegionDump);
 }
 
 
@@ -442,7 +450,21 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addUInt(totNL1Mu, "totNL1Mu", iEvent); addUInt(maxNL1Mu, "maxNL1Mu", iEvent);
   addUInt(totNL1PF, "totNL1PF", iEvent); addUInt(maxNL1PF, "maxNL1PF", iEvent);
   addUInt(totNL1Puppi, "totNL1Puppi", iEvent); addUInt(maxNL1Puppi, "maxNL1Puppi", iEvent);
-  
+ 
+  if (fRegionDump) {
+    uint32_t run = iEvent.id().run(), lumi = iEvent.id().luminosityBlock(); uint64_t event = iEvent.id().event();
+    fwrite(&run, sizeof(uint32_t), 1, fRegionDump);
+    fwrite(&lumi, sizeof(uint32_t), 1, fRegionDump);
+    fwrite(&event, sizeof(uint64_t), 1, fRegionDump);
+    fwrite(&z0, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaCMed, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaCRms, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaFMed, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaFRms, sizeof(float), 1, fRegionDump);
+    uint32_t nregions = l1regions_.regions().size();
+    fwrite(&nregions, sizeof(uint32_t), 1, fRegionDump);
+    for (const auto & r : l1regions_.regions()) r.writeToFile(fRegionDump);
+  } 
   if (metanalyzer_) {
       metanalyzer_->clear();
       metanalyzer_->setZ(lTKCands,z0);

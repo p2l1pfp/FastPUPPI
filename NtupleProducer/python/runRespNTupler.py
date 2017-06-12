@@ -123,13 +123,21 @@ def goRegional(inParallel=False):
     if inParallel:
         process.InfoOutReg = process.InfoOut.clone(regions = regions)
         process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.InfoOutReg + process.ntuple)
+        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(False)
     else:
         process.InfoOut.regions = regions
+        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
 if False:
     process.InfoOut.fillTrackTree = cms.untracked.int32(1)
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
     process.p.remove(process.ntuple)
     process.TFileService.fileName = cms.string("trackTupleNew.root")
+if False: # prepare dump file for Vivado
+    goRegional()
+    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+    process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU140_job10.root']
+     
 if False:
     #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
     #process.InfoOutBackup = process.InfoOut.clone()

@@ -91,7 +91,7 @@ void PFAlgo3::runPF(Region &r) const {
     std::vector<float> em2sumtkpterr(r.emcalo.size(), 0);
     for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
         const auto & em = r.emcalo[iem];
-        if (std::abs(em.floatEta()) > 2.5) continue; 
+        if (r.globalAbsEta(em.floatEta()) > 2.5) continue; 
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             if (tk2em[itk] == iem) {
                 const auto & tk = r.track[itk]; 
@@ -109,7 +109,7 @@ void PFAlgo3::runPF(Region &r) const {
     for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
         auto & em = r.emcalo[iem];
         em.isEM = false; em.used = false; em.hwFlags = 0; 
-        if (std::abs(em.floatEta()) > 2.5) continue; 
+        if (r.globalAbsEta(em.floatEta()) > 2.5) continue; 
         if (debug_) printf("ALT \t EM    %3d (pt %7.2f) has %2d tracks (sumpt %7.2f, sumpterr %7.2f), ptdif %7.2f +- %7.2f\n", iem, em.floatPt(), em2ntk[iem], em2sumtkpt[iem], em2sumtkpterr[iem], em.floatPt() - em2sumtkpt[iem], std::max<float>(em2sumtkpterr[iem],em.floatPtErr()));
         if (em2ntk[iem] == 0) { // Photon
             em.isEM = true;
@@ -229,7 +229,7 @@ void PFAlgo3::runPF(Region &r) const {
     std::vector<float> calo2sumtkpterr(r.calo.size(), 0);
     for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
         const auto & calo = r.calo[ic];
-        if (std::abs(calo.floatEta()) > 2.5) continue; 
+        if (r.globalAbsEta(calo.floatEta()) > 2.5) continue; 
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             if (tk2calo[itk] == ic) {
                 const auto & tk = r.track[itk]; 
@@ -269,11 +269,11 @@ void PFAlgo3::runPF(Region &r) const {
         std::vector<float> addtopt(r.calo.size(), 0);
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
             auto & calo = r.calo[ic];
-            if (calo2ntk[ic] != 0 || calo.used || std::abs(calo.floatEta()) > 2.5) continue;
+            if (calo2ntk[ic] != 0 || calo.used || r.globalAbsEta(calo.floatEta()) > 2.5) continue;
             int i2best = -1; float drbest = caloReLinkDr_;
             for (int ic2 = 0; ic2 < nc; ++ic2) {
                 const auto & calo2 = r.calo[ic2];
-                if (calo2ntk[ic2] == 0 || calo2.used || std::abs(calo2.floatEta()) > 2.5) continue;
+                if (calo2ntk[ic2] == 0 || calo2.used || r.globalAbsEta(calo2.floatEta()) > 2.5) continue;
                 float dr = floatDR(calo,calo2);
                 //// uncomment below for more verbose debugging
                 //if (debug_ && dr < 0.5) printf("ALT \t calo  %3d (pt %7.2f) with no tracks is at dr %.3f from calo %3d with pt %7.2f (sum tk pt %7.2f), track excess %7.2f +- %7.2f\n", ic, calo.floatPt(), dr, ic2, calo2.floatPt(), calo2sumtkpt[ic2], calo2sumtkpt[ic2] - calo2.floatPt(), useTrackCaloSigma_ ? calo2sumtkpterr[ic2] : calo2.floatPtErr());

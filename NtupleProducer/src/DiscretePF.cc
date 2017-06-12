@@ -13,9 +13,42 @@ namespace {
 }
 using namespace l1tpf_int;
 
-RegionMapper::RegionMapper( const edm::ParameterSet& iConfig) 
+void Region::writeToFile(FILE *file) const {
+    fwrite(&etaCenter, sizeof(float), 1, file);
+    fwrite(&etaMin,    sizeof(float), 1, file);
+    fwrite(&etaMax,    sizeof(float), 1, file);
+    fwrite(&phiCenter, sizeof(float), 1, file);
+    fwrite(&phiHalfWidth, sizeof(float), 1, file);
+    fwrite(&etaExtra, sizeof(float), 1, file);
+    fwrite(&phiExtra, sizeof(float), 1, file);
+
+    uint32_t number; uint32_t size;
+    number = calo.size(); size = sizeof(CaloCluster);
+    fwrite(&number, sizeof(uint32_t), 1, file);
+    fwrite(&size,   sizeof(uint32_t), 1, file);
+    fwrite(&calo[0], size, number, file);
+
+    number = emcalo.size(); size = sizeof(CaloCluster);
+    fwrite(&number, sizeof(uint32_t), 1, file);
+    fwrite(&size,   sizeof(uint32_t), 1, file);
+    fwrite(&emcalo[0], size, number, file);
+
+    number = track.size(); size = sizeof(PropagatedTrack);
+    fwrite(&number, sizeof(uint32_t), 1, file);
+    fwrite(&size,   sizeof(uint32_t), 1, file);
+    fwrite(&track[0], size, number, file);
+
+    number = muon.size(); size = sizeof(Muon);
+    fwrite(&number, sizeof(uint32_t), 1, file);
+    fwrite(&size,   sizeof(uint32_t), 1, file);
+    fwrite(&muon[0], size, number, file);
+}
+
+RegionMapper::RegionMapper( const edm::ParameterSet& iConfig )  :
+    useRelativeRegionalCoordinates_(false)
 {
     if (iConfig.existsAs<std::vector<edm::ParameterSet>>("regions")) {
+        useRelativeRegionalCoordinates_ = iConfig.getParameter<bool>("useRelativeRegionalCoordinates");
         for (const edm::ParameterSet & preg : iConfig.getParameter<std::vector<edm::ParameterSet>>("regions")) {
             std::vector<double> etaBoundaries = preg.getParameter<std::vector<double>>("etaBoundaries");
             unsigned int phiSlices = preg.getParameter<uint32_t>("phiSlices");
@@ -34,7 +67,7 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
                     float phiCenter = (iphi+0.5)*phiWidth-M_PI;
                     regions_.push_back(Region(
                             etaBoundaries[ieta], etaBoundaries[ieta+1], phiCenter, phiWidth, 
-                            phiExtra, etaExtra,
+                            phiExtra, etaExtra, useRelativeRegionalCoordinates_,
                             ncalomax, nemcalomax, ntrackmax, nmuonmax, npfmax, npuppimax)); 
                 }
             }
@@ -43,7 +76,7 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig)
     } else {
         // start off with a dummy region
         unsigned int ncalomax = 0, nemcalomax = 0, ntrackmax = 0, nmuonmax = 0, npfmax = 0, npuppimax = 0;
-        regions_.push_back(Region(-5.5,5.5, 0,2*M_PI, 0.5, 0.5,
+        regions_.push_back(Region(-5.5,5.5, 0,2*M_PI, 0.5, 0.5, useRelativeRegionalCoordinates_,
                                  ncalomax, nemcalomax, ntrackmax, nmuonmax, npfmax, npuppimax));
     }
 }
@@ -52,14 +85,14 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
     // now let's be optimistic and make things very simple
     // we propagate in floating point the track to the calo
     // we add the track to the region corresponding to its vertex (eta,phi) coordinates AND its (eta,phi) calo coordinates
-    PropagatedTrack prop;
-    prop.fillInput(t.pt(), t.eta(), t.phi(), t.charge(), t.dz(), 0);
-    prop.fillPropagated(t.pt(), t.sigma(), t.caloSigma(), t.caloEta(), t.caloPhi(), 0);
-    float ndf = 2*t.quality()-4;
-    prop.hwChi2  = round(t.normalizedChi2()*ndf*10);
-    prop.hwStubs = round(t.quality());
-    for (Region &r : regions_) {
+   for (Region &r : regions_) {
         if (r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi())) {
+            PropagatedTrack prop;
+            prop.fillInput(t.pt(), r.localEta(t.eta()), r.localPhi(t.phi()), t.charge(), t.dz(), 0);
+            prop.fillPropagated(t.pt(), t.sigma(), t.caloSigma(), r.localEta(t.caloEta()), r.localPhi(t.caloPhi()), 0);
+            float ndf = 2*t.quality()-4;
+            prop.hwChi2  = round(t.normalizedChi2()*ndf*10);
+            prop.hwStubs = round(t.quality());
             r.track.push_back(prop);
         }
     } 
@@ -68,10 +101,10 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
 void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
     // now let's be optimistic and make things very simple
     // we don't propagate anything
-    Muon prop;
-    prop.fill(mu.pt(), mu.eta(), mu.phi(), mu.charge(), mu.quality());
     for (Region &r : regions_) {
         if (r.contains(mu.eta(), mu.phi())) {
+            Muon prop;
+            prop.fill(mu.pt(), r.localEta(mu.eta()), r.localPhi(mu.phi()), mu.charge(), mu.quality());
             r.muon.push_back(prop);
         }
     } 
@@ -79,20 +112,20 @@ void RegionMapper::addMuon( const l1tpf::Particle &mu ) {
 
 void RegionMapper::addCalo( const l1tpf::Particle &p ) { 
     if (p.pt() == 0) return;
-    CaloCluster calo;
-    calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
         if (r.contains(p.eta(), p.phi())) {
+            CaloCluster calo;
+            calo.fill(p.pt(), p.rawEmEt(), p.sigma(), r.localEta(p.eta()), r.localPhi(p.phi()), p.pdgId() == l1tpf::Particle::GAMMA, 0);
             r.calo.push_back(calo);
         }
     } 
 }
 void RegionMapper::addEmCalo( const l1tpf::Particle &p ) { 
     if (p.pt() == 0) return;
-    CaloCluster calo;
-    calo.fill(p.pt(), p.rawEmEt(), p.sigma(), p.eta(), p.phi(), p.pdgId() == l1tpf::Particle::GAMMA, 0);
     for (Region &r : regions_) {
         if (r.contains(p.eta(), p.phi())) {
+            CaloCluster calo;
+            calo.fill(p.pt(), p.rawEmEt(), p.sigma(), r.localEta(p.eta()), r.localPhi(p.phi()), p.pdgId() == l1tpf::Particle::GAMMA, 0);
             r.emcalo.push_back(calo);
         }
     } 
@@ -104,10 +137,10 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin, bool d
     for (const Region &r : regions_) {
         for (const PFParticle & p : (puppi ? r.puppi : (discarded ? r.pfdiscarded : r.pf ))) {
             if (regions_.size() > 1) {
-                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+                if (!r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.hwId, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge()  );
+                ret.emplace_back( p.floatPt(), r.globalEta(p.floatVtxEta()), r.globalPhi(p.floatVtxPhi()), 0.13f, p.hwId, 0.f, p.floatDZ(), r.globalEta(p.floatEta()), r.globalPhi(p.floatPhi()), p.intCharge()  );
                 ret.back().setStatus(p.hwStatus);
                 ret.back().setPuppiWeight(p.floatPuppiW());
             }
@@ -121,10 +154,10 @@ std::vector<l1tpf::Particle> RegionMapper::fetchCalo(float ptMin, bool emcalo) c
     for (const Region &r : regions_) {
         for (const CaloCluster & p : (emcalo ? r.emcalo : r.calo)) {
             if (regions_.size() > 1) {
-                if (!r.fiducial(p.floatEta(), p.floatPhi())) continue;
+                if (!r.fiducialLocal(p.floatEta(), p.floatPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatPt(), p.floatEta(), p.floatPhi(), 0.13f, (p.isEM || emcalo) ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH );
+                ret.emplace_back( p.floatPt(), r.globalEta(p.floatEta()), r.globalPhi(p.floatPhi()), 0.13f, (p.isEM || emcalo) ? l1tpf::Particle::GAMMA : l1tpf::Particle::NH );
             }
         }
     }
@@ -137,10 +170,10 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin, bool fromPV)
         for (const PropagatedTrack & p : r.track) {
             if (fromPV && !p.fromPV) continue;
             if (regions_.size() > 1) {
-                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+                if (!r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi())) continue;
             }
             if (p.floatPt() > ptMin) {
-                ret.emplace_back( p.floatVtxPt(), p.floatVtxEta(), p.floatVtxPhi(), 0.13f, p.muonLink ? l1tpf::Particle::MU : l1tpf::Particle::CH, 0.f, p.floatDZ(), p.floatEta(), p.floatPhi(), p.intCharge() );
+                ret.emplace_back( p.floatVtxPt(), r.globalEta(p.floatVtxEta()), r.globalPhi(p.floatVtxPhi()), 0.13f, p.muonLink ? l1tpf::Particle::MU : l1tpf::Particle::CH, 0.f, p.floatDZ(), r.globalEta(p.floatEta()), r.globalPhi(p.floatPhi()), p.intCharge() );
             }
         }
     }
@@ -348,7 +381,9 @@ void PFAlgo::runChargedPV(Region &r, float z0) const {
     int16_t iDZ  = round(1.5 * vtxRes_ * InputTrack::Z0_SCALE);
     int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxRes_ * InputTrack::Z0_SCALE) : iDZ;
     for (PFParticle & p : r.pf) {
-        p.chargedPV = (p.hwId <= 1 && std::abs(p.track.hwZ0 - iZ0) < (std::abs(p.track.hwVtxEta) < InputTrack::VTX_ETA_1p3 ? iDZ : iDZ2));
+        bool barrel = std::abs(p.track.hwVtxEta) < InputTrack::VTX_ETA_1p3;
+        if (r.relativeCoordinates) barrel = (std::abs(r.globalAbsEta(p.track.floatVtxEta())) < 1.3); // FIXME could make a better integer implementation
+        p.chargedPV = (p.hwId <= 1 && std::abs(p.track.hwZ0 - iZ0) < (barrel ? iDZ : iDZ2));
     }
 }
 
@@ -374,7 +409,9 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
             }
         }
         float alpha = -99, x2 = -99;
-        if (std::abs(p.hwEta) < ietacut) {
+        bool central = std::abs(p.hwEta) < ietacut;
+        if (r.relativeCoordinates) central = (std::abs(r.globalAbsEta(p.floatEta())) < etaCharged_); // FIXME could make a better integer implementation
+        if (central) {
             if (alphaC > 0) {
                 alpha = std::log(alphaC);
                 x2 = (alpha - alphaCMed) * std::abs(alpha - alphaCMed) / std::pow(alphaCRms,2);
@@ -402,7 +439,7 @@ void PFAlgo::doVertexing(std::vector<Region> &rs, VertexAlgo algo, float &pvdz) 
     for (const Region & r : rs) {
         for (const PropagatedTrack & p : r.track) {
             if (rs.size() > 1) {
-                if (!r.fiducial(p.floatVtxEta(), p.floatVtxPhi())) continue;
+                if (!r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi())) continue; // skip duplicates
             }
             h_dz->Fill( p.floatDZ(), std::min(p.floatPt(), 50.f) );
         }
@@ -426,7 +463,9 @@ void PFAlgo::doVertexing(std::vector<Region> &rs, VertexAlgo algo, float &pvdz) 
     int16_t iDZ2 = vtxAdaptiveCut_ ? round(4.0 * vtxRes_ * InputTrack::Z0_SCALE) : iDZ;
     for (Region & r : rs) {
         for (PropagatedTrack & p : r.track) {
-            p.fromPV = (std::abs(p.hwZ0 - iZ0) < (std::abs(p.hwVtxEta) < InputTrack::VTX_ETA_1p3 ? iDZ : iDZ2));
+            bool central = std::abs(p.hwVtxEta) < InputTrack::VTX_ETA_1p3;
+            if (r.relativeCoordinates) central = (std::abs(r.globalAbsEta(p.floatVtxEta())) < 1.3); // FIXME could make a better integer implementation
+            p.fromPV = (std::abs(p.hwZ0 - iZ0) < (central ? iDZ : iDZ2));
         }
     }
 
@@ -439,7 +478,9 @@ void PFAlgo::computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed,
     float puppiDr2 = std::pow(puppiDr_,2);
     for (const Region & r : rs) {
         for (const PFParticle & p : r.pf) {
-            if (std::abs(p.hwEta) < ietacut) {
+            bool central = std::abs(p.hwEta) < ietacut;
+            if (r.relativeCoordinates) central = (r.globalAbsEta(p.floatEta()) < etaCharged_); // FIXME could make a better integer implementation
+            if (central) {
                 if (p.hwId > 1 || p.chargedPV) continue;
             }
             float alphaC = 0, alphaF = 0;
@@ -451,7 +492,7 @@ void PFAlgo::computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed,
                     if (p2.chargedPV) alphaC += w;
                 }
             }
-            if (std::abs(p.hwEta) < ietacut) {
+            if (central) {
                 if (alphaC > 0) alphaCs.push_back(std::log(alphaC));
             } else {
                 if (alphaF > 0) alphaFs.push_back(std::log(alphaF));
@@ -496,7 +537,7 @@ void PFAlgo::fillPuppi(Region &r) const {
                 // FIXME would work better with PUPPI_SCALE being a power of two, to do the shift
                 // FIXME done with floats
                 int16_t hwPt = ( float(p.hwPt) * float(p.hwPuppiWeight) / float(PFParticle::PUPPI_SCALE) );
-                int16_t hwPtCut = 0, hwAbsEta = std::abs(p.hwEta);
+                int16_t hwPtCut = 0, hwAbsEta = r.relativeCoordinates ? round(r.globalAbsEta(p.floatEta()) * CaloCluster::ETAPHI_SCALE) : std::abs(p.hwEta);
                 for (unsigned int ietaBin = 0, nBins = intPuppiEtaCuts_.size(); ietaBin < nBins; ++ietaBin) {
                     if (hwAbsEta < intPuppiEtaCuts_[ietaBin]) {
                         hwPtCut = (p.hwId == l1tpf::Particle::GAMMA ? intPuppiPtCutsPhotons_[ietaBin] : intPuppiPtCuts_[ietaBin]);
