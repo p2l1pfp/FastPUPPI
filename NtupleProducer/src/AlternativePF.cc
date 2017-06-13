@@ -55,8 +55,67 @@ void PFAlgo3::runPF(Region &r) const {
                                 ic, calo.floatPt(), calo.floatPtErr(), calo.floatEta(), calo.floatPhi(), calo.floatEta(), calo.floatPhi(), calo.floatPtErr(), calo.floatEmPt());
         }
     }
+
     // match all tracks to the closest EM cluster
     std::vector<int> tk2em(r.track.size(), -1);
+    link_tk2em(r, tk2em);
+
+    // match all em to the closest had (can happen in parallel to the above)
+    std::vector<int> em2calo(r.emcalo.size(), -1);
+    link_em2calo(r, em2calo);
+
+    /// ------------- next step (needs the previous) ----------------
+    // for each EM cluster, count and add up the pt of all the corresponding tracks (skipping muons)
+    std::vector<int> em2ntk(r.emcalo.size(), 0);
+    std::vector<float> em2sumtkpt(r.emcalo.size(), 0);
+    std::vector<float> em2sumtkpterr(r.emcalo.size(), 0);
+    sum_tk2em(r, tk2em, em2ntk, em2sumtkpt, em2sumtkpterr);
+
+    /// ------------- next step (needs the previous) ----------------
+    // process ecal clusters after linking
+    emcalo_algo(r, em2ntk, em2sumtkpt, em2sumtkpterr);
+
+    /// ------------- next step (needs the previous) ----------------
+    // promote all flagged tracks to electrons
+    emtk_algo(r, tk2em, em2ntk);
+    sub_em2calo(r, em2calo);
+
+    /// ------------- next step (needs the previous) ----------------
+    // track to calo matching (first iteration, with a lower bound on the calo pt; there may be another one later)
+    std::vector<int> tk2calo(r.track.size(), -1);
+    link_tk2calo(r, tk2calo);
+
+    /// ------------- next step (needs the previous) ----------------
+    // for each calo, compute the sum of the track pt
+    std::vector<int> calo2ntk(r.calo.size(), 0);
+    std::vector<float> calo2sumtkpt(r.calo.size(), 0);
+    std::vector<float> calo2sumtkpterr(r.calo.size(), 0);
+    sum_tk2calo(r, tk2calo, calo2ntk, calo2sumtkpt, calo2sumtkpterr);
+
+    // in the meantime, promote unlinked low pt tracks to hadrons
+    unlinkedtk_algo(r, tk2calo);
+
+    /// ------------- next step (needs the previous) ----------------
+    /// OPTIONAL STEP: try to recover split hadron showers (v1.0): 
+    //     off by default, as it seems to not do much in jets even if it helps remove tails in single-pion events
+    if (caloReLinkStep_) calo_relink(r, calo2ntk, calo2sumtkpt, calo2sumtkpterr); 
+
+    /// ------------- next step (needs the previous) ----------------
+    // process matched calo clusters, compare energy to sum track pt
+    std::vector<float> calo2alpha(r.calo.size(), 1);
+    linkedcalo_algo(r, calo2ntk, calo2sumtkpt, calo2sumtkpterr, calo2alpha);
+
+    /// ------------- next step (needs the previous) ----------------
+    /// process matched tracks, if necessary rescale or average
+    linkedtk_algo(r, tk2calo, calo2ntk, calo2alpha);
+    // process unmatched calo clusters 
+    unlinkedcalo_algo(r);
+    // finally do muons
+    if(!skipMuons_) save_muons(r);
+}
+
+void PFAlgo3::link_tk2em(Region &r, std::vector<int> & tk2em) const {
+    // match all tracks to the closest EM cluster
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         const auto & tk = r.track[itk]; 
         //if (tk.muonLink) continue; // not necessary I think
@@ -68,9 +127,10 @@ void PFAlgo3::runPF(Region &r) const {
         }
         if (debug_ && tk2em[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to EM   %3d (pt %7.2f) with dr %.3f\n", itk, tk.floatPt(), tk2em[itk], tk2em[itk] == -1 ? 0.0 : r.emcalo[tk2em[itk]].floatPt(), drbest );
     }
+}
 
+void PFAlgo3::link_em2calo(Region &r, std::vector<int> & em2calo) const {
     // match all em to the closest had (can happen in parallel to the above)
-    std::vector<int> em2calo(r.emcalo.size(), -1);
     for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
         const auto & em = r.emcalo[iem];
         float drbest = drMatchEmHad_;
@@ -83,12 +143,11 @@ void PFAlgo3::runPF(Region &r) const {
         if (debug_ && em2calo[iem] != -1) printf("ALT \t EM    %3d (pt %7.2f) matches to calo %3d (pt %7.2f, empt %7.2f) with dr %.3f\n", iem, em.floatPt(), em2calo[iem], em2calo[iem] == -1 ? 0.0 : r.calo[em2calo[iem]].floatPt(), em2calo[iem] == -1 ? 0.0 : r.calo[em2calo[iem]].floatEmPt(), drbest );
     }
 
-    /// ------------- next step (needs the previous) ----------------
+}
 
+ void PFAlgo3::sum_tk2em(Region & r, const std::vector<int> & tk2em, 
+                       std::vector<int> & em2ntk, std::vector<float> & em2sumtkpt, std::vector<float> & em2sumtkpterr) const {
     // for each EM cluster, count and add up the pt of all the corresponding tracks (skipping muons)
-    std::vector<int> em2ntk(r.emcalo.size(), 0);
-    std::vector<float> em2sumtkpt(r.emcalo.size(), 0);
-    std::vector<float> em2sumtkpterr(r.emcalo.size(), 0);
     for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
         const auto & em = r.emcalo[iem];
         if (r.globalAbsEta(em.floatEta()) > 2.5) continue; 
@@ -102,9 +161,9 @@ void PFAlgo3::runPF(Region &r) const {
             }
         }
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-
+void PFAlgo3::emcalo_algo(Region & r, const std::vector<int> & em2ntk, const std::vector<float> & em2sumtkpt, const std::vector<float> & em2sumtkpterr) const {
     // process ecal clusters after linking
     for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
         auto & em = r.emcalo[iem];
@@ -139,9 +198,9 @@ void PFAlgo3::runPF(Region &r) const {
             discardCalo(r, em, 2);
         } 
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-
+void PFAlgo3::emtk_algo(Region & r, const std::vector<int> & tk2em, const std::vector<int> & em2ntk) const {
     // promote all flagged tracks to electrons
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         auto & tk = r.track[itk]; 
@@ -158,7 +217,9 @@ void PFAlgo3::runPF(Region &r) const {
             tk.used = true;
         }
     }
+}
 
+void PFAlgo3::sub_em2calo(Region & r, const std::vector<int> & em2calo) const {
     // subtract EM component from Calo clusters for all photons and electrons (within tracker coverage)
     // kill clusters that end up below their own uncertainty, or that loose 90% of the energy,
     // unless they still have live EM clusters pointing to them
@@ -190,11 +251,10 @@ void PFAlgo3::runPF(Region &r) const {
             }
         }
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-   
+void PFAlgo3::link_tk2calo(Region & r, std::vector<int> & tk2calo) const {
     // track to calo matching (first iteration, with a lower bound on the calo pt; there may be another one later)
-    std::vector<int> tk2calo(r.track.size(), -1);
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         const auto & tk = r.track[itk]; 
         if (tk.muonLink || tk.used) continue; // not necessary but just a waste of CPU otherwise
@@ -220,13 +280,11 @@ void PFAlgo3::runPF(Region &r) const {
             if (ibest != -1) printf("ALT \t track %3d (pt %7.2f) would match to calo %3d (pt %7.2f) with dr %.3f if the pt min and dr requirement had been relaxed\n", itk, tk.floatPt(), ibest, r.calo[ibest].floatPt(), drbest );
         }
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-
+void PFAlgo3::sum_tk2calo(Region & r, const std::vector<int> & tk2calo, 
+                          std::vector<int> & calo2ntk, std::vector<float> & calo2sumtkpt, std::vector<float> & calo2sumtkpterr) const {
     // for each calo, compute the sum of the track pt
-    std::vector<int> calo2ntk(r.calo.size(), 0);
-    std::vector<float> calo2sumtkpt(r.calo.size(), 0);
-    std::vector<float> calo2sumtkpterr(r.calo.size(), 0);
     for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
         const auto & calo = r.calo[ic];
         if (r.globalAbsEta(calo.floatEta()) > 2.5) continue; 
@@ -241,8 +299,9 @@ void PFAlgo3::runPF(Region &r) const {
         }
         if (sumTkCaloErr2_ && calo2sumtkpterr[ic] > 0)  calo2sumtkpterr[ic] = std::sqrt(calo2sumtkpterr[ic]);
     }
+}
 
-
+void PFAlgo3::unlinkedtk_algo(Region & r, const std::vector<int> & tk2calo) const {
     // in the meantime, promote unlinked low pt tracks to hadrons
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         auto & tk = r.track[itk]; 
@@ -258,55 +317,53 @@ void PFAlgo3::runPF(Region &r) const {
             discardTrack(r, tk, BadTK_NoCalo); // log this as discarded, for debugging
         }
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-
+void PFAlgo3::calo_relink(Region & r, const std::vector<int> & calo2ntk, const std::vector<float> & calo2sumtkpt, const std::vector<float> & calo2sumtkpterr) const {
     /// OPTIONAL STEP: try to recover split hadron showers (v1.0): 
     //     take hadrons that are not track matched, close by a hadron which has an excess of track pt vs calo pt 
     //     add this pt to the calo pt of the other cluster 
     //     off by default, as it seems to not do much in jets even if it helps remove tails in single-pion events
-    if (caloReLinkStep_) {
-        std::vector<float> addtopt(r.calo.size(), 0);
-        for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
-            auto & calo = r.calo[ic];
-            if (calo2ntk[ic] != 0 || calo.used || r.globalAbsEta(calo.floatEta()) > 2.5) continue;
-            int i2best = -1; float drbest = caloReLinkDr_;
-            for (int ic2 = 0; ic2 < nc; ++ic2) {
-                const auto & calo2 = r.calo[ic2];
-                if (calo2ntk[ic2] == 0 || calo2.used || r.globalAbsEta(calo2.floatEta()) > 2.5) continue;
-                float dr = floatDR(calo,calo2);
-                //// uncomment below for more verbose debugging
-                //if (debug_ && dr < 0.5) printf("ALT \t calo  %3d (pt %7.2f) with no tracks is at dr %.3f from calo %3d with pt %7.2f (sum tk pt %7.2f), track excess %7.2f +- %7.2f\n", ic, calo.floatPt(), dr, ic2, calo2.floatPt(), calo2sumtkpt[ic2], calo2sumtkpt[ic2] - calo2.floatPt(), useTrackCaloSigma_ ? calo2sumtkpterr[ic2] : calo2.floatPtErr());
-                if (dr < drbest) {
-                    float ptdiff = calo2sumtkpt[ic2] - calo2.floatPt() + (useTrackCaloSigma_ ? calo2sumtkpterr[ic2] : calo2.floatPtErr());
-                    if (ptdiff >= caloReLinkThreshold_*calo.floatPt()) {
-                        i2best = ic2; drbest = dr;
-                    }
+    std::vector<float> addtopt(r.calo.size(), 0);
+    for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
+        auto & calo = r.calo[ic];
+        if (calo2ntk[ic] != 0 || calo.used || r.globalAbsEta(calo.floatEta()) > 2.5) continue;
+        int i2best = -1; float drbest = caloReLinkDr_;
+        for (int ic2 = 0; ic2 < nc; ++ic2) {
+            const auto & calo2 = r.calo[ic2];
+            if (calo2ntk[ic2] == 0 || calo2.used || r.globalAbsEta(calo2.floatEta()) > 2.5) continue;
+            float dr = floatDR(calo,calo2);
+            //// uncomment below for more verbose debugging
+            //if (debug_ && dr < 0.5) printf("ALT \t calo  %3d (pt %7.2f) with no tracks is at dr %.3f from calo %3d with pt %7.2f (sum tk pt %7.2f), track excess %7.2f +- %7.2f\n", ic, calo.floatPt(), dr, ic2, calo2.floatPt(), calo2sumtkpt[ic2], calo2sumtkpt[ic2] - calo2.floatPt(), useTrackCaloSigma_ ? calo2sumtkpterr[ic2] : calo2.floatPtErr());
+            if (dr < drbest) {
+                float ptdiff = calo2sumtkpt[ic2] - calo2.floatPt() + (useTrackCaloSigma_ ? calo2sumtkpterr[ic2] : calo2.floatPtErr());
+                if (ptdiff >= caloReLinkThreshold_*calo.floatPt()) {
+                    i2best = ic2; drbest = dr;
                 }
             }
-            if (i2best != -1) {
-                const auto & calo2 = r.calo[i2best];
-                if (debug_) printf("ALT \t calo  %3d (pt %7.2f) with no tracks matched within dr %.3f with calo %3d with pt %7.2f (sum tk pt %7.2f), track excess %7.2f +- %7.2f\n", ic, calo.floatPt(), drbest, i2best, calo2.floatPt(), calo2sumtkpt[i2best], calo2sumtkpt[i2best] - calo2.floatPt(), useTrackCaloSigma_ ? calo2sumtkpterr[i2best] : calo2.floatPtErr());
-                calo.used = true;
-                addtopt[i2best] += calo.floatPt();
-            }
         }
-        // we do this at the end, so that the above loop is parallelizable
-        for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
-            if (addtopt[ic]) {
-                auto & calo = r.calo[ic];
-                if (debug_) printf("ALT \t calo  %3d (pt %7.2f, sum tk pt %7.2f) is increased to pt %7.2f after merging\n", ic, calo.floatPt(), calo2sumtkpt[ic], calo.floatPt() + addtopt[ic]);
-                calo.setFloatPt(calo.floatPt() + addtopt[ic]);
-            }
+        if (i2best != -1) {
+            const auto & calo2 = r.calo[i2best];
+            if (debug_) printf("ALT \t calo  %3d (pt %7.2f) with no tracks matched within dr %.3f with calo %3d with pt %7.2f (sum tk pt %7.2f), track excess %7.2f +- %7.2f\n", ic, calo.floatPt(), drbest, i2best, calo2.floatPt(), calo2sumtkpt[i2best], calo2sumtkpt[i2best] - calo2.floatPt(), useTrackCaloSigma_ ? calo2sumtkpterr[i2best] : calo2.floatPtErr());
+            calo.used = true;
+            addtopt[i2best] += calo.floatPt();
         }
     }
+    // we do this at the end, so that the above loop is parallelizable
+    for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
+        if (addtopt[ic]) {
+            auto & calo = r.calo[ic];
+            if (debug_) printf("ALT \t calo  %3d (pt %7.2f, sum tk pt %7.2f) is increased to pt %7.2f after merging\n", ic, calo.floatPt(), calo2sumtkpt[ic], calo.floatPt() + addtopt[ic]);
+            calo.setFloatPt(calo.floatPt() + addtopt[ic]);
+        }
+    }
+}
  
 
 
+void PFAlgo3::linkedcalo_algo(Region & r, const std::vector<int> & calo2ntk, const std::vector<float> & calo2sumtkpt, const std::vector<float> & calo2sumtkpterr, std::vector<float> & calo2alpha) const {
     /// ------------- next step (needs the previous) ----------------
-
     // process matched calo clusters, compare energy to sum track pt
-    std::vector<float> calo2alpha(r.calo.size(), 1);
     for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
         auto & calo = r.calo[ic];
         if (calo2ntk[ic] == 0 || calo.used) continue;
@@ -345,12 +402,14 @@ void PFAlgo3::runPF(Region &r) const {
             calo2alpha[ic] = calo.floatPt() / calo2sumtkpt[ic];
             calo.hwFlags = 2;
             if (debug_) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot and will be scaled down by %.4f\n", ic, calo.floatPt(), calo2alpha[ic]);
+            if (1) printf("ALT \t calo  %3d (pt %7.2f +- %7.2f, empt %7.2f) has %2d tracks (sumpt %7.2f, sumpterr %7.2f), ptdif %7.2f +- %7.2f\n", ic, calo.floatPt(), calo.floatPtErr(), calo.floatEmPt(), calo2ntk[ic], calo2sumtkpt[ic], calo2sumtkpterr[ic], ptdiff, pterr);
+            if (1) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot and will be scaled down by %.4f\n", ic, calo.floatPt(), calo2alpha[ic]);
         }
         calo.used = true;
     }
+}
 
-    /// ------------- next step (needs the previous) ----------------
-
+void PFAlgo3::linkedtk_algo(Region & r, const std::vector<int> & tk2calo, const std::vector<int> & calo2ntk, const std::vector<float> & calo2alpha) const {
     // process matched tracks, if necessary rescale or average
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         auto & tk = r.track[itk]; 
@@ -383,7 +442,9 @@ void PFAlgo3::runPF(Region &r) const {
             if (debug_) printf("ALT \t track %3d (pt %7.2f) linked to calo %3d promoted to charged hadron with pt %7.2f after rescaling\n", itk, tk.floatPt(), tk2calo[itk], p.floatPt());
         }
     }
+}
 
+void PFAlgo3::unlinkedcalo_algo(Region & r) const {
     // process unmatched calo clusters 
     for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
         if (!r.calo[ic].used) {
@@ -391,12 +452,12 @@ void PFAlgo3::runPF(Region &r) const {
             if (debug_) printf("ALT \t calo  %3d (pt %7.2f) not linked, promoted to neutral\n", ic, r.calo[ic].floatPt());
         }
     }
+}
     
+void PFAlgo3::save_muons(Region &r) const {
     // finally do muons
-    if(!skipMuons_) { 
-        for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
-            if (r.track[itk].muonLink) addTrackToPF(r, r.track[itk]);
-        }
+    for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
+        if (r.track[itk].muonLink) addTrackToPF(r, r.track[itk]);
     }
 }
 
