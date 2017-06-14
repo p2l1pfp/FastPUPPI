@@ -18,6 +18,8 @@ from optparse import OptionParser
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-n", "--events", type=int, nargs=1, default=3, help="Number of events to consider")
 parser.add_option("-E", "--select-events", type=str, nargs=1, action="append", default=[], help="Specific event to select (run:lumi:event)")
+parser.add_option("-g", "--global", dest="ged", action="store_true", default=False, help="Look at the global event description instead of individual PFJets")
+parser.add_option("--max-eta", dest="maxEta", type=float, default=5, help="Number of events to consider")
 options, args = parser.parse_args()
 
 events = Events(args[0])
@@ -52,7 +54,7 @@ for iev,event in enumerate(events):
             j.mcId = abs(incone[0].pdgId())
         else:
             j.mcId = 99
-        if abs(j.eta()) > 5: continue
+        if abs(j.eta()) > options.maxEta: continue
         #daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
         #chall = sum(d.pt() for d in daus if d.charge() != 0)
         #chacc = sum(d.pt() for d in daus if d.charge() != 0 and d.pt() > 2 and abs(d.eta()) < 2.5)
@@ -70,16 +72,25 @@ for iev,event in enumerate(events):
         rec_Z0 = recf.product()[0];
         print "PV  generated %+7.3f  reconstructed %+7.3f  diff %+5.3f " % (gen_Z0, rec_Z0, rec_Z0-gen_Z0)
 
-    print "Gen jets in the event:"
+    if options.ged:
+        allGenJ = [None]
+        print "Full event:"
+    else:
+        print "Gen jets in the event:"
     for j in allGenJ:
-        if abs(j.eta()) > 2.5: continue
-        #if j.mcId != 1 or j.pt() < 20: continue
-        if j.pt() < 20: continue
-        print "------------------------"     
-        print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
-        daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
-        for d in daus: d.dr = deltaR(d,j)
-        daus.sort(key = lambda p : p.dr)
+        if j:
+            if abs(j.eta()) > 2.5: continue
+            #if j.mcId != 1 or j.pt() < 20: continue
+            if j.pt() < 20: continue
+            print "------------------------"     
+            print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
+            daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
+            for d in daus: d.dr = deltaR(d,j)
+            daus.sort(key = lambda p : p.dr)
+        else:
+            daus = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) not in (12,14,16) and p.pt() > 0.5 and abs(p.eta()) < options.maxEta ]
+            daus.sort(key = lambda p : -p.pt())
+            for d in daus: d.dr = 0
         ptsum = 0
         for d in daus:
             ptsum += d.pt()
@@ -101,9 +112,15 @@ for iev,event in enumerate(events):
             else: h = hop
             event.getByLabel(a, h)
             print "   --> ",a
-            matches = [ p for p in h.product() if deltaR(p,j) < 0.5 ]
-            for d in matches: d.dr = deltaR(d,j)
-            matches.sort(key = lambda p : p.dr)
+            if j:
+                matches = [ p for p in h.product() if deltaR(p,j) < 0.5 ]
+                for d in matches: d.dr = deltaR(d,j)
+                matches.sort(key = lambda p : p.dr)
+            else:
+                matches = [ p for p in h.product() if abs(p.eta()) < options.maxEta ]
+                for d in matches: d.dr = 0
+                matches.sort(key = lambda p : -p.pt())
+
             ptsum = 0
             # OK, try some MC matching for them
             if "PF" in a or "Puppi" in a: 
@@ -142,8 +159,13 @@ for iev,event in enumerate(events):
                 if "Track" in a or "TK" in a:
                     print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0),
                     g, dr2 = bestMatch(d, c_tomatch)
-                    if (dr2 < .01): print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
-                    else:           print " --> unmatched",
+                    if (dr2 < .01): 
+                        print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
+                        # check match back
+                        db, dr2b = bestMatch(g, matches)
+                        if db != d: print " <-- NOT matched back (gen prefers reco pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d)"  % (db.pt(), db.eta(), db.phi(), sqrt(dr2b), db.pdgId()),
+                    else:           
+                        print " --> unmatched",
                 elif "PF" in a or "Puppi" in a or "Calo" in a:
                         if "Calo" not in a:
                             print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0 if d.charge() else 0),
