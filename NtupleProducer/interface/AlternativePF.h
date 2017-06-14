@@ -10,9 +10,11 @@ class PFAlgo3 : public PFAlgo {
         PFAlgo3( const edm::ParameterSet& ) ;
         virtual void runPF(Region &r) const override;
     protected:
+        enum TkCaloLinkMetric { BestByDR=0, BestByDRPt=1 };
         float drMatchEm_, ptMinFracMatchEm_, drMatchEmHad_;
+        TkCaloLinkMetric tkCaloLinkMetric_;
         bool caloReLinkStep_; float caloReLinkDr_, caloReLinkThreshold_;
-        bool sumTkCaloErr2_, ecalPriority_;
+        bool rescaleTracks_, sumTkCaloErr2_, ecalPriority_;
         unsigned int tightTrackMinStubs_; float tightTrackMaxChi2_, tightTrackMaxInvisiblePt_;
         enum GoodTrackStatus { GoodTK_Calo_TkPt=0, GoodTK_Calo_TkCaloPt=1, GoodTk_Calo_CaloPt=2, GoodTK_NoCalo=3 };
         enum BadTrackStatus { BadTK_NoCalo=1 };

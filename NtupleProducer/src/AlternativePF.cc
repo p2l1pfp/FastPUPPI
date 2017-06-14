@@ -16,12 +16,17 @@ PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
 {
     debug_ = iConfig.getUntrackedParameter<int>("altDebug", debug_);
     edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+    std::string tkCaloLinkMetric = linkcfg.getParameter<std::string>("trackCaloLinkMetric");
+    if (tkCaloLinkMetric == "bestByDR") tkCaloLinkMetric_ = BestByDR;
+    else if (tkCaloLinkMetric == "bestByDRPt") tkCaloLinkMetric_ = BestByDRPt;
+    else throw cms::Exception("Configuration", "bad value for tkCaloLinkMetric configurable");
     drMatchEm_ = linkcfg.getParameter<double>("trackEmDR");
     ptMinFracMatchEm_ = linkcfg.getParameter<double>("caloEmPtMinFrac");
     drMatchEmHad_ = linkcfg.getParameter<double>("emCaloDR");
     caloReLinkStep_ = linkcfg.getParameter<bool>("caloReLink");
     caloReLinkDr_ = linkcfg.getParameter<double>("caloReLinkDR");
     caloReLinkThreshold_ = linkcfg.getParameter<double>("caloReLinkThreshold");
+    rescaleTracks_ = linkcfg.getParameter<bool>("rescaleTracks");
     sumTkCaloErr2_ = linkcfg.getParameter<bool>("sumTkCaloErr2");
     ecalPriority_ = linkcfg.getParameter<bool>("ecalPriority");
     tightTrackMinStubs_ = linkcfg.getParameter<unsigned>("tightTrackMinStubs");
@@ -258,14 +263,26 @@ void PFAlgo3::link_tk2calo(Region & r, std::vector<int> & tk2calo) const {
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         const auto & tk = r.track[itk]; 
         if (tk.muonLink || tk.used) continue; // not necessary but just a waste of CPU otherwise
-        float drbest = drMatch_;
+        float drbest = drMatch_, dptscale = 0;
+        switch (tkCaloLinkMetric_) {
+            case BestByDR:   drbest = drMatch_; break;
+            case BestByDRPt: drbest = 1.0; dptscale = drMatch_ / tk.floatCaloPtErr(); break;
+        }
         float minCaloPt = tk.floatPt() - ptMatchLow_*tk.floatCaloPtErr();
         if (debug_) printf("ALT \t track %3d (pt %7.2f) to be matched to calo, min pT %7.2f\n", itk, tk.floatPt(), minCaloPt );
         for (int ic = 0, nc = r.calo.size(); ic < nc; ++ic) {
             auto & calo = r.calo[ic]; 
             if (calo.used || calo.floatPt() < minCaloPt) continue;
-            float dr = floatDR(tk, calo);
-            if (dr < drbest) { tk2calo[itk] = ic; drbest = dr; }
+            float dr = floatDR(tk, calo), dq;
+            switch (tkCaloLinkMetric_) {
+                case BestByDR:
+                    if (dr < drbest) { tk2calo[itk] = ic; drbest = dr; }
+                    break;
+                case BestByDRPt:
+                    dq = dr + std::max<float>(tk.floatPt()-calo.floatPt(), 0.)*dptscale;
+                    if (dr < drMatch_ && dq < drbest) { tk2calo[itk] = ic; drbest = dq; }
+                    break;
+            }
         }
         if (debug_ && tk2calo[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to calo %3d (pt %7.2f) with dr %.3f\n", itk, tk.floatPt(), tk2calo[itk], tk2calo[itk] == -1 ? 0.0 : r.calo[tk2calo[itk]].floatPt(), drbest );
         // now we re-do this for debugging sake, it may be done for real later
@@ -399,11 +416,10 @@ void PFAlgo3::linkedcalo_algo(Region & r, const std::vector<int> & calo2ntk, con
             discardCalo(r, calo, 0); // log this as discarded, for debugging
         } else {
             // tracks overshoot, rescale to tracks to calo
-            calo2alpha[ic] = calo.floatPt() / calo2sumtkpt[ic];
+            calo2alpha[ic] = rescaleTracks_ ? calo.floatPt() / calo2sumtkpt[ic] : 1.0;
             calo.hwFlags = 2;
-            if (debug_) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot and will be scaled down by %.4f\n", ic, calo.floatPt(), calo2alpha[ic]);
-            if (1) printf("ALT \t calo  %3d (pt %7.2f +- %7.2f, empt %7.2f) has %2d tracks (sumpt %7.2f, sumpterr %7.2f), ptdif %7.2f +- %7.2f\n", ic, calo.floatPt(), calo.floatPtErr(), calo.floatEmPt(), calo2ntk[ic], calo2sumtkpt[ic], calo2sumtkpterr[ic], ptdiff, pterr);
-            if (1) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot and will be scaled down by %.4f\n", ic, calo.floatPt(), calo2alpha[ic]);
+            if (debug_ &&  rescaleTracks_) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot and will be scaled down by %.4f\n", ic, calo.floatPt(), calo2alpha[ic]);
+            if (debug_ && !rescaleTracks_) printf("ALT \t calo  %3d (pt %7.2f)    ---> tracks overshoot by %.4f\n", ic, calo.floatPt(), calo2sumtkpt[ic]/calo.floatPt());
         }
         calo.used = true;
     }
@@ -439,7 +455,7 @@ void PFAlgo3::linkedtk_algo(Region & r, const std::vector<int> & tk2calo, const 
             // must rescale
             p.setFloatPt(tk.floatPt() * calo2alpha[tk2calo[itk]]); 
             p.hwStatus = GoodTk_Calo_CaloPt;
-            if (debug_) printf("ALT \t track %3d (pt %7.2f) linked to calo %3d promoted to charged hadron with pt %7.2f after rescaling\n", itk, tk.floatPt(), tk2calo[itk], p.floatPt());
+            if (debug_) printf("ALT \t track %3d (pt %7.2f, stubs %2d chi2 %7.1f) linked to calo %3d promoted to charged hadron with pt %7.2f after maybe rescaling\n", itk, tk.floatPt(), int(tk.hwStubs), tk.hwChi2*0.1f, tk2calo[itk], p.floatPt());
         }
     }
 }
