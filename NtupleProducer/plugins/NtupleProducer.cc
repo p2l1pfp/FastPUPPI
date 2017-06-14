@@ -391,11 +391,24 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addPF(lEmCalo ,"EmCalo"  ,iEvent);
   addPF(lCorrCalo,"Calo"    ,iEvent);
   addPF(lTKCands ,"TK"      ,iEvent);
+  if (fRegionDump) {
+    uint32_t run = iEvent.id().run(), lumi = iEvent.id().luminosityBlock(); uint64_t event = iEvent.id().event();
+    fwrite(&run, sizeof(uint32_t), 1, fRegionDump);
+    fwrite(&lumi, sizeof(uint32_t), 1, fRegionDump);
+    fwrite(&event, sizeof(uint64_t), 1, fRegionDump);
+    uint32_t nregions = l1regions_.regions().size();
+    fwrite(&nregions, sizeof(uint32_t), 1, fRegionDump);
+    for (const auto & r : l1regions_.regions()) r.writeToFile(fRegionDump);
+  } 
+
 
   // then do the vertexing, and save it out
   float z0;
   l1pfalgo_->doVertexing(l1regions_.regions(), vtxAlgo_, z0);
   iEvent.put(std::make_unique<float>(z0), "z0");
+  if (fRegionDump) {
+    fwrite(&z0, sizeof(float), 1, fRegionDump);
+  } 
 
   // then also save the tracks with a vertex cut
   std::vector<l1tpf::Particle> lTKVtxCands = l1regions_.fetchTracks(/*ptmin=*/0.0, /*frompv=*/true);
@@ -414,6 +427,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   l1pfalgo_->computePuppiMedRMS(l1regions_.regions(), alphaCMed, alphaCRms, alphaFMed, alphaFRms);
   iEvent.put(std::make_unique<float>(alphaCMed), "alphaCMed"); iEvent.put(std::make_unique<float>(alphaCRms), "alphaCRms");
   iEvent.put(std::make_unique<float>(alphaFMed), "alphaFMed"); iEvent.put(std::make_unique<float>(alphaFRms), "alphaFRms");
+  if (fRegionDump) {
+    fwrite(&alphaCMed, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaCRms, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaFMed, sizeof(float), 1, fRegionDump);
+    fwrite(&alphaFRms, sizeof(float), 1, fRegionDump);
+  } 
 
   // then run puppi (regionally)
   for (auto & l1region : l1regions_.regions()) {
@@ -451,20 +470,6 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addUInt(totNL1PF, "totNL1PF", iEvent); addUInt(maxNL1PF, "maxNL1PF", iEvent);
   addUInt(totNL1Puppi, "totNL1Puppi", iEvent); addUInt(maxNL1Puppi, "maxNL1Puppi", iEvent);
  
-  if (fRegionDump) {
-    uint32_t run = iEvent.id().run(), lumi = iEvent.id().luminosityBlock(); uint64_t event = iEvent.id().event();
-    fwrite(&run, sizeof(uint32_t), 1, fRegionDump);
-    fwrite(&lumi, sizeof(uint32_t), 1, fRegionDump);
-    fwrite(&event, sizeof(uint64_t), 1, fRegionDump);
-    fwrite(&z0, sizeof(float), 1, fRegionDump);
-    fwrite(&alphaCMed, sizeof(float), 1, fRegionDump);
-    fwrite(&alphaCRms, sizeof(float), 1, fRegionDump);
-    fwrite(&alphaFMed, sizeof(float), 1, fRegionDump);
-    fwrite(&alphaFRms, sizeof(float), 1, fRegionDump);
-    uint32_t nregions = l1regions_.regions().size();
-    fwrite(&nregions, sizeof(uint32_t), 1, fRegionDump);
-    for (const auto & r : l1regions_.regions()) r.writeToFile(fRegionDump);
-  } 
   if (metanalyzer_) {
       metanalyzer_->clear();
       metanalyzer_->setZ(lTKCands,z0);
