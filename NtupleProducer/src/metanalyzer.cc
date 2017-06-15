@@ -52,7 +52,7 @@ metanalyzer::metanalyzer(std::string iFile) {
   fTree->Branch("genmet"     ,&fVar[38],"genmet/D");
   fTree->Branch("genmetphi"  ,&fVar[39],"genmetphi/D");
 }
-void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
+void metanalyzer::setZ(std::vector<l1tpf::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
     if (iParticle[i0].pdgId() == 4) { nmuons++; }
@@ -73,7 +73,7 @@ void metanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
     }
   }
 }
-void metanalyzer::setMETRecoil(int iId,std::vector<combiner::Particle> &iParticle,bool iAdd) {
+void metanalyzer::setMETRecoil(int iId,std::vector<l1tpf::Particle> &iParticle,bool iAdd) {
   int lId = 4+iId*4;
   TLorentzVector lVec(0.,0.,0.,0.);
   TLorentzVector lZ; lZ.SetPtEtaPhiM(fVar[1],0.,fVar[3],0.);

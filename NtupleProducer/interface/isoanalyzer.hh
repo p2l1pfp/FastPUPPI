@@ -1,6 +1,6 @@
 #ifndef FASTPUPPI_NTUPLERPRODUCER_ISOANALYZER_HH
 #define FASTPUPPI_NTUPLERPRODUCER_ISOANALYZER_HH
-#include "combiner.hh"
+#include "L1TPFParticle.h"
 #include "TFile.h"
 #include "TTree.h"
 #include <algorithm>  
@@ -13,8 +13,8 @@ class isoanalyzer {
 public:
   isoanalyzer(std::string iFile, int debug=0);
   void setGenMuons(const reco::GenParticleCollection &iGenParticles,int iIndex);
-  void matchMuons(std::vector<combiner::Particle> &iParticle);
-  void computeIso(std::vector<combiner::Particle> &iParticle, float coneSize, std::string type);
+  void matchMuons(std::vector<l1tpf::Particle> &iParticle);
+  void computeIso(std::vector<l1tpf::Particle> &iParticle, float coneSize, std::string type);
   // double genmatch(int iId, fastjet::PseudoJet &matchjet,std::vector < fastjet::PseudoJet > &genjets);
   void clear();
   inline void fill()  {fFile->cd(); fTree->Fill();}

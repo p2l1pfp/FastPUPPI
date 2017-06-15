@@ -59,6 +59,20 @@ namespace l1pf_calo {
             
     };
 
+    class FineEcalGrid : public Grid {
+        public:
+            FineEcalGrid() ;
+            virtual int find_cell(float eta, float phi) const override ;
+            int ifind_cell(int ieta, int iphi) const { return (ieta < 0 ? ieta + nEta_ : ieta - 1 + nEta_)*nPhi_ + (iphi-1); }
+        protected:
+            static const int nTowerEta_ = 17, nEta_ = nTowerEta_*5, nPhi_ = 72*5;
+            static const float towerEtas_[nTowerEta_+1];
+            // move by around a cell; return icell or -1 if not available
+            int imove(int ieta, int iphi, int deta, int dphi) ;
+    };
+
+ 
+
     template<typename T>
     class GridData {
         public:
@@ -120,6 +134,8 @@ namespace l1pf_calo {
     };
     typedef GridData<CombinedCluster> CombinedClusterGrid;
 
+    Grid * makeGrid(const std::string & type) ;
+
     class SingleCaloClusterer {
         public:
             SingleCaloClusterer(const edm::ParameterSet &pset) ;
@@ -144,6 +160,7 @@ namespace l1pf_calo {
                     }
                 }
             }
+
         private:
             enum EnergyShareAlgo { Fractions, /* each local maximum neighbour takes a share proportional to its value */
                                    None,      /* each local maximum neighbour takes all the value (double counting!) */

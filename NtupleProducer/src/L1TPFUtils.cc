@@ -53,10 +53,13 @@ int l1tpf::translateIEta(float eta) {
   return sign*ieta;
 }
 int l1tpf::translateIPhi(float phi,float eta) {
-  int iphi = int(phi/towerPhiSize(eta))+0.5;
-  if (iphi < 1)                 iphi = iphi + towerNPhi(eta);
-  if (iphi > towerNPhi(eta))    iphi = iphi - towerNPhi(eta);
-  if (iphi > towerNPhi(eta) || iphi < 0) return 0;
+  // put phi in [0, 2pi]
+  while (phi < 0) phi += 2*M_PI;
+  while (phi > 2*M_PI) phi -= 2*M_PI; // shouldn't be needed
+  int iphi = std::floor(phi/towerPhiSize(eta)) + 1;
+  int nphi = towerNPhi(eta);
+  if (iphi > nphi) iphi -= nphi;
+  assert(iphi >= 1 && iphi <= nphi);
   return iphi;
 }
 int l1tpf::translateAEta(int ieta,bool iInvert) {

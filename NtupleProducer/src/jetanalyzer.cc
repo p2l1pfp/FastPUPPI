@@ -56,7 +56,7 @@ jetanalyzer::jetanalyzer(std::string iFile, int debug) {
   // debug
   fDebug = debug;
 }
-void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
+void jetanalyzer::setZ(std::vector<l1tpf::Particle> &iParticle,double iDZ) {
   int nmuons = 0;
   for(unsigned   int i0 = 0; i0 < iParticle.size(); i0++) {
     if (iParticle[i0].pdgId() == 4) { nmuons++; }
@@ -77,7 +77,7 @@ void jetanalyzer::setZ(std::vector<combiner::Particle> &iParticle,double iDZ) {
     }
   }
 }
-void jetanalyzer::setJets(std::vector<combiner::Particle> &iParticles,int iIndex) {
+void jetanalyzer::setJets(std::vector<l1tpf::Particle> &iParticles,int iIndex) {
   int lIndex = fBase+iIndex*fSize;
   if (fDebug) std::cout << "---> " << iIndex << " -- " << fSize << " -- " << lIndex << std::endl;
   std::vector < fastjet::PseudoJet > particles;
@@ -148,11 +148,11 @@ std::vector<fastjet::PseudoJet> jetanalyzer::cluster(std::vector < fastjet::Pseu
   //thisClustering->delete_self_when_unused();
   return out_jets;
 }
-double jetanalyzer::dz(fastjet::PseudoJet &iJet,std::vector<combiner::Particle> &iParticles) {
+double jetanalyzer::dz(fastjet::PseudoJet &iJet,std::vector<l1tpf::Particle> &iParticles) {
   double lDZ = 0;
   double lPtTot = 0;
   for(unsigned int i0 = 0; i0 < iJet.constituents().size(); i0++) { 
-    combiner::Particle pParticle = iParticles[iJet.constituents()[i0].user_index()];
+    l1tpf::Particle pParticle = iParticles[iJet.constituents()[i0].user_index()];
     lDZ = pParticle.dz() * pParticle.pt();
     lPtTot += pParticle.pt();
   }

@@ -42,7 +42,7 @@
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
 #include <FastPUPPI/NtupleProducer/interface/L1TPFUtils.h>
-//#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 //#include "CommonTools/Utils/interface/StringObjectFunction.h"
 
 #include <cstdint>
@@ -59,13 +59,16 @@ namespace {
     class MultiCollection {
         public:
             MultiCollection(const edm::ParameterSet &iConfig, const std::string &name, edm::ConsumesCollector && coll) :
-                name_(name),prop_(false)
+                name_(name),prop_(false),sel_("")
             {
                 if      (name.find("Ecal") != std::string::npos) prop_ = true;
                 else if (name.find("Hcal") != std::string::npos) prop_ = true;
                 else if (name.find("Calo") != std::string::npos) prop_ = true;
                 const std::vector<edm::InputTag> & tags = iConfig.getParameter< std::vector<edm::InputTag>>(name);
                 for (const auto & tag : tags) tokens_.push_back(coll.consumes<reco::CandidateView>(tag));
+                if (iConfig.existsAs<std::string>(name+"_sel")) {
+                    sel_ = StringCutObjectSelector<reco::Candidate>(iConfig.getParameter<std::string>(name+"_sel"), true);
+                }
             }
             const std::string & name() const { return name_; }
             bool  prop() const { return prop_; }
@@ -74,7 +77,7 @@ namespace {
                 for (const auto & token : tokens_) {
                     iEvent.getByToken(token, handle);
                     for (const reco::Candidate & c : *handle) {
-                        objects_.emplace_back(c.pt(), c.eta(), c.phi());
+                        if (sel_(c)) objects_.emplace_back(c.pt(), c.eta(), c.phi());
                     }
                 }
                 std::sort(objects_.begin(), objects_.end());
@@ -85,6 +88,7 @@ namespace {
             std::string name_;
             bool prop_;
             std::vector<edm::EDGetTokenT<reco::CandidateView>> tokens_;
+            StringCutObjectSelector<reco::Candidate> sel_;
             std::vector<SimpleObject> objects_;
     };
     class InCone {
@@ -110,6 +114,21 @@ namespace {
                     if (p.second < dr2) mysum += p.first;
                 }
                 return mysum;
+            }
+            int number(float dr, float threshold) const { 
+                float dr2 = dr*dr, absthreshold = sum()*threshold;
+                int mysum = 0;
+                for (const auto & p : ptdr2) {
+                    if (p.second < dr2 && p.first > absthreshold) mysum++;
+                }
+                return mysum;
+            }
+            float mindr(float threshold) const {
+                float best = 9999, absthreshold = sum()*threshold;
+                for (const auto & p : ptdr2) {
+                    if (p.second < best && p.first > absthreshold) best = p.second;
+                }
+                return std::sqrt(best);
             }
             float nearest() const {
                 std::pair<float,float> best(0,9999);
@@ -189,12 +208,15 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, ptbest, pthighest;
+         float pt, pt02, ptbest, pthighest, mindr025; int n025, n010;
          void makeBranches(const std::string &prefix, TTree *tree) {
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
              tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
              tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
              tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
+             tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
+             tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
+             tree->Branch((prefix+"_n010").c_str(), &n010, (prefix+"_n010/I").c_str());
          }
          void fill(const std::vector<::SimpleObject> & objects, float eta, float phi) {
              ::InCone incone(objects, eta, phi, 0.4);
@@ -202,6 +224,9 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
              pt02 = incone.sum(0.2);
              ptbest = incone.nearest();
              pthighest = incone.max();
+             mindr025 =  incone.mindr(0.25);
+             n025 = incone.number(0.2, 0.25);
+             n010 = incone.number(0.2, 0.10);
          }
       };
       std::vector<std::pair<::MultiCollection,RecoVars>> reco_;

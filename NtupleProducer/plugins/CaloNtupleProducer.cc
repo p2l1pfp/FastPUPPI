@@ -60,11 +60,13 @@ public:
   ~CaloNtupleProducer();
   
   static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
-  const bool zeroSuppress_;
+  const bool zeroSuppress_, ecalOnly_;
   const std::vector<edm::InputTag> EcalTPTags_;
   const std::vector<edm::InputTag> HcalTPTags_;
   const edm::InputTag GenParTag_;
   const std::string CorrectorTag_;
+  const unsigned int CorrectorEmfBins_;
+  const double CorrectorEmfMax_;
   const std::string ECorrectorTag_;
 
 private:
@@ -92,7 +94,10 @@ private:
   // new calo clusterer (float)
   l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
   l1pf_calo::SimpleCaloLinker caloLinker_;
-     
+
+  // debug
+  int fDebug;
+ 
   // declare variables for output file
   std::string fOutputName;
   TFile *fOutputFile;
@@ -116,18 +121,22 @@ private:
 //
 CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   zeroSuppress_         (iConfig.getParameter<bool>("zeroSuppress")),
+  ecalOnly_             (iConfig.existsAs<bool>("ecalOnly") ? iConfig.getParameter<bool>("ecalOnly") : false),
   EcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("EcalTPTags")),
-  HcalTPTags_           (iConfig.getParameter<std::vector<edm::InputTag>>("HcalTPTags")),
+  HcalTPTags_           (!ecalOnly_ ? iConfig.getParameter<std::vector<edm::InputTag>>("HcalTPTags") : std::vector<edm::InputTag>()),
   GenParTag_            (iConfig.getParameter<edm::InputTag>("genParTag")),
   CorrectorTag_         (getFilePath(iConfig,"corrector")),
+  CorrectorEmfBins_     (iConfig.getParameter<uint32_t>("correctorEmfBins")),
+  CorrectorEmfMax_      (iConfig.getParameter<double>("correctorEmfMax")),
   ECorrectorTag_        (getFilePath(iConfig,"ecorrector")),
-  corrector_            (new corrector(CorrectorTag_,11,iConfig.getUntrackedParameter<int>("debug",0))),
-  ecorrector_           (new corrector(ECorrectorTag_,1,iConfig.getUntrackedParameter<int>("debug",0))),
+  corrector_            (new corrector(CorrectorTag_,CorrectorEmfBins_,CorrectorEmfMax_,iConfig.getUntrackedParameter<int>("debug",0))),
+  ecorrector_           (new corrector(ECorrectorTag_,1,1.0,iConfig.getUntrackedParameter<int>("debug",0))),
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
   hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
   caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
+  fDebug                (iConfig.getUntrackedParameter<int>("debug",0)),
   fOutputName           (iConfig.getUntrackedParameter<std::string>("outputName", "ntuple.root")),
   fOutputFile           (0),
   fTotalEvents          (0),
@@ -143,6 +152,9 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   }
   produces<L1PFCollection>("emCalibrated");
   produces<L1PFCollection>("emUncalibrated");
+
+  if (ecalOnly_) return;
+
   produces<L1PFCollection>("uncalibrated");
   produces<L1PFCollection>("calibrated");
   produces<PFOutputCollection>("RawCalo");
@@ -230,6 +242,15 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       }
   }
 
+  // Get also ecal-only from the clusterer
+  std::unique_ptr<L1PFCollection> RawEcal  = ecalClusterer_.fetch(false);
+  std::unique_ptr<L1PFCollection> CorrEcal = ecalClusterer_.fetch(true);
+
+  iEvent.put(std::move(RawEcal),  "emUncalibrated");
+  iEvent.put(std::move(CorrEcal), "emCalibrated");
+  if (ecalOnly_) return;
+
+
   // / ----------------HCAL INFO-------------------
 
   edm::Handle<L1PFCollection> hcals;
@@ -256,8 +277,8 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               return simpleCorrHad_(c.et, std::abs(c.eta), c.ecal_et/c.et); 
               } );
   }
-  // write debug output tree
-  if (!fOutputName.empty()) {
+  // write debug output tree and/or standard output
+  if (!fOutputName.empty() || fDebug) {
       const auto & clusters = caloLinker_.clusters();
       unsigned int nh = 0;
       for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
@@ -285,6 +306,9 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               hcal_genId   = float(lGenVars[3]);
               hcal_dr = reco::deltaR( hcal_genEta, hcal_genPhi, hcal_clust_eta,hcal_clust_phi );
           }
+          if (fDebug) printf("Linked cluster et %7.2f eta %+5.2f phi %+5.2f  raw et %7.2f ecal %7.2f hcal %7.2f   gen pt %7.2f dr %.2f\n",
+                                    clusters[i].et_corr, clusters[i].eta, clusters[i].phi, clusters[i].et, clusters[i].ecal_et, clusters[i].hcal_et, hcal_genPt, hcal_dr);
+          if (fOutputName.empty()) continue;
           if (zeroSuppress_) {
               if(hcal_genPt > 1.) fHcalInfoTree->Fill();      
           } else {
@@ -302,13 +326,6 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   iEvent.put(std::move(RawCalo),  "uncalibrated");
   iEvent.put(std::move(CorrCalo), "calibrated");
-
-  // Get also ecal-only from the clusterer
-  std::unique_ptr<L1PFCollection> RawEcal  = ecalClusterer_.fetch(false);
-  std::unique_ptr<L1PFCollection> CorrEcal = ecalClusterer_.fetch(true);
-
-  iEvent.put(std::move(RawEcal),  "emUncalibrated");
-  iEvent.put(std::move(CorrEcal), "emCalibrated");
 
 
 }

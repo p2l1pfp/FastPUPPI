@@ -84,6 +84,8 @@ process.s = cms.Sequence(
 
 process.p = cms.Path(process.s)
 
+process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
+
 process.out = cms.OutputModule("PoolOutputModule",
         fileName = cms.untracked.string("inputs_17D.root"),
         outputCommands = cms.untracked.vstring("drop *",

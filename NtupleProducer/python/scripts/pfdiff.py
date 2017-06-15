@@ -25,12 +25,16 @@ events = Events(args[0])
 
 if args[1].startswith("l1tPF"):
     pf1 = Handle("std::vector<l1tpf::Particle>")
-else:
+elif "InfoOut" in args[1]:
     pf1   = Handle("std::vector<reco::PFCandidate>")
+else:
+    pf1   = Handle("edm::OwnVector<reco::Candidate>")
 if args[2].startswith("l1tPF"):
     pf2 = Handle("std::vector<l1tpf::Particle>")
-else:
+elif "InfoOut" in args[2]:
     pf2   = Handle("std::vector<reco::PFCandidate>")
+else:
+    pf2   = Handle("edm::OwnVector<reco::Candidate>")
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 

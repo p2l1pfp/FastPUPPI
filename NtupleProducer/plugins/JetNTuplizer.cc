@@ -38,6 +38,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 
 #include <cstdint>
 #include <TTree.h>
@@ -51,7 +52,14 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
    private:
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
 
-      std::vector<std::pair<std::string,edm::EDGetTokenT<edm::View<reco::Jet>>>> jets_;
+      struct JetInput {
+         std::string name;
+         edm::EDGetTokenT<edm::View<reco::Jet>> token;
+         l1tpf::SimpleCorrEm jec;
+         JetInput() {}
+         JetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::Jet>> &t, const l1tpf::SimpleCorrEm & c) : name(n), token(t), jec(c) {}
+      };
+      std::vector<JetInput> jets_;
       std::vector<std::pair<std::string,StringCutObjectSelector<reco::Jet>>> jetSels_;
 
       TTree *tree_;
@@ -59,17 +67,22 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
 
       struct JetBranch {
         std::string name;
-        int   count;
-        float ht;
-        JetBranch(const std::string &n) : name(n), count(), ht() {}
+        int   count_raw, count_corr;
+        float ht_raw, ht_corr;
+        JetBranch(const std::string &n) : name(n) {}
         void makeBranches(TTree *tree) {
-            tree->Branch((name+"_ht").c_str(),   &ht,   (name+"_ht/F").c_str());
-            tree->Branch((name+"_num").c_str(), &count, (name+"_num/I").c_str());
+            tree->Branch((name+"_ht_raw").c_str(),   &ht_raw,   (name+"_ht_raw/F").c_str());
+            tree->Branch((name+"_num_raw").c_str(), &count_raw, (name+"_num_raw/I").c_str());
+            tree->Branch((name+"_ht_corr").c_str(),   &ht_corr,   (name+"_ht_corr/F").c_str());
+            tree->Branch((name+"_num_corr").c_str(), &count_corr, (name+"_num_corr/I").c_str());
         }
-        void fill(const edm::View<reco::Jet> & jets, const StringCutObjectSelector<reco::Jet> & sel) {  
-            count = 0; ht = 0;
-            for (const reco::Jet & jet : jets) {
-                if (sel(jet)) { count++; ht += std::min(jet.pt(),500.); }
+        void fill(const edm::View<reco::Jet> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::Jet> & sel) {  
+            count_raw = 0; ht_raw = 0;
+            count_corr = 0; ht_corr = 0;
+            for (reco::Jet jet : jets) {
+                if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); }
+                jet.setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
+                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); }
             }
         }
       };
@@ -86,8 +99,9 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig)
     tree_->Branch("event", &event_, "event/l");
 
     edm::ParameterSet jets = iConfig.getParameter<edm::ParameterSet>("jets");
+    edm::ParameterSet jecs = iConfig.getParameter<edm::ParameterSet>("jecs");
     for (const std::string & name : jets.getParameterNamesForType<edm::InputTag>()) {
-        jets_.emplace_back(name, consumes<edm::View<reco::Jet>>(jets.getParameter<edm::InputTag>(name)));
+        jets_.emplace_back(name, consumes<edm::View<reco::Jet>>(jets.getParameter<edm::InputTag>(name)), l1tpf::SimpleCorrEm(jecs, name));
     }
     edm::ParameterSet sels = iConfig.getParameter<edm::ParameterSet>("sels");
     for (const std::string & name : sels.getParameterNamesForType<std::string>()) {
@@ -96,7 +110,7 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig)
     branches_.reserve(jets_.size() * jetSels_.size());
     for (const auto & j : jets_) {
         for (const auto & s : jetSels_) {
-            branches_.emplace_back(j.first + s.first);
+            branches_.emplace_back(j.name + s.first);
         }
     }
     for (auto & b : branches_) b.makeBranches(tree_);
@@ -116,9 +130,9 @@ JetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
     int ibranch = 0;
     for (const auto & j : jets_) {
         edm::Handle<edm::View<reco::Jet>> jets;
-        iEvent.getByToken(j.second, jets);
+        iEvent.getByToken(j.token, jets);
         for (const auto & s : jetSels_) {
-            branches_[ibranch++].fill(*jets, s.second);
+            branches_[ibranch++].fill(*jets, j.jec, s.second);
         } 
     }
     tree_->Fill();
