@@ -19,7 +19,7 @@ os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (o
 ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE']);
 c1 = ROOT.TCanvas("c1","c1")
 particles = {
-    "Calo":(10000,200),  "EmCalo":(10000,200), "Mu":(100,100), "TK":(1000,1000), "PF":(1000,1000), "Puppi":(1000,1000)
+    "Calo":(10000,200),  "EmCalo":(10000,200), "Mu":(100,100), "TK":(1000,1000), "PF":(1000,1000), "PFCharged":(1000,1000), "PFNeutral":(1000,1000), "Puppi":(1000,1000), "PuppiCharged":(1000,1000), "PuppiNeutral":(1000,1000)
 }.items()
 tfile = ROOT.TFile.Open(args[0])
 tree = tfile.Get("ntuple/tree")

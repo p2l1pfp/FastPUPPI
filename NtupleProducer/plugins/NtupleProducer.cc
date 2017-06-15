@@ -241,13 +241,21 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   produces<unsigned int>("totNL1Calo");
   produces<unsigned int>("totNL1EmCalo");
   produces<unsigned int>("totNL1PF");
+  produces<unsigned int>("totNL1PFCharged");
+  produces<unsigned int>("totNL1PFNeutral");
   produces<unsigned int>("totNL1Puppi");
+  produces<unsigned int>("totNL1PuppiCharged");
+  produces<unsigned int>("totNL1PuppiNeutral");
   produces<unsigned int>("maxNL1TK");
   produces<unsigned int>("maxNL1Mu");
   produces<unsigned int>("maxNL1Calo");
   produces<unsigned int>("maxNL1EmCalo");
   produces<unsigned int>("maxNL1PF");
+  produces<unsigned int>("maxNL1PFCharged");
+  produces<unsigned int>("maxNL1PFNeutral");
   produces<unsigned int>("maxNL1Puppi");
+  produces<unsigned int>("maxNL1PuppiCharged");
+  produces<unsigned int>("maxNL1PuppiNeutral");
 }
 
 NtupleProducer::~NtupleProducer()
@@ -447,21 +455,30 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   produces<PFOutputCollection>("PFDiscarded");
 
   // then go do the multiplicities
-  unsigned int totNL1Calo = 0, totNL1EmCalo = 0, totNL1TK = 0, totNL1Mu = 0, totNL1PF = 0, totNL1Puppi = 0;
-  unsigned int maxNL1Calo = 0, maxNL1EmCalo = 0, maxNL1TK = 0, maxNL1Mu = 0, maxNL1PF = 0, maxNL1Puppi = 0;
+  unsigned int totNL1Calo = 0, totNL1EmCalo = 0, totNL1TK = 0, totNL1Mu = 0, totNL1PF = 0, totNL1PFCharged = 0, totNL1PFNeutral = 0, totNL1Puppi = 0, totNL1PuppiCharged = 0, totNL1PuppiNeutral = 0;
+  unsigned int maxNL1Calo = 0, maxNL1EmCalo = 0, maxNL1TK = 0, maxNL1Mu = 0, maxNL1PF = 0, maxNL1PFCharged = 0, maxNL1PFNeutral = 0, maxNL1Puppi = 0, maxNL1PuppiCharged = 0, maxNL1PuppiNeutral = 0;
   for (const auto & r : l1regions_.regions()) {
-      totNL1Calo += r.calo.size();
-      totNL1EmCalo += r.emcalo.size();
-      totNL1TK += r.track.size();
-      totNL1PF += r.pf.size();
-      totNL1Mu += r.muon.size();
-      totNL1Puppi += r.puppi.size();
-      maxNL1Calo = std::max<unsigned>( maxNL1Calo, r.calo.size() );
-      maxNL1EmCalo = std::max<unsigned>( maxNL1EmCalo, r.emcalo.size() );
-      maxNL1TK = std::max<unsigned>( maxNL1TK, r.track.size() );
-      maxNL1PF = std::max<unsigned>( maxNL1PF, r.pf.size() );
-      maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.muon.size() );
-      maxNL1Puppi = std::max<unsigned>( maxNL1Puppi, r.puppi.size() );
+      if (std::abs(r.etaCenter) > 1.5) continue;
+      totNL1Calo += r.ncalo();
+      totNL1EmCalo += r.nemcalo();
+      totNL1TK += r.ntrack();
+      totNL1PF += r.npf();
+      totNL1Mu += r.nmuon();
+      totNL1Puppi += r.npuppi();
+      totNL1PFCharged += r.npfCharged();
+      totNL1PuppiCharged += r.npuppiCharged();
+      totNL1PFNeutral += r.npfNeutral();
+      totNL1PuppiNeutral += r.npuppiNeutral();
+      maxNL1Calo = std::max<unsigned>( maxNL1Calo, r.ncalo() );
+      maxNL1EmCalo = std::max<unsigned>( maxNL1EmCalo, r.nemcalo() );
+      maxNL1TK = std::max<unsigned>( maxNL1TK, r.ntrack() );
+      maxNL1PF = std::max<unsigned>( maxNL1PF, r.npf() );
+      maxNL1Mu = std::max<unsigned>( maxNL1Mu, r.nmuon() );
+      maxNL1Puppi = std::max<unsigned>( maxNL1Puppi, r.npuppi() );
+      maxNL1PFCharged = std::max<unsigned>( maxNL1PFCharged, r.npfCharged() );
+      maxNL1PuppiCharged = std::max<unsigned>( maxNL1PuppiCharged, r.npuppiCharged() );
+      maxNL1PFNeutral = std::max<unsigned>( maxNL1PFNeutral, r.npfNeutral() );
+      maxNL1PuppiNeutral = std::max<unsigned>( maxNL1PuppiNeutral, r.npuppiNeutral() );
   }
   addUInt(totNL1Calo, "totNL1Calo", iEvent); addUInt(maxNL1Calo, "maxNL1Calo", iEvent);
   addUInt(totNL1EmCalo, "totNL1EmCalo", iEvent); addUInt(maxNL1EmCalo, "maxNL1EmCalo", iEvent);
@@ -469,6 +486,10 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   addUInt(totNL1Mu, "totNL1Mu", iEvent); addUInt(maxNL1Mu, "maxNL1Mu", iEvent);
   addUInt(totNL1PF, "totNL1PF", iEvent); addUInt(maxNL1PF, "maxNL1PF", iEvent);
   addUInt(totNL1Puppi, "totNL1Puppi", iEvent); addUInt(maxNL1Puppi, "maxNL1Puppi", iEvent);
+  addUInt(totNL1PFCharged, "totNL1PFCharged", iEvent); addUInt(maxNL1PFCharged, "maxNL1PFCharged", iEvent);
+  addUInt(totNL1PuppiCharged, "totNL1PuppiCharged", iEvent); addUInt(maxNL1PuppiCharged, "maxNL1PuppiCharged", iEvent);
+  addUInt(totNL1PFNeutral, "totNL1PFNeutral", iEvent); addUInt(maxNL1PFNeutral, "maxNL1PFNeutral", iEvent);
+  addUInt(totNL1PuppiNeutral, "totNL1PuppiNeutral", iEvent); addUInt(maxNL1PuppiNeutral, "maxNL1PuppiNeutral", iEvent);
  
   if (metanalyzer_) {
       metanalyzer_->clear();

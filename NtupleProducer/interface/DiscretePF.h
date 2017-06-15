@@ -40,6 +40,17 @@ namespace l1tpf_int {
         etaCenter(0.5*(etamin+etamax)), etaMin(etamin), etaMax(etamax), phiCenter(phicenter), phiHalfWidth(0.5*phiwidth), etaExtra(etaextra), phiExtra(phiextra), relativeCoordinates(useRelativeCoordinates),
         ncaloMax(ncalomax), nemcaloMax(nemcalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
 
+    unsigned int ncalo() const { return calo.size(); }
+    unsigned int nemcalo() const { return emcalo.size(); }
+    unsigned int ntrack() const { return track.size(); }
+    unsigned int nmuon() const { return muon.size(); }
+    unsigned int npf() const { return pf.size(); }
+    unsigned int npuppi() const { return puppi.size(); }
+    unsigned int npfCharged() const ; 
+    unsigned int npfNeutral() const { return npf() - npfCharged(); }
+    unsigned int npuppiCharged() const ; 
+    unsigned int npuppiNeutral() const { return npuppi() - npuppiCharged(); }
+
     // global coordinates
     bool contains(float eta, float phi) const { return (etaMin-etaExtra <= eta && eta <= etaMax+etaExtra && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth+phiExtra); }
     // global coordinates

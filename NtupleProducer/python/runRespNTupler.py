@@ -51,8 +51,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1Puppi = cms.VInputTag("InfoOut:Puppi",),
     ),
     copyUInts = cms.VInputTag(
-        "InfoOut:totNL1Calo", "InfoOut:totNL1EmCalo", "InfoOut:totNL1TK", "InfoOut:totNL1Mu", "InfoOut:totNL1PF", "InfoOut:totNL1Puppi",
-        "InfoOut:maxNL1Calo", "InfoOut:maxNL1EmCalo", "InfoOut:maxNL1TK", "InfoOut:maxNL1Mu", "InfoOut:maxNL1PF", "InfoOut:maxNL1Puppi",
+        "InfoOut:totNL1Calo", "InfoOut:totNL1EmCalo", "InfoOut:totNL1TK", "InfoOut:totNL1Mu", "InfoOut:totNL1PF", "InfoOut:totNL1PFCharged", "InfoOut:totNL1PFNeutral", "InfoOut:totNL1Puppi", "InfoOut:totNL1PuppiCharged", "InfoOut:totNL1PuppiNeutral",
+        "InfoOut:maxNL1Calo", "InfoOut:maxNL1EmCalo", "InfoOut:maxNL1TK", "InfoOut:maxNL1Mu", "InfoOut:maxNL1PF", "InfoOut:maxNL1PFCharged", "InfoOut:maxNL1PFNeutral", "InfoOut:maxNL1Puppi", "InfoOut:maxNL1PuppiCharged", "InfoOut:maxNL1PuppiNeutral",
     )
 )
 process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.ntuple)
@@ -127,6 +127,17 @@ def goRegional(inParallel=False):
     else:
         process.InfoOut.regions = regions
         process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+def gbr(neta,nphi,etaex=0.3,phiex=0.2):
+    regions = cms.VPSet(
+            cms.PSet(
+                etaBoundaries = cms.vdouble(*[(-1.5+3*i/neta) for i in xrange(neta+1)]),
+                phiSlices = cms.uint32(nphi),
+                etaExtra = cms.double(etaex),
+                phiExtra = cms.double(phiex),
+            ),
+    )
+    process.InfoOut.regions = regions
+    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
 if False:
     process.InfoOut.fillTrackTree = cms.untracked.int32(1)
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]

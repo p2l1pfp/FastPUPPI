@@ -100,9 +100,15 @@ for iev,event in enumerate(events):
         print "   total pt from photons           in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() == 22 and d.pt() > 1)
         print "   total pt from other neutrals    in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() != 22 and d.pt() > 1)
         print "   total pt from any     particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.pt() > (2 if d.charge() != 0 else 1))
+        if not j:
+            print "   total pt from charged particles (pt > 0.5)   : %7.2f" % sum(d.pt() for d in daus if d.charge() != 0)
+            print "   total pt from neutral particles (pt > 0.5)   : %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 )
+            print "   total pt from photons           (pt > 0.5)   : %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() == 22)
+            print "   total pt from other neutrals    (pt > 0.5)   : %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() != 22)
+            print "   total pt from any     particles (pt > 0.5)   : %7.2f" % sum(d.pt() for d in daus)
         print ""
         
-        c_tomatch = [g for g in daus if g.charge() != 0 and g.pt() > 1.5 and abs(d.eta()) < 2.7]
+        c_tomatch = [g for g in daus if (g.charge() != 0 and g.pt() > 1.5 and abs(g.eta()) < 2.7)]
         n_tomatch = [g for g in daus if g.charge() == 0 and g.pt() > 1]
         a_tomatch = c_tomatch + n_tomatch
 

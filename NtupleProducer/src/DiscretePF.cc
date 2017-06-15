@@ -13,6 +13,21 @@ namespace {
 }
 using namespace l1tpf_int;
 
+unsigned int Region::npfCharged() const {
+    unsigned int ret = 0;
+    for (const auto &p : pf) {
+        ret += (p.intCharge() != 0);
+    }
+    return ret;
+}
+unsigned int Region::npuppiCharged() const {
+    unsigned int ret = 0;
+    for (const auto &p : puppi) {
+        ret += (p.intCharge() != 0);
+    }
+    return ret;
+}
+
 void Region::writeToFile(FILE *file) const {
     fwrite(&etaCenter, sizeof(float), 1, file);
     fwrite(&etaMin,    sizeof(float), 1, file);
@@ -428,7 +443,7 @@ void PFAlgo::computePuppiWeights(Region &r, float alphaCMed, float alphaCRms, fl
                 p.setPuppiW(0);
             }
         }
-        if (debug_) printf("PUPPI \t neutral id %1d pt %7.2f eta %+5.2f phi %+5.2f  alpha %+6.2f x2 %+6.2f --> puppi weight %.3f   puppi pt %7.2f \n", p.hwId, p.floatPt(), p.floatEta(), p.floatPhi(), alpha, x2, p.floatPuppiW(), p.floatPt()*p.floatPuppiW());
+        if (debug_) printf("PUPPI \t neutral id %1d pt %7.2f eta %+5.2f phi %+5.2f  alpha %+6.2f x2 %+7.2f --> puppi weight %.3f   puppi pt %7.2f \n", p.hwId, p.floatPt(), p.floatEta(), p.floatPhi(), alpha, x2, p.floatPuppiW(), p.floatPt()*p.floatPuppiW());
     }
 }
 
@@ -487,7 +502,7 @@ void PFAlgo::computePuppiMedRMS(const std::vector<Region> &rs, float &alphaCMed,
             for (const PFParticle & p2 : r.pf) {
                 float dr2 = ::deltaR2(p.floatEta(), p.floatPhi(), p2.floatEta(), p2.floatPhi());
                 if (dr2 > 0 && dr2 < puppiDr2) {
-                    float w = std::pow(p2.floatPt(),2) / dr2;
+                    float w = std::pow(p2.floatPt(),2) / std::max<float>(0.01f, dr2);
                     alphaF += w;
                     if (p2.chargedPV) alphaC += w;
                 }
