@@ -14,10 +14,25 @@ scram b -j8
 ```
 
 The first step is to produce the inputs:
-`FastPUPPI/NtupleProducer/python/runInputs.py`
+```
+cd FastPUPPI/NtupleProducer/python/runInputs.py
+cmsRun runInputs.py
+```
+
+The second step runs the algorithm and creates ntuples which can be used to do analysis:
+```
+cmsRun runNtupleProducer_cfg.py
+cmsRun runJetNTupler.py
+cmsRun runRespNTupler.py
+```
+`Should we try to collate all of these?`
+
+The plotting scripts are in:
+```FastPUPPI/NtupleProducer/python/scripts```
+
 
 The trigger MC can be found on DAS `dataset=/*/*PhaseIISpring17D*/*`
 
-Other resources:
-`https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideL1TPhase2Instructions#CMSSW_9_2_0_and_l1t_phase2_v1_10`
-`https://twiki.cern.ch/twiki/bin/view/CMS/L1Tracklet90X#Recipe_for_CMSSW_9_2_0`
+Other resources: <br>
+[Correlator code](https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideL1TPhase2Instructions#CMSSW_9_2_0_and_l1t_phase2_v1_10) <br>
+[Track trigger code](https://twiki.cern.ch/twiki/bin/view/CMS/L1Tracklet90X#Recipe_for_CMSSW_9_2_0) <br>

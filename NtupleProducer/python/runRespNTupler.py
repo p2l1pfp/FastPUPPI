@@ -9,7 +9,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_SinglePion_PU0_job42.root')
+    fileNames = cms.untracked.vstring('file:inputs_17D.root')
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
