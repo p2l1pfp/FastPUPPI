@@ -56,30 +56,7 @@ CaloTowerHardcodeGeometryEP = cms.ESProducer("CaloTowerHardcodeGeometryEP")
 CaloTowerTopologyEP = cms.ESProducer("CaloTowerTopologyEP")
 
 from L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff import *
-# Remove best choice selection
-hgcalTriggerPrimitiveDigiProducer.FECodec.NData = cms.uint32(999)
-hgcalTriggerPrimitiveDigiProducer.FECodec.DataLength = cms.uint32(8)
-hgcalTriggerPrimitiveDigiProducer.FECodec.triggerCellTruncationBits = cms.uint32(7)
-
-hgcalTriggerPrimitiveDigiProducer.BEConfiguration.algorithms[0].calib_parameters.cellLSB = cms.double(
-        hgcalTriggerPrimitiveDigiProducer.FECodec.linLSB.value() * 
-        2 ** hgcalTriggerPrimitiveDigiProducer.FECodec.triggerCellTruncationBits.value() 
-)
-
-cluster_algo_all =  cms.PSet( AlgorithmName = cms.string('HGCClusterAlgoBestChoice'),
-                              FECodec = hgcalTriggerPrimitiveDigiProducer.FECodec,
-                              HGCalEESensitive_tag = cms.string('HGCalEESensitive'),
-                              HGCalHESiliconSensitive_tag = cms.string('HGCalHESiliconSensitive'),                           
-                              calib_parameters = hgcalTriggerPrimitiveDigiProducer.BEConfiguration.algorithms[0].calib_parameters,
-                              C2d_parameters = hgcalTriggerPrimitiveDigiProducer.BEConfiguration.algorithms[0].C2d_parameters,
-                              C3d_parameters = hgcalTriggerPrimitiveDigiProducer.BEConfiguration.algorithms[0].C3d_parameters
-                              )
-
-
-hgcalTriggerPrimitiveDigiProducer.BEConfiguration.algorithms = cms.VPSet( cluster_algo_all )
-
 hgcl1tpg_step = cms.Sequence(hgcalTriggerPrimitives)
-
 
 from SimCalorimetry.EcalEBTrigPrimProducers.ecalEBTriggerPrimitiveDigis_cff import *
 EcalEBtp_step = cms.Sequence(simEcalEBTriggerPrimitiveDigis)
