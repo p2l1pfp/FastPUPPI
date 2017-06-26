@@ -24,8 +24,9 @@ process.hcalDigis = EventFilter.HcalRawToDigi.HcalRawToDigi_cfi.hcalDigis.clone(
 process.load('RecoLuminosity.LumiProducer.bunchSpacingProducer_cfi')
 process.load('RecoLocalCalo.Configuration.RecoLocalCalo_cff')
 
-process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
+process.load('L1Trigger.L1TTrackMatch.L1TkObjectProducers_cff')
 
+process.load('FastPUPPI.NtupleProducer.l1tPFCaloProducersFromOfflineRechits_cff')
 process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromTPDigis_cfi')
 process.load('FastPUPPI.NtupleProducer.l1tPFHcalProducerFromTPDigis_cfi')
 process.load('FastPUPPI.NtupleProducer.l1tPFHGCalProducerFrom3DTPs_cfi')
@@ -39,7 +40,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_c
 
 process.source = cms.Source("PoolSource",
                 fileNames = cms.untracked.vstring(
-                    '/store/mc/PhaseIISpring17D/SinglePhoton_FlatPt-8to150/GEN-SIM-DIGI-RAW/NoPU_90X_upgrade2023_realistic_v9-v1/70000/3E7BF05D-0627-E711-AECD-02163E013E33.root'
+                '/store/mc/PhaseIISpring17D/SinglePhoton_FlatPt-8to150/GEN-SIM-DIGI-RAW/NoPU_90X_upgrade2023_realistic_v9-v1/70000/3E7BF05D-0627-E711-AECD-02163E013E33.root'
                 ),
         #                     fileNames = cms.untracked.vstring(
         # '/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1084.root',
@@ -69,11 +70,14 @@ process.source = cms.Source("PoolSource",
 #'/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion/ChargedPion_1111.root'),
                             duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
+process.load('FWCore.MessageService.MessageLogger_cfi')
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.s = cms.Sequence(
     process.reprocess_L1Phase2_MC +
     process.ecalDigis + process.ecalPreshowerDigis + process.hcalDigis + process.bunchSpacingProducer + process.ecalLocalRecoSequence + process.hcalLocalRecoSequence + process.hcalGlobalRecoSequence + process.hgcalLocalRecoSequence +
+    process.L1TkElectrons + process.L1TkPhotons + process.L1TkJets + process.L1TkPrimaryVertex + process.L1TkEtMiss + process.L1TkHTMissVtx +
     process.l1tPFEcalProducerFromOfflineRechits + process.l1tPFHcalProducerFromOfflineRechits + process.l1tPFHFProducerFromOfflineRechits + process.l1tPFHGCalEEProducerFromOfflineRechits + process.l1tPFHGCalFHProducerFromOfflineRechits + process.l1tPFHGCalBHProducerFromOfflineRechits +
     process.l1tPFEcalProducerFromTPDigis +
     process.L1EGammaCrystalsProducer + process.l1tPFEcalProducerFromL1EGCrystalClusters +
@@ -94,6 +98,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_genParticles_*_*",
             "keep *_ak4GenJetsNoNu_*_*",
             "keep *_genMetTrue_*_*",
+	    "keep *_L1Tk*_*_*",
             "keep *_l1tPF*_*_IN",
         ),
         compressionAlgorithm = cms.untracked.string('LZMA'),
