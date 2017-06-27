@@ -1,0 +1,22 @@
+#DAS samples
+/SingleNeutrino/PhaseIISpring17D-PU140_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 3334
+/SingleNeutrino/PhaseIISpring17D-PU200_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 5001
+
+/SingleE_FlatPt-8to100/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 117
+
+/SinglePhoton_FlatPt-8to150/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 109
+
+/SinglePion0_FlatPt-8to100/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 190
+
+/SinglePion_FlatPt-8to100/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 185
+
+/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 106
+/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpring17D-PU140_100M_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 676
+/TT_TuneCUETP8M2T4_14TeV-powheg-pythia8/PhaseIISpring17D-PU200_100M_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW 1012
+
+#privated samples
+/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/ChargedPion
+/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/Pion
+/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/TT_0PU
+/eos/cms/store/group/dpg_trigger/comm_trigger/TriggerStudiesGroup/L1PF/TT_140PU
+/eos/cms/store/cmst3/user/gpetrucc/l1phase2/QCD/GEN-SIM-DIGI-RAW
