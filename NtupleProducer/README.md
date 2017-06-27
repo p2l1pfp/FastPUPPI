@@ -29,6 +29,7 @@ For more options for job splitting:
 ./scripts/cmsSplit.pl --help
 ```
 The job outputs are copied to the eos directory --eosoutdir
+
 When jobs are finished you can clean up your local dir
 ```
 ./runInputs_test_cleanup.sh
