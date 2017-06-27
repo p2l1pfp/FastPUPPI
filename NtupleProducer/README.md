@@ -18,6 +18,22 @@ cd FastPUPPI/NtupleProducer/python/runInputs.py
 cmsRun runInputs.py
 ```
 
+Example how to submit jobs to the lxbatch:
+```
+cd FastPUPPI/NtupleProducer/python
+./scripts/cmsSplit.pl --dataset /SingleE_FlatPt-8to100/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
+./runInputs_test_bsub.sh
+```
+For more options for job splitting:
+```
+./scripts/cmsSplit.pl --help
+```
+The job outputs are copied to the eos directory --eosoutdir
+When jobs are finished you can clean up your local dir
+```
+./runInputs_test_cleanup.sh
+```
+
 The second step runs the algorithm and creates ntuples which can be used to do analysis:
 ```
 cmsRun runNtupleProducer_cfg.py
