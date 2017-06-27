@@ -67,10 +67,14 @@ HcalTPsimulation_step = cms.Sequence(hcalTTPSequence)
 from Configuration.StandardSequences.SimL1Emulator_cff import *
 L1simulation_step = cms.Sequence(SimL1Emulator)
 
+from L1Trigger.TrackTrigger.TrackTrigger_cff import *
+from L1Trigger.TrackTrigger.TTStubAlgorithmRegister_cfi import *
+TTClusterStub = cms.Sequence(TrackTriggerClustersStubs)
+
 from L1Trigger.TrackFindingTracklet.L1TrackletTracks_cff import *
 #TTClusterAssociatorFromPixelDigis.digiSimLinks          = cms.InputTag( "simSiPixelDigis","Tracker" )
 L1TrackTrigger_step = cms.Sequence(L1TrackletTracks)
 
 reprocess_L1Phase2_MC = cms.Sequence(
-    hgcl1tpg_step + EcalEBtp_step + L1TrackTrigger_step + HcalTPsimulation_step
+    hgcl1tpg_step + EcalEBtp_step + TTClusterStub + L1TrackTrigger_step + HcalTPsimulation_step
 )
