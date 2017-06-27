@@ -1,0 +1,36 @@
+#!/bin/bash
+export MYDIR=$PWD
+export HOMEDIR=$1
+shift
+export EOSDIR=$1
+shift
+export CFGFILE=$1
+BASE=$(echo $CFGFILE | sed -s 's#\.\(cfg\|cfg\.py\|py\)$##');
+LOG="$BASE.log.${LSB_JOBID}"
+cd $HOMEDIR;
+eval $(scramv1 runtime -sh)
+cd $MYDIR
+echo "## Home dir: $HOMEDIR"  > $LOG
+echo "## Work dir: $MYDIR"    >> $LOG
+echo "## Executing cmsRun $*" >> $LOG
+echo "## Starting at $(date)" >> $LOG
+cp -s $HOMEDIR/* .
+cmsRun $* >> $LOG 2>&1
+for f in *.root; do
+    if test -f $f; then
+        xrdcp -f $f root://eoscms/$EOSDIR/$f      2>&1 | tee -a $LOG
+        if $eos ls $EOSDIR/$f; then
+            echo "Successfully copied to $EOSDIR" 2>&1 | tee -a $LOG
+        else
+            echo "Making a second attempt"        2>&1 | tee -a $LOG
+            xrdcp -f $f root://eoscms/$EOSDIR/$f  2>&1 | tee -a $LOG  
+        fi
+    else
+        echo "File $f does not exist!"	
+    fi;
+done
+if (( $(stat -c "%s" $LOG) < 12400 )); then
+    cp $LOG $HOMEDIR/
+else
+    gzip $LOG && cp ${LOG}.gz $HOMEDIR/
+fi;
