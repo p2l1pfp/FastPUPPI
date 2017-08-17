@@ -1,4 +1,4 @@
-import os
+import os, sys
 import ROOT
 from array import array
 ROOT.PyConfig.IgnoreCommandLineOptions = True
@@ -83,7 +83,8 @@ if __name__ == "__main__":
             etas = [ 1.5, 3.0, 5.0 ]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.semiCoarseEta:
-            etas = [ 1.5, 3.0, 3.5, 3.8, 4.2, 4.4, 4.7, 5.0 ]
+            #etas = [ 1.5, 3.0, 3.5, 3.8, 4.2, 4.4, 4.7, 5.0 ]
+	    etas = [1.5, 3.0, 3.2, 3.5, 4.0, 4.5, 5.0]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
@@ -97,7 +98,12 @@ if __name__ == "__main__":
             for ieta in range(0,50,5):
                 if ieta*0.1 >= options.etaMax: break
                 etas.append((0.1*(ieta),0.1*(ieta+5)))
-        for etamin,etamax in etas:
+        
+	#print etas
+	#print emfs
+	#sys.exit()
+	
+	for etamin,etamax in etas:
             sels.append(("%s_eta_%02d_%02d"  % (particle,int(etamin*10),int(etamax*10)), "abs(mc_eta) > %.1f && abs(mc_eta) < %.1f && mc_pt > %g &&  %s" % (etamin,etamax,max(options.ptmin,minPt),pdgIdCut)))
     if options.emfSlices:
         oldsels, oldetas = sels[:], etas[:]

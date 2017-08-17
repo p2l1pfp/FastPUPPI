@@ -35,7 +35,7 @@ class PFAlgo3 : public PFAlgo {
         void emcalo_algo(Region & r, const std::vector<int> & em2ntk, const std::vector<float> & em2sumtkpt, const std::vector<float> & em2sumtkpterr) const ;
 
         /// promote all flagged tracks to electrons
-        void emtk_algo(Region & r, const std::vector<int> & tk2em, const std::vector<int> & em2ntk) const ;
+        void emtk_algo(Region & r, const std::vector<int> & tk2em, const std::vector<int> & em2ntk, const std::vector<float> & em2sumtkpterr) const ;
 
         /// subtract EM component from Calo clusters for all photons and electrons (within tracker coverage)
         void sub_em2calo(Region & r, const std::vector<int> & em2calo) const ;

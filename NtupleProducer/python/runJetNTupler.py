@@ -9,8 +9,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SingleNeutrino_PU140/inputs_17D_SingleNeutrino_PU140_job1.root'),
-    eventsToProcess = cms.untracked.VEventRange('1:973:48615'),
+    fileNames = cms.untracked.vstring('file:inputs_17D.root'),
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
@@ -19,7 +18,6 @@ process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
 process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 process.CaloInfoOut.outputName = ""; # turn off Ntuples
 process.InfoOut.outputName = ""; # turn off Ntuples
-process.InfoOut.debug = 2;
 
 from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')
@@ -63,34 +61,6 @@ JEC_PU140 = {
 			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
 			offset  = cms.vdouble(-11.052, -10.943, -8.822, -5.544, -6.385,  3.602,  5.024,  11.132,  11.561, -0.803),
 			scale   = cms.vdouble( 1.028,  1.033,  0.938,  0.889,  1.016,  0.382,  0.887,  0.994,  1.076,  1.379),
-            ),
-}
-
-JEC_PU0 = {
-    'L1Calo' : cms.PSet(
-			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-			offset  = cms.vdouble(-12.704, -12.376, -10.322, -9.258, -10.556, -11.380, -4.990, -6.409, -2.709, -9.033),
-			scale   = cms.vdouble( 0.918,  0.911,  0.818,  0.852,  0.931,  0.899,  0.734,  0.878,  0.868,  1.088),
-            ),
-    'L1TK' : cms.PSet(
-			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
-			offset  = cms.vdouble(-4.484, -4.062, -3.586, -8.047, -1.065),
-			scale   = cms.vdouble( 0.546,  0.534,  0.522,  0.659,  0.482),
-            ),
-    'L1TKV' : cms.PSet(
-			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
-			offset  = cms.vdouble(-2.068, -2.033, -1.172, -1.511,  1.154),
-			scale   = cms.vdouble( 0.490,  0.484,  0.451,  0.483,  0.398),
-            ),
-    'L1PF' : cms.PSet(
-                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 12.622,  15.549,  18.607,  26.369,  41.212,  38.112,  48.410,  60.027,  45.062,  53.013),
-                        scale   = cms.vdouble( 0.988,  0.967,  0.928,  0.926,  0.986,  1.025,  0.748,  0.765,  1.213,  1.276),
-            ),
-    'L1Puppi' : cms.PSet(
-			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-			offset  = cms.vdouble(-13.687, -13.801, -10.823, -11.606, -12.974,  4.456,  11.672,  5.632,  15.133, -6.580),
-			scale   = cms.vdouble( 0.797,  0.792,  0.706,  0.739,  0.754,  0.131,  0.050,  0.182, -0.004,  0.619),
             ),
 }
 

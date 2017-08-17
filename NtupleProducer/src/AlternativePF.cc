@@ -82,7 +82,7 @@ void PFAlgo3::runPF(Region &r) const {
 
     /// ------------- next step (needs the previous) ----------------
     // promote all flagged tracks to electrons
-    emtk_algo(r, tk2em, em2ntk);
+    emtk_algo(r, tk2em, em2ntk, em2sumtkpterr);
     sub_em2calo(r, em2calo);
 
     /// ------------- next step (needs the previous) ----------------
@@ -128,7 +128,9 @@ void PFAlgo3::link_tk2em(Region &r, std::vector<int> & tk2em) const {
         for (int iem = 0, nem = r.emcalo.size(); iem < nem; ++iem) {
             const auto & em = r.emcalo[iem];
             float dr = floatDR(tk, em);
-            if (dr < drbest) { tk2em[itk] = iem; drbest = dr; }
+            if (dr < drbest) {
+	     tk2em[itk] = iem; drbest = dr;
+	    }
         }
         if (debug_ && tk2em[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to EM   %3d (pt %7.2f) with dr %.3f\n", itk, tk.floatPt(), tk2em[itk], tk2em[itk] == -1 ? 0.0 : r.emcalo[tk2em[itk]].floatPt(), drbest );
     }
@@ -205,7 +207,7 @@ void PFAlgo3::emcalo_algo(Region & r, const std::vector<int> & em2ntk, const std
     }
 }
 
-void PFAlgo3::emtk_algo(Region & r, const std::vector<int> & tk2em, const std::vector<int> & em2ntk) const {
+void PFAlgo3::emtk_algo(Region & r, const std::vector<int> & tk2em, const std::vector<int> & em2ntk, const std::vector<float> & em2sumtkpterr) const {
     // promote all flagged tracks to electrons
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
         auto & tk = r.track[itk]; 
@@ -214,8 +216,10 @@ void PFAlgo3::emtk_algo(Region & r, const std::vector<int> & tk2em, const std::v
         if (em.isEM) {
             auto & p = addTrackToPF(r, tk);
             // FIXME to check if this is useful
-            if (em2ntk[tk2em[itk]] == 1 && em.floatPt() > 20 && em.hwFlags == 1) { 
-                p.setFloatPt(em.floatPt()); // calo has better resolution above 20 GeV
+            if (em2ntk[tk2em[itk]] == 1 && em.hwFlags == 1) {
+                if (em.floatPtErr() < em2sumtkpterr[tk2em[itk]]) {
+                    p.setFloatPt(em.floatPt());
+                }
             }
             if (debug_) printf("ALT \t track %3d (pt %7.2f) matched to EM   %3d (pt %7.2f) promoted to electron with pt %7.2f\n", itk, tk.floatPt(), tk2em[itk], em.floatPt(), p.floatPt() );
             p.hwId = l1tpf::Particle::EL;

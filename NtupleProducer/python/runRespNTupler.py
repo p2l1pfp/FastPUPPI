@@ -10,7 +10,6 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SingleNeutrino_PU140/inputs_17D_SingleNeutrino_PU140_job1.root'),
-    eventsToProcess = cms.untracked.VEventRange('1:973:48615'),
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
@@ -20,7 +19,6 @@ process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
 process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 process.CaloInfoOut.outputName = ""; # turn off Ntuples
 process.InfoOut.outputName = ""; # turn off Ntuples
-process.InfoOut.debug = 2;
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),

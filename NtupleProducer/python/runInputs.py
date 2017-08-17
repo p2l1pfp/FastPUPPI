@@ -40,18 +40,13 @@ process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_c
 
 process.source = cms.Source("PoolSource",
                 fileNames = cms.untracked.vstring(
-                '/store/mc/PhaseIISpring17D/SingleNeutrino/GEN-SIM-DIGI-RAW/PU140_90X_upgrade2023_realistic_v9-v1/70000/00A055EB-9626-E711-A677-0242AC130002.root'
+                '/store/mc/PhaseIISpring17D/SingleNeutrino/GEN-SIM-DIGI-RAW/PU140_90X_upgrade2023_realistic_v9-v1/70002/0ADAA3FC-7B2A-E711-A0CD-0242AC130003.root'
                 ),
                 duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
-process.source.eventsToProcess = cms.untracked.VEventRange('1:973:48615')
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 1
-#process.options = cms.untracked.PSet(
-#    SkipEvent = cms.untracked.vstring( 'FallbackFileOpenError','BadGeometry', 'FileReadError' ),
-    #IgnoreCompletely = cms.untracked.vstring( 'Q' )
-#  )
+process.MessageLogger.cerr.FwkReport.reportEvery = 1000
   
 process.s = cms.Sequence(
     process.reprocess_L1Phase2_MC +

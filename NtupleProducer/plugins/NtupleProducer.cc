@@ -295,9 +295,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       // the combiner knows the sigma, the track producer doesn't
       tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
       tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
-      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt());
+      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f, stubs %2d, chi2 %7.1f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt(), int(tk.quality()),tk.normalizedChi2());
       // adding objects to PF
-      if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
+      if(tk.pt() > trkPt_ && int(tk.quality()) > 3 && tk.normalizedChi2() < 15) l1regions_.addTrack(tk);      
       /// filling the tree    
       if (!fTrkInfoTree) continue;
       trkPx  = tk.px();

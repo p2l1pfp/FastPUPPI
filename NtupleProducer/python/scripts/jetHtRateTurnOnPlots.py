@@ -1,4 +1,5 @@
-import os
+
+import os, sys
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
@@ -13,6 +14,7 @@ from bisect import bisect_left
 def makeCumulativeHTEff(name, tree, expr, cut="", norm=40E3):
     tree.Draw("min(%s,1999)>>htemp(2000,0,2000)" % expr, cut);
     htemp = ROOT.gROOT.FindObject("htemp")
+    htemp.SaveAs("htemp.root")
     tot, msum = norm/htemp.Integral(), 0
     nbins = htemp.GetNbinsX()
     for ib in xrange(0, nbins-1):
@@ -77,6 +79,7 @@ for kind,things in whats:
     htexpr = "E%sPt%d_ht_corr" % (options.eta, options.pt)
     for name,expr,col,msty,msiz in things:
         rexpr = expr.replace("$",htexpr)
+        print rexpr
         label = name
         if args[3] == "rate":
             plot = makeCumulativeHTEff(name, background, rexpr)
