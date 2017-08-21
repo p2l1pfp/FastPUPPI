@@ -9,7 +9,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs_17D.root')
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SingleNeutrino_PU140/inputs_17D_SingleNeutrino_PU140_job1.root'),
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
@@ -175,3 +175,4 @@ if False:
         process.InfoOut.debugPhi = cms.untracked.double(+2.3)
         process.InfoOut.debugR   = cms.untracked.double(0.8)
 
+#goGun()

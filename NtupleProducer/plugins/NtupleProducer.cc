@@ -100,7 +100,8 @@ private:
   edm::EDGetTokenT<L1PFCollection>                TokL1TrackTPTag_;
   std::vector<edm::EDGetTokenT<L1PFCollection>>   TokCaloClusterTags_, TokEmClusterTags_;
   edm::EDGetTokenT<L1PFCollection>                TokMuonTPTag_;
-  double trkPt_;
+  double trkPt_, trkMaxChi2_;
+  unsigned trkMinStubs_;
   bool   metRate_;
   double etaCharged_;
   double puppiPtCut_, puppiDr_;
@@ -163,6 +164,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
   EleResTag_            (getFilePath(iConfig,"eleres")),
   PionResTag_           (getFilePath(iConfig,"pionres")),
   trkPt_                (iConfig.getParameter<double>       ("trkPtCut")),
+  trkMaxChi2_           (iConfig.getParameter<double>       ("trkMaxChi2")),
+  trkMinStubs_          (iConfig.getParameter<unsigned>     ("trkMinStubs")),
   metRate_              (iConfig.getParameter<bool>         ("metRate")),
   etaCharged_           (iConfig.getParameter<double>       ("etaCharged")),
   puppiPtCut_           (iConfig.getParameter<double>       ("puppiPtCut")),
@@ -295,9 +298,9 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       // the combiner knows the sigma, the track producer doesn't
       tk.setSigma(simpleResolTrk_(tk.pt(), std::abs(tk.eta())));
       tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
-      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt());
+      if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f, stubs %2d, chi2 %7.1f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt(), int(tk.quality()),tk.normalizedChi2());
       // adding objects to PF
-      if(tk.pt() > trkPt_) l1regions_.addTrack(tk);      
+      if(tk.pt() > trkPt_ && unsigned(tk.quality()) > trkMinStubs_ && tk.normalizedChi2() < trkMaxChi2_ ) l1regions_.addTrack(tk);      
       /// filling the tree    
       if (!fTrkInfoTree) continue;
       trkPx  = tk.px();

@@ -19,6 +19,8 @@ InfoOut = cms.EDProducer('NtupleProducer',
          correctorEmfBins = cms.uint32(11),
          correctorEmfMax  = cms.double(1.0),
          trkPtCut    = cms.double(2.0),
+	 trkMinStubs = cms.uint32(3),
+	 trkMaxChi2 = cms.double(15),
          metRate     = cms.bool(False),
          etaCharged  = cms.double(2.5),
          puppiDr     = cms.double(0.3),
@@ -65,23 +67,23 @@ InfoOut = cms.EDProducer('NtupleProducer',
 # these below are temporary resolutions, to be improved later
 if True:
     InfoOut.simpleResolHad = cms.PSet(
-            etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
-            offset  = cms.vdouble( 3.749,  3.026,  2.611,  1.638,  1.231,  1.817),
-            scale   = cms.vdouble( 0.122,  0.269,  0.138,  0.246,  0.213,  0.219),
+	    etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
+	    offset  = cms.vdouble( 3.378,  2.673,  3.143,  1.976,  1.205, -1.147),
+	    scale   = cms.vdouble( 0.109,  0.344,  0.139,  0.236,  0.158,  0.427),
             ptMin   = cms.vdouble( 10.00,  10.00,  10.00,  10.00,  10.00,  10.00),
             ptMax   = cms.vdouble(999999, 999999, 999999, 999999, 999999, 999999),
             kind    = cms.string('calo'),
             )
     InfoOut.simpleResolEm = cms.PSet(
-            etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
-            offset  = cms.vdouble( 0.849,  0.626,  0.157, -1.305,  0.607, -3.985),
-            scale   = cms.vdouble( 0.016,  0.097,  0.043,  0.305,  0.142,  0.626),
-            kind    = cms.string('calo'),
+	    etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
+	    offset  = cms.vdouble( 1.642,  2.546,  1.373,  1.381,  1.008, -2.637),
+	    scale   = cms.vdouble( 0.002,  0.094, -0.002,  0.267,  0.124,  0.497),
+	    kind    = cms.string('calo'),
             )
     InfoOut.simpleResolTrk  = cms.PSet(
-            etaBins = cms.vdouble( 0.800,  1.200,  1.500,  2.000,  2.500),
-            offset  = cms.vdouble( 0.006,  0.010,  0.010,  0.019,  0.027),
-            scale   = cms.vdouble( 0.303,  0.465,  1.003,  1.219,  1.518),
+	    etaBins = cms.vdouble( 0.800,  1.200,  1.500,  2.000,  2.500),
+	    offset  = cms.vdouble( 0.007,  0.009,  0.011,  0.015,  0.024),
+	    scale   = cms.vdouble( 0.271,  0.392,  0.493,  0.453,  1.093),
             kind    = cms.string('track'),
             )
 

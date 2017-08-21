@@ -119,7 +119,7 @@ options:
   --fnal: use fnal xrootd redirector
   --AAA:  use cern global xrootd redirector
   --nomerge:  don't merge the outputs
-  --EOSoutdir: EOS directory to store the jobs output files
+  --eosoutdir: EOS directory to store the jobs output files
 EOF
 }
 

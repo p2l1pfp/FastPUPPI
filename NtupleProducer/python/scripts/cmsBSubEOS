@@ -6,9 +6,8 @@ if echo "X$1" | grep -q '^X-[a-zA-Z0-9]'; then
 fi;
 if test -f $1 ; then echo "ERROR, $1 must be the EOS path for stage out. "; exit 1; fi
 if echo $1 | grep -v -q '^/eos/cms/store/' ; then echo "ERROR, $1 must be the EOS path for stage out. "; exit 1; fi
-eos=/afs/cern.ch/project/eos/installation/0.3.84-aquamarine/bin/eos.select
-$eos ls $1 > /dev/null 2>&1 || $eos mkdir -p $1 2> /dev/null 
-if $eos ls $1 > /dev/null 2>&1 ; then
+eos ls $1 > /dev/null 2>&1 || $eos mkdir -p $1 2> /dev/null 
+if eos ls $1 > /dev/null 2>&1 ; then
     echo "Will stage out the output in $1";
 else
     echo "Directory $1 does not exist, and cannot create it. Aborting."

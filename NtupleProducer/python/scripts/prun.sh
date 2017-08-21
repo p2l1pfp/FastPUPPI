@@ -1,5 +1,5 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517
+MAIN=/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/$1/
 PREFIX="inputs_17D"
 
 INPUT=$1; shift
