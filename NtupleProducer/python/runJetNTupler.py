@@ -26,14 +26,9 @@ process.ak4L1TK      = ak4PFJets.clone(src = 'InfoOut:TK')
 process.ak4L1TKV     = ak4PFJets.clone(src = 'InfoOut:TKVtx')
 process.ak4L1PF      = ak4PFJets.clone(src = 'InfoOut:PF')
 process.ak4L1Puppi   = ak4PFJets.clone(src = 'InfoOut:Puppi')
-process.ak4L1ICalo   = ak4PFJets.clone(src = 'InfoOut:L1Calo')
-process.ak4L1ITK     = ak4PFJets.clone(src = 'InfoOut:L1TK')
-process.ak4L1IPF     = ak4PFJets.clone(src = 'InfoOut:L1PF')
-process.ak4L1IPuppi  = ak4PFJets.clone(src = 'InfoOut:L1Puppi')
 
 process.jets = cms.Sequence(     
     process.ak4L1RawCalo + process.ak4L1Calo + process.ak4L1TK + process.ak4L1TKV + process.ak4L1PF + process.ak4L1Puppi
-    #process.ak4L1ICalo + process.ak4L1ITK + process.ak4L1IPF + process.ak4L1IPuppi 
 )
 
 JEC_PU140 = {
@@ -69,20 +64,12 @@ JEC = JEC_PU140;
 process.ntuple = cms.EDAnalyzer("JetNTuplizer",
     jets = cms.PSet(
         Gen = cms.InputTag("ak4GenJetsNoNu"),
-        #RawCalo = cms.InputTag("ak4L1RawCalo"),
+        RawCalo = cms.InputTag("ak4L1RawCalo"),
         Calo = cms.InputTag("ak4L1Calo"),
         TK = cms.InputTag("ak4L1TK"),
         TKV = cms.InputTag("ak4L1TKV"),
         PF = cms.InputTag("ak4L1PF"),
         Puppi = cms.InputTag("ak4L1Puppi"),
-        #L1Calo = cms.InputTag("ak4L1ICalo"),
-        #L1TK = cms.InputTag("ak4L1ITK"),
-        #L1PF = cms.InputTag("ak4L1IPF"),
-        #L1Puppi = cms.InputTag("ak4L1IPuppi"),
-        L1Calo = cms.InputTag("ak4L1Calo"),
-        L1TK = cms.InputTag("ak4L1TK"),
-        L1PF = cms.InputTag("ak4L1PF"),
-        L1Puppi = cms.InputTag("ak4L1Puppi"),
     ),
     jecs = cms.PSet(
         Calo = JEC['L1Calo'],
@@ -90,10 +77,6 @@ process.ntuple = cms.EDAnalyzer("JetNTuplizer",
         TKV = JEC['L1TKV'],
         PF = JEC['L1PF'],
         Puppi = JEC['L1Puppi'],
-        L1Calo = JEC['L1Calo'],
-        L1TK = JEC['L1TK'],
-        L1PF = JEC['L1PF'],
-        L1Puppi = JEC['L1Puppi'],
     ),
     sels = cms.PSet(
         #E24Pt15 = cms.string("pt > 15 && abs(eta) < 2.4"),
