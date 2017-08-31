@@ -81,22 +81,22 @@ void Region::writeToFile(FILE *file) const {
     number = calo.size(); size = sizeof(CaloCluster);
     fwrite(&number, sizeof(uint32_t), 1, file);
     fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&calo[0], size, number, file);
+    for (unsigned int j = 0; j < number; ++j) fwrite(&calo[j], size, 1, file);
 
     number = emcalo.size(); size = sizeof(CaloCluster);
     fwrite(&number, sizeof(uint32_t), 1, file);
     fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&emcalo[0], size, number, file);
+    for (unsigned int j = 0; j < number; ++j) fwrite(&emcalo[j], size, 1, file);
 
     number = track.size(); size = sizeof(PropagatedTrack);
     fwrite(&number, sizeof(uint32_t), 1, file);
     fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&track[0], size, number, file);
+    for (unsigned int j = 0; j < number; ++j) fwrite(&track[j], size, 1, file);
 
     number = muon.size(); size = sizeof(Muon);
     fwrite(&number, sizeof(uint32_t), 1, file);
     fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&muon[0], size, number, file);
+    for (unsigned int j = 0; j < number; ++j) fwrite(&muon[j], size, 1, file);
 }
 
 RegionMapper::RegionMapper( const edm::ParameterSet& iConfig )  :
