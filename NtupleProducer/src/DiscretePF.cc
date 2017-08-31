@@ -13,17 +13,57 @@ namespace {
 }
 using namespace l1tpf_int;
 
-unsigned int Region::npfCharged() const {
-    unsigned int ret = 0;
-    for (const auto &p : pf) {
-        ret += (p.intCharge() != 0);
+const char * Region::inputTypeName(int type) {
+    switch(InputType(type)) {
+        case calo_type: return "Calo";
+        case emcalo_type: return "EmCalo";
+        case track_type: return "TK";
+        case l1mu_type: return "Mu";
+        case n_input_types: assert(false);
     }
-    return ret;
+    return "NO_SUCH_INPUT_TYPE";
 }
-unsigned int Region::npuppiCharged() const {
+const char * Region::outputTypeName(int type) {
+    switch(OutputType(type)) {
+        case any_type: return "";
+        case charged_type: return "Charged";
+        case neutral_type: return "Neutral";
+        case electron_type: return "Electron";
+        case pfmuon_type: return "Muon";
+        case charged_hadron_type: return "ChargedHadron";
+        case neutral_hadron_type: return "NeutralHadron";
+        case photon_type: return "Photon";
+        case n_output_types: assert(false);
+    }
+    return "NO_SUCH_OUTPUT_TYPE";
+}
+
+unsigned int Region::nInput(InputType type) const {
+    switch(type) {
+        case calo_type: return calo.size();
+        case emcalo_type: return emcalo.size();
+        case track_type: return track.size();
+        case l1mu_type: return muon.size();
+        case n_input_types: assert(false);
+    }
+    return 9999;
+}
+unsigned int Region::nOutput(OutputType type, bool usePuppi) const {
     unsigned int ret = 0;
-    for (const auto &p : puppi) {
-        ret += (p.intCharge() != 0);
+    for (const auto &p : (usePuppi ? puppi : pf)) {
+        if (p.hwPt <= 0) continue;
+        if (!fiducialLocal(p.floatEta(), p.floatPhi())) continue;
+        switch(type) {
+            case any_type: ret++; break;
+            case charged_type: if (p.intCharge() != 0) ret++; break;
+            case neutral_type: if (p.intCharge() == 0) ret++; break;
+            case electron_type: if (p.hwId == l1tpf::Particle::EL) ret++; break;
+            case pfmuon_type: if (p.hwId == l1tpf::Particle::MU) ret++; break;
+            case charged_hadron_type: if (p.hwId == l1tpf::Particle::CH) ret++; break;
+            case neutral_hadron_type: if (p.hwId == l1tpf::Particle::NH) ret++; break;
+            case photon_type: if (p.hwId == l1tpf::Particle::GAMMA) ret++; break;
+            case n_output_types: assert(false);
+        }
     }
     return ret;
 }
@@ -194,6 +234,27 @@ std::vector<l1tpf::Particle> RegionMapper::fetchTracks(float ptMin, bool fromPV)
     }
     return ret;
 }
+
+std::pair<unsigned,unsigned> RegionMapper::totAndMaxInput(int type) const {
+    unsigned ntot = 0, nmax = 0;
+    for (const auto & r : regions_) {
+        unsigned int ni = r.nInput(Region::InputType(type));
+        ntot += ni;
+        nmax = std::max(nmax, ni);
+    }
+    return std::make_pair(ntot,nmax);
+}
+std::pair<unsigned,unsigned> RegionMapper::totAndMaxOutput(int type, bool puppi) const {
+    unsigned ntot = 0, nmax = 0;
+    for (const auto & r : regions_) {
+        unsigned int ni = r.nOutput(Region::OutputType(type),puppi);
+        ntot += ni;
+        nmax = std::max(nmax, ni);
+    }
+    return std::make_pair(ntot,nmax);
+}
+
+
 
 
 PFAlgo::PFAlgo( const edm::ParameterSet & iConfig ) :

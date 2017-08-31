@@ -40,16 +40,14 @@ namespace l1tpf_int {
         etaCenter(0.5*(etamin+etamax)), etaMin(etamin), etaMax(etamax), phiCenter(phicenter), phiHalfWidth(0.5*phiwidth), etaExtra(etaextra), phiExtra(phiextra), relativeCoordinates(useRelativeCoordinates),
         ncaloMax(ncalomax), nemcaloMax(nemcalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
 
-    unsigned int ncalo() const { return calo.size(); }
-    unsigned int nemcalo() const { return emcalo.size(); }
-    unsigned int ntrack() const { return track.size(); }
-    unsigned int nmuon() const { return muon.size(); }
-    unsigned int npf() const { return pf.size(); }
-    unsigned int npuppi() const { return puppi.size(); }
-    unsigned int npfCharged() const ; 
-    unsigned int npfNeutral() const { return npf() - npfCharged(); }
-    unsigned int npuppiCharged() const ; 
-    unsigned int npuppiNeutral() const { return npuppi() - npuppiCharged(); }
+    enum InputType { calo_type=0, emcalo_type=1, track_type=2, l1mu_type=3, n_input_types=4 };
+    static const char * inputTypeName(int inputType) ;
+
+    enum OutputType { any_type=0, charged_type=1, neutral_type=2, electron_type=3, pfmuon_type=4, charged_hadron_type=5, neutral_hadron_type=6, photon_type=7, n_output_types=8 };
+    static const char * outputTypeName(int outputType) ;
+
+    unsigned int nInput(InputType type) const ;
+    unsigned int nOutput(OutputType type, bool puppi) const ;
 
     // global coordinates
     bool contains(float eta, float phi) const { return (etaMin-etaExtra <= eta && eta <= etaMax+etaExtra && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth+phiExtra); }
@@ -102,6 +100,9 @@ namespace l1tpf_int {
         std::vector<l1tpf::Particle> fetch(bool puppi=true, float ptMin=0.01, bool discarded = false) const ;
         std::vector<l1tpf::Particle> fetchCalo(float ptMin=0.01, bool emcalo=false) const ;
         std::vector<l1tpf::Particle> fetchTracks(float ptMin=0.01, bool fromPV=false) const ;
+
+        std::pair<unsigned,unsigned> totAndMaxInput(/*Region::InputType*/int type) const ;
+        std::pair<unsigned,unsigned> totAndMaxOutput(/*Region::OutputType*/int type, bool puppi) const ;
     protected:
         std::vector<Region> regions_;
         bool useRelativeRegionalCoordinates_; // whether the eta,phi in each region are global or relative to the region center
