@@ -43,6 +43,7 @@
 #include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 #include "FastPUPPI/NtupleProducer/interface/DiscretePF.h"
 #include "FastPUPPI/NtupleProducer/interface/AlternativePF.h"
+#include "FastPUPPI/NtupleProducer/interface/BitwisePF.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -203,6 +204,8 @@ NtupleProducer::NtupleProducer(const edm::ParameterSet& iConfig):
       l1pfalgo_.reset(new l1tpf_int::PFAlgo3(iConfig));
   } else if (algo == "PFAlgoOld") {
       l1pfalgo_.reset(new l1tpf_int::PFAlgo(iConfig));
+  } else if (algo == "BitwisePF") {
+      l1pfalgo_.reset(new l1tpf_int::BitwisePF(iConfig));
   } else throw cms::Exception("Configuration", "Unsupported PFAlgo");
 
   std::string regionDumpFile = iConfig.getUntrackedParameter<std::string>("regionDumpFileName", "");

@@ -145,11 +145,16 @@ if False:
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
     process.p.remove(process.ntuple)
     process.TFileService.fileName = cms.string("trackTupleNew.root")
+if False: # run bitwise PF for Vivado
+    goRegional()
+    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+    process.InfoOut.linking.algo = "BitwisePF"
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SinglePion_PU0/inputs_17D_SinglePion_PU0_job1.root', ]
 if False: # prepare dump file for Vivado
     goRegional()
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU140_job10.root']
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
      
 if False:
     #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
