@@ -396,9 +396,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
     fwrite(&run, sizeof(uint32_t), 1, fRegionDump);
     fwrite(&lumi, sizeof(uint32_t), 1, fRegionDump);
     fwrite(&event, sizeof(uint64_t), 1, fRegionDump);
-    uint32_t nregions = l1regions_.regions().size();
-    fwrite(&nregions, sizeof(uint32_t), 1, fRegionDump);
-    for (const auto & r : l1regions_.regions()) r.writeToFile(fRegionDump);
+    l1tpf_int::writeManyToFile(l1regions_.regions(), fRegionDump);
   } 
 
 
