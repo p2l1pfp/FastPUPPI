@@ -56,7 +56,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     )
 )
 process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.ntuple)
-process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
+process.TFileService = cms.Service("TFileService", fileName = cms.string("respTuple.root"))
 
 # Below for more debugging
 if True:

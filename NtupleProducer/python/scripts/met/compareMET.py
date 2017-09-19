@@ -7,69 +7,53 @@ ROOT.gStyle.SetOptFit(0 );
 ROOT.gStyle.SetPalette(55);
 import math
 from array import array
-import os
+import os, sys
 from METContainer import METContainer
 
 
 ##---------------------------------------
 def main():
 
-	idir = 'data_May22-offlinetracks';
+	idir = './'
 
-	bkgFiles = [];
-	# bkgFiles.append( ROOT.TFile("data_may18/M_dy_140_2.0ZMM_140PU-desploop.root") );
-	# bkgFiles.append( ROOT.TFile("data_may18/M_dy_140_3.0ZMM_140PU.root") );
-	# bkgFiles.append( ROOT.TFile("data_May20/M_dy_140_2.0ZMM_140PU.root") );
-	# bkgFiles.append( ROOT.TFile("data_May20/M_dy_140_3.0ZMM_140PU.root") );
-	bkgFiles.append( ROOT.TFile(idir + "/M_dy_140_2.0ZMM_140PU.root") );
-	bkgFiles.append( ROOT.TFile(idir + "/M_dy_140_3.0ZMM_140PU.root") );
-	sigFiles = [];
-	# sigFiles.append( ROOT.TFile("data_may18/M_tt_140_2.0TT_140PU-desploop.root") );
-	# sigFiles.append( ROOT.TFile("data_may18/M_tt_140_3.0TT_140PU.root") );
-	# sigFiles.append( ROOT.TFile("data_May20/M_tt_140_2.0TT_140PU.root") );
-	# sigFiles.append( ROOT.TFile("data_May20/M_tt_140_3.0TT_140PU.root") );
-	sigFiles.append( ROOT.TFile(idir + "/M_tt_140_2.0TT_140PU.root") );
-	sigFiles.append( ROOT.TFile(idir + "/M_tt_140_3.0TT_140PU.root") );
+	bkg =  ROOT.TFile(idir + "/ntuple/metTuple_SingleNeutrino_PU140.root")
+	sig = ROOT.TFile(idir + "/ntuple/metTuple_TTbar_PU140.root")
 
-	metTypes = ["","ucalo","tk","pup","pvtk"];
-	# ttags = ["pt2","pt2d5","pt3"];
-	ttags = ["pt2","pt3"];
+	#metTypes = ["Calo"]
+	metTypes = ["Calo","TK","Puppi","TKV","PF"];
+	#ttags = [];
 
-	bkgMets = [];
-	bkgMetCuts_1percent = [];
-	sigMets = [];
-	for fi,f in enumerate(bkgFiles):
-		for t in metTypes: bkgMets.append( METContainer(f.Get("met"),t,ttags[fi]+'_nu',400) );
+	bkgMets = []
+	bkgMetCuts_1percent = []
+	sigMets = []
+	for t in metTypes:
+	 bkgMets.append( METContainer(bkg.Get("ntuple/tree"),t,'',400) );
 	for b in bkgMets: 
-		bkgMetCuts_1percent.append( b._L1Met_1percent );
-		print b._tag, b._L1Met_1percent
+	 bkgMetCuts_1percent.append( b._L1Met_1percent );
+	 print b._tag, b._L1Met_1percent
 
 	mctr = 0;
-	for fi,f in enumerate(sigFiles):
-		for t in metTypes: 
-			sigMets.append( METContainer(f.Get("met"),t,ttags[fi]+'_tt',400,bkgMetCuts_1percent[mctr])  );
-			# sigMets.append( METContainer(f.Get("met"),t,ttags[fi]+'_tt',400) );
-			mctr += 1;
+	for t in metTypes: 
+	  sigMets.append( METContainer(sig.Get("ntuple/tree"),t,'',400,bkgMetCuts_1percent[mctr])  );
+	  mctr += 1;
 
 	rocs = [];
 	roclegs = [];
 	for m in metTypes:
-		for t in ttags:
-			curtype = m;
-			if m == "": curtype = "pf"
-			curttag = t;
-			curmet_sig = getMetByTag(sigMets, curtype+"_"+curttag);
-			curmet_bkg = getMetByTag(bkgMets, curtype+"_"+curttag);
-			h = [];
-			h.append( curmet_sig.h_met_sig100 )
-			h.append( curmet_bkg.h_met )
-			leg = ['ttbar','DY']
-			makeCanvases(h,leg, "met_"+curtype+"_"+curttag);
-			print "making ROC: ", curtype, curttag
-			cur_tg = makeROCFromHisto(h);
-			cur_tg.SetName("roc"+curtype+"_"+curttag)
-			rocs.append( cur_tg );
-			roclegs.append( curtype+"_"+curttag );
+	 curtype = m;
+	 if m == "": curtype = "pf"
+	 curmet_sig = getMetByTag(sigMets, curtype);
+	 curmet_bkg = getMetByTag(bkgMets, curtype);
+	 h = [];
+	 h.append( curmet_sig.h_met_sig150 )
+	 h.append( curmet_bkg.h_met )
+	 leg = ['ttbar','DY']
+	 makeCanvases(h,leg, "met_"+curtype);
+	 print "making ROC: ", curtype
+	 cur_tg = makeROCFromHisto(h);
+	 cur_tg.SetName("roc"+curtype)
+	 rocs.append( cur_tg );
+	 roclegs.append( curtype );
 
 	print "number of rocs = ", len(rocs);
 	makeCanvasGraphsROCs(rocs,roclegs,"rocs",1e-3,1e-3,1,1,True);
@@ -198,7 +182,8 @@ def makeCanvasGraphsROCs(grs,legs,name,xlo,ylo,xhi,yhi,setlog=False):
 	if setlog: ROOT.gPad.SetLogy();
 	c.SaveAs("plots/%s.pdf" % (name));
 	c.SaveAs("plots/%s.png" % (name));
-
+	c.SaveAs("plots/%s.root" % (name));
+	
 ##---------------------------------------
 def makeCanvasGraphs(grs,legs,name,xlo,ylo,xhi,yhi,setlog=False):
 
@@ -244,6 +229,7 @@ def makeCanvasGraphs(grs,legs,name,xlo,ylo,xhi,yhi,setlog=False):
 	if setlog: ROOT.gPad.SetLogy();
 	c.SaveAs("plots/%s.pdf" % (name));
 	c.SaveAs("plots/%s.png" % (name));	
+	c.SaveAs("plots/%s.root" % (name));	
 
 ##---------------------------------------
 def makeCanvases(hists,legs,name,normalize=False):
@@ -285,9 +271,11 @@ def makeCanvases(hists,legs,name,normalize=False):
 	leg.Draw();
 	c.SaveAs("plots/"+name+".pdf")
 	c.SaveAs("plots/"+name+".png")
+	c.SaveAs("plots/"+name+".root")
 	ROOT.gPad.SetLogy();
 	c.SaveAs("plots/"+name+"_log.pdf")
 	c.SaveAs("plots/"+name+"_log.png")
+	c.SaveAs("plots/"+name+"_log.root")
 
 def makeAGraph(listx,listy,linecolor = 1, linestyle = 1):
 

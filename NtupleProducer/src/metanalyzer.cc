@@ -4,7 +4,7 @@
 #include "TTree.h"
 
 metanalyzer::metanalyzer(std::string iFile) {
-  fNVars = 32;
+  fNVars = 40;
   for(int i0 = 0; i0 < fNVars; i0++) fVar[i0] = 0;
   fFile = new TFile(iFile.c_str(),"RECREATE");
   fTree = new TTree("met","met");
