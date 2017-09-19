@@ -50,11 +50,13 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1PF = cms.VInputTag("InfoOut:PF",),
         L1Puppi = cms.VInputTag("InfoOut:Puppi",),
     ),
-    copyUInts = cms.VInputTag(
-        "InfoOut:totNL1Calo", "InfoOut:totNL1EmCalo", "InfoOut:totNL1TK", "InfoOut:totNL1Mu", "InfoOut:totNL1PF", "InfoOut:totNL1PFCharged", "InfoOut:totNL1PFNeutral", "InfoOut:totNL1Puppi", "InfoOut:totNL1PuppiCharged", "InfoOut:totNL1PuppiNeutral",
-        "InfoOut:maxNL1Calo", "InfoOut:maxNL1EmCalo", "InfoOut:maxNL1TK", "InfoOut:maxNL1Mu", "InfoOut:maxNL1PF", "InfoOut:maxNL1PFCharged", "InfoOut:maxNL1PFNeutral", "InfoOut:maxNL1Puppi", "InfoOut:maxNL1PuppiCharged", "InfoOut:maxNL1PuppiNeutral",
-    )
+    copyUInts = cms.VInputTag(),
 )
+for X in "tot","max":
+    for I in "Calo EmCalo TK Mu".split(): process.ntuple.copyUInts.append( "InfoOut:%sNL1%s" % (X,I))
+    for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
+        process.ntuple.copyUInts.append( "InfoOut:%sNL1PF%s" % (X,O))
+        process.ntuple.copyUInts.append( "InfoOut:%sNL1Puppi%s" % (X,O))
 process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTuple.root"))
 
@@ -143,11 +145,16 @@ if False:
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
     process.p.remove(process.ntuple)
     process.TFileService.fileName = cms.string("trackTupleNew.root")
+if False: # run bitwise PF for Vivado
+    goRegional()
+    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+    process.InfoOut.linking.algo = "BitwisePF"
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SinglePion_PU0/inputs_17D_SinglePion_PU0_job1.root', ]
 if False: # prepare dump file for Vivado
     goRegional()
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU140_job10.root']
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
      
 if False:
     #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
