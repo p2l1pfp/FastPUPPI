@@ -69,20 +69,24 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
         std::string name;
         int   count_raw, count_corr;
         float ht_raw, ht_corr;
+        float mht_raw, mht_corr;
         JetBranch(const std::string &n) : name(n) {}
         void makeBranches(TTree *tree) {
             tree->Branch((name+"_ht_raw").c_str(),   &ht_raw,   (name+"_ht_raw/F").c_str());
+            tree->Branch((name+"_mht_raw").c_str(),   &mht_raw,   (name+"_mht_raw/F").c_str());
             tree->Branch((name+"_num_raw").c_str(), &count_raw, (name+"_num_raw/I").c_str());
             tree->Branch((name+"_ht_corr").c_str(),   &ht_corr,   (name+"_ht_corr/F").c_str());
+            tree->Branch((name+"_mht_corr").c_str(),   &mht_corr,   (name+"_mht_corr/F").c_str());
             tree->Branch((name+"_num_corr").c_str(), &count_corr, (name+"_num_corr/I").c_str());
         }
         void fill(const edm::View<reco::Jet> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::Jet> & sel) {  
             count_raw = 0; ht_raw = 0;
             count_corr = 0; ht_corr = 0;
+            reco::Particle::LorentzVector sum_raw, sum_corr;
             for (reco::Jet jet : jets) {
-                if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); }
+                if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); sum_raw += jet.p4(); }
                 jet.setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
-                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); }
+                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); }
             }
         }
       };
