@@ -68,37 +68,6 @@ unsigned int Region::nOutput(OutputType type, bool usePuppi) const {
     return ret;
 }
 
-void Region::writeToFile(FILE *file) const {
-    fwrite(&etaCenter, sizeof(float), 1, file);
-    fwrite(&etaMin,    sizeof(float), 1, file);
-    fwrite(&etaMax,    sizeof(float), 1, file);
-    fwrite(&phiCenter, sizeof(float), 1, file);
-    fwrite(&phiHalfWidth, sizeof(float), 1, file);
-    fwrite(&etaExtra, sizeof(float), 1, file);
-    fwrite(&phiExtra, sizeof(float), 1, file);
-
-    uint32_t number; uint32_t size;
-    number = calo.size(); size = sizeof(CaloCluster);
-    fwrite(&number, sizeof(uint32_t), 1, file);
-    fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&calo[0], size, number, file);
-
-    number = emcalo.size(); size = sizeof(CaloCluster);
-    fwrite(&number, sizeof(uint32_t), 1, file);
-    fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&emcalo[0], size, number, file);
-
-    number = track.size(); size = sizeof(PropagatedTrack);
-    fwrite(&number, sizeof(uint32_t), 1, file);
-    fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&track[0], size, number, file);
-
-    number = muon.size(); size = sizeof(Muon);
-    fwrite(&number, sizeof(uint32_t), 1, file);
-    fwrite(&size,   sizeof(uint32_t), 1, file);
-    fwrite(&muon[0], size, number, file);
-}
-
 RegionMapper::RegionMapper( const edm::ParameterSet& iConfig )  :
     useRelativeRegionalCoordinates_(false)
 {

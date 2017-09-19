@@ -21,23 +21,17 @@ namespace edm { class ParameterSet; }
 namespace l1tpf_int { 
 
 
-  struct Region {
-    std::vector<CaloCluster>      calo;
-    std::vector<CaloCluster>      emcalo; // not used in the default implementation
-    std::vector<PropagatedTrack>  track;
-    std::vector<Muon>             muon;
+  struct Region : public InputRegion {
     std::vector<PFParticle>       pf;
     std::vector<PFParticle>       puppi;
     std::vector<PFParticle>       pfdiscarded; // for debugging
     unsigned int caloOverflow, emcaloOverflow, trackOverflow, muonOverflow, pfOverflow, puppiOverflow;
 
-    const float etaCenter, etaMin, etaMax, phiCenter, phiHalfWidth;
-    const float etaExtra, phiExtra;
     const bool relativeCoordinates; // whether the eta,phi in each region are global or relative to the region center
     const unsigned int ncaloMax, nemcaloMax, ntrackMax, nmuonMax, npfMax, npuppiMax;
     Region(float etamin, float etamax, float phicenter, float phiwidth, float etaextra, float phiextra, bool useRelativeCoordinates,
            unsigned int ncalomax, unsigned int nemcalomax, unsigned int ntrackmax, unsigned int nmuonmax, unsigned int npfmax, unsigned int npuppimax) :
-        etaCenter(0.5*(etamin+etamax)), etaMin(etamin), etaMax(etamax), phiCenter(phicenter), phiHalfWidth(0.5*phiwidth), etaExtra(etaextra), phiExtra(phiextra), relativeCoordinates(useRelativeCoordinates),
+        InputRegion(0.5*(etamin+etamax), etamin, etamax, phicenter, 0.5*phiwidth, etaextra, phiextra), relativeCoordinates(useRelativeCoordinates),
         ncaloMax(ncalomax), nemcaloMax(nemcalomax), ntrackMax(ntrackmax), nmuonMax(nmuonmax), npfMax(npfmax), npuppiMax(npuppimax) {}
 
     enum InputType { calo_type=0, emcalo_type=1, track_type=2, l1mu_type=3, n_input_types=4 };
@@ -82,7 +76,6 @@ namespace l1tpf_int {
         std::sort(puppi.begin(), puppi.end());
     }
 
-    void writeToFile(FILE *file) const ;
   };
 
   class RegionMapper {
