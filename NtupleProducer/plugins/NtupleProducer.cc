@@ -268,6 +268,7 @@ NtupleProducer::~NtupleProducer()
 // ------------ method called to produce the data  ------------
 void
 NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
   //fOutputFile->cd();
   if (fTotalEvents) fTotalEvents->Fill(1);  
   using namespace edm;
@@ -292,7 +293,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
       if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f, stubs %2d, chi2 %7.1f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt(), int(tk.quality()),tk.normalizedChi2());
       // adding objects to PF
-      if(tk.pt() > trkPt_ && unsigned(tk.quality()) > trkMinStubs_ && tk.normalizedChi2() < trkMaxChi2_ ) l1regions_.addTrack(tk);      
+      if(tk.pt() > trkPt_ && unsigned(tk.quality()) >= trkMinStubs_ && tk.normalizedChi2() < trkMaxChi2_ ) l1regions_.addTrack(tk);      
       /// filling the tree    
       if (!fTrkInfoTree) continue;
       trkPx  = tk.px();
@@ -611,14 +612,15 @@ NtupleProducer::endJob() {
   //
   // Save to ROOT file
   //
-  
   metanalyzer_->write();
   jetanalyzer_->write();
   isoanalyzer_->write();
+  
   fOutputFile->cd();
   fTotalEvents->Write();
   fOutputFile->Write();
   fOutputFile->Close();
+
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------

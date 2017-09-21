@@ -18,7 +18,7 @@ process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
 process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 process.CaloInfoOut.outputName = ""; # turn off Ntuples
 process.InfoOut.outputName = ""; # turn off Ntuples
-
+	 
 from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')
 process.ak4L1Calo    = ak4PFJets.clone(src = 'InfoOut:Calo')
@@ -31,7 +31,63 @@ process.jets = cms.Sequence(
     process.ak4L1RawCalo + process.ak4L1Calo + process.ak4L1TK + process.ak4L1TKV + process.ak4L1PF + process.ak4L1Puppi
 )
 
-JEC_PU140 = {
+JEC_PU140_pt2_trkCutsLoose = {
+    'L1Calo' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble( 0.214,  2.048,  4.319,  14.301,  20.314,  16.401,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 0.993,  0.990,  0.909,  0.931,  1.005,  0.993,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1TK' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble( 1.054,  1.465,  2.814,  3.392,  5.913),
+			scale   = cms.vdouble( 0.557,  0.536,  0.481,  0.477,  0.397),
+            ),
+    'L1TKV' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble(-0.675, -0.821,  0.434,  1.229,  3.230),
+			scale   = cms.vdouble( 0.492,  0.487,  0.441,  0.437,  0.375),
+            ),
+    'L1PF' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble( 1.445,  2.989,  5.236,  15.621,  27.823,  18.562,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 1.078,  1.072,  0.993,  1.046,  1.078,  1.003,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1Puppi' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble(-12.054, -12.002, -10.493, -10.274, -8.143,  4.279,  4.964,  11.538,  10.682, -7.683),
+			scale   = cms.vdouble( 1.042,  1.048,  0.966,  0.982,  1.070,  0.367,  0.885,  0.986,  1.097,  1.520),
+            ),
+}
+
+JEC_PU140_pt2_trkCutsTight = {
+    'L1Calo' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble( 0.214,  2.048,  4.319,  14.301,  20.314,  16.401,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 0.993,  0.990,  0.909,  0.931,  1.005,  0.993,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1TK' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble( 1.329,  1.607,  3.287,  4.462,  8.821),
+			scale   = cms.vdouble( 0.429,  0.403,  0.364,  0.401,  0.238),
+            ),
+    'L1TKV' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble(-0.704, -0.178,  1.115,  1.921,  6.593),
+			scale   = cms.vdouble( 0.414,  0.388,  0.354,  0.389,  0.232),
+            ),
+    'L1PF' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble(-0.917,  0.708,  3.730,  15.081,  27.327,  18.220,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 1.066,  1.060,  0.977,  1.036,  1.070,  1.002,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1Puppi' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble(-16.913, -16.867, -14.144, -12.415, -10.023,  4.423,  4.915,  11.427,  10.613, -7.733),
+			scale   = cms.vdouble( 1.058,  1.053,  0.952,  0.974,  1.016,  0.346,  0.884,  0.987,  1.094,  1.520),
+            ),
+}
+
+JEC_PU140_pt2 = {
     'L1Calo' : cms.PSet(
 			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
 			offset  = cms.vdouble( 0.225,  2.078,  4.325,  14.328,  20.329,  16.589,  38.821,  49.950,  50.680,  49.587),
@@ -59,7 +115,35 @@ JEC_PU140 = {
             ),
 }
 
-JEC = JEC_PU140;
+JEC_PU140_pt3 = {
+    'L1Calo' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble( 0.214,  2.048,  4.319,  14.301,  20.314,  16.401,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 0.993,  0.990,  0.909,  0.931,  1.005,  0.993,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1TK' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble(-3.279, -2.823, -1.039, -0.378,  2.416),
+			scale   = cms.vdouble( 0.548,  0.531,  0.473,  0.466,  0.389),
+            ),
+    'L1TKV' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500),
+			offset  = cms.vdouble(-2.318, -2.450, -1.001, -0.459,  1.542),
+			scale   = cms.vdouble( 0.484,  0.480,  0.432,  0.429,  0.369),
+            ),
+    'L1PF' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble(-2.264, -0.342,  2.326,  12.990,  26.232,  18.224,  38.697,  49.053,  48.612,  47.783),
+			scale   = cms.vdouble( 1.078,  1.072,  0.990,  1.047,  1.074,  1.001,  0.808,  0.921,  0.987,  1.312),
+            ),
+    'L1Puppi' : cms.PSet(
+			etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+			offset  = cms.vdouble(-14.675, -14.877, -12.686, -12.862, -14.130,  3.085,  4.940,  11.376,  10.500, -7.733),
+			scale   = cms.vdouble( 0.889,  0.890,  0.805,  0.812,  0.890,  0.383,  0.884,  0.986,  1.097,  1.520),
+            ),
+}
+
+JEC = JEC_PU140_pt2_trkCutsLoose;
 
 process.ntuple = cms.EDAnalyzer("JetNTuplizer",
     jets = cms.PSet(
@@ -104,7 +188,7 @@ process.ntuple = cms.EDAnalyzer("JetNTuplizer",
 )
 
 process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.jets + process.ntuple)
-process.TFileService = cms.Service("TFileService", fileName = cms.string("jetTupleNew.root"))
+process.TFileService = cms.Service("TFileService", fileName = cms.string("jetTuple.root"))
 
  
 

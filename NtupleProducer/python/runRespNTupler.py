@@ -58,7 +58,7 @@ for X in "tot","max":
         process.ntuple.copyUInts.append( "InfoOut:%sNL1PF%s" % (X,O))
         process.ntuple.copyUInts.append( "InfoOut:%sNL1Puppi%s" % (X,O))
 process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.ntuple)
-process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
+process.TFileService = cms.Service("TFileService", fileName = cms.string("respTuple.root"))
 
 # Below for more debugging
 if True:
