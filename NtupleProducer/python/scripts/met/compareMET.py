@@ -16,11 +16,11 @@ def main():
 
 	idir = './'
 
-	bkg =  ROOT.TFile(idir + "/ntuple/metTuple_SingleNeutrino_PU140.root")
-	sig = ROOT.TFile(idir + "/ntuple/metTuple_TTbar_PU140.root")
+	bkg =  ROOT.TFile(idir + "/jetmetTuple_DYJetsToLL_PU140.root")
+	sig = ROOT.TFile(idir + "/jetmetTuple_TTbar_PU140_looseTkQuality.root")
 
 	#metTypes = ["Calo"]
-	metTypes = ["Calo","TK","Puppi","TKV","PF"];
+	metTypes = ["METCalo","METTK","METPuppi","METTKV","METPF"];
 	#ttags = [];
 
 	bkgMets = []
@@ -45,7 +45,7 @@ def main():
 	 curmet_sig = getMetByTag(sigMets, curtype);
 	 curmet_bkg = getMetByTag(bkgMets, curtype);
 	 h = [];
-	 h.append( curmet_sig.h_met_sig150 )
+	 h.append( curmet_sig.h_met_sig100 )
 	 h.append( curmet_bkg.h_met )
 	 leg = ['ttbar','DY']
 	 makeCanvases(h,leg, "met_"+curtype);

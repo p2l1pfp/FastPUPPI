@@ -29,7 +29,6 @@ class METContainer:
 		self._tt = tree;
 		self._tag = tag; 
 		
-		print tag
 		self._xtag = tag
 		#if tag == "": self._xtag = 'pf_'+xtag; 
 		#else: self._xtag = tag + '_' + xtag;
@@ -57,7 +56,7 @@ class METContainer:
 				sys.stdout.write("\r[" + "="*int(20*i/nent) + " " + str(round(100.*i/nent,0)) + "% done");
 				sys.stdout.flush();
 
-			curgenmet = getattr( self._tt, "Gen" );
+			curgenmet = getattr( self._tt, "METGen" );
 			self.h_genMet.Fill( curgenmet );
 			if curgenmet >  50: self.h_met_sig050.Fill( getattr( self._tt, ctag ) );
 			if curgenmet > 100: self.h_met_sig100.Fill( getattr( self._tt, ctag ) );
@@ -71,7 +70,6 @@ class METContainer:
 		self._L1Met_1percent = -1.; 
 		for i in range(self.h_met.GetNbinsX()):
 			cureff = self.h_met.Integral(i+1,self.h_met.GetNbinsX()) / self.h_met.Integral();
-			# print cureff, self.h_met.GetBinCenter(i+1);
 			if cureff < 0.0025: 
 				self._L1Met_1percent = self.h_met.GetBinCenter(i+1);
 				break;
@@ -85,8 +83,8 @@ class METContainer:
 				numer = 0;
 				for i in range(self._tt.GetEntries()):
 					self._tt.GetEntry(i);
-					if self._tt.Gen > xvals[xi]: denom+=1;
-					if self._tt.Gen > xvals[xi] and getattr( self._tt, ctag ) > self._L1CutVal: numer+=1;
+					if self._tt.METGen > xvals[xi]: denom+=1;
+					if self._tt.METGen > xvals[xi] and getattr( self._tt, ctag ) > self._L1CutVal: numer+=1;
 				yvals.append( float(numer)/float(denom) );
 			self._MetTurnOn = makeAGraph(xvals,yvals);
 

@@ -9,7 +9,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SingleNeutrino_PU140/inputs_17D_SingleNeutrino_PU140_job1.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'),
 )
 process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
@@ -18,7 +18,33 @@ process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
 process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
 process.CaloInfoOut.outputName = ""; # turn off Ntuples
 process.InfoOut.outputName = ""; # turn off Ntuples
+#tighter track cuts as in track trigger TDR
+#process.InfoOut.trkMinStubs = cms.uint32(5)
+#process.InfoOut.trkMaxChi2 = cms.double(20)
 	 
+from RecoMET.METProducers.PFMET_cfi import pfMet
+pfMet.calculateSignificance = False
+process.l1MetRawCalo = pfMet.clone(src = "InfoOut:RawCalo")
+process.l1MetCalo    = pfMet.clone(src = "InfoOut:Calo")
+process.l1MetTK      = pfMet.clone(src = "InfoOut:TK")
+process.l1MetTKV     = pfMet.clone(src = "InfoOut:TKVtx")
+process.l1MetPF      = pfMet.clone(src = "InfoOut:PF")
+process.l1MetPuppi   = pfMet.clone(src = "InfoOut:Puppi")
+
+#process.METntuple = cms.EDAnalyzer("MetNTuplizer",
+#    mets = cms.PSet(
+#        Gen = cms.InputTag("genMetTrue"),
+#        RawCalo = cms.InputTag("l1MetRawCalo"),
+#        Calo = cms.InputTag("l1MetCalo"),
+#        TK = cms.InputTag("l1MetTK"),
+#        TKV = cms.InputTag("l1MetTKV"),
+#        PF = cms.InputTag("l1MetPF"),
+#        Puppi = cms.InputTag("l1MetPuppi"),
+#    ),
+#)
+
+process.mets = cms.Sequence( process.l1MetRawCalo + process.l1MetCalo + process.l1MetTK + process.l1MetTKV + process.l1MetPF + process.l1MetPuppi)
+
 from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 process.ak4L1RawCalo = ak4PFJets.clone(src = 'InfoOut:RawCalo')
 process.ak4L1Calo    = ak4PFJets.clone(src = 'InfoOut:Calo')
@@ -145,22 +171,22 @@ JEC_PU140_pt3 = {
 
 JEC = JEC_PU140_pt2_trkCutsLoose;
 
-process.ntuple = cms.EDAnalyzer("JetNTuplizer",
+process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
     jets = cms.PSet(
-        Gen = cms.InputTag("ak4GenJetsNoNu"),
-        RawCalo = cms.InputTag("ak4L1RawCalo"),
-        Calo = cms.InputTag("ak4L1Calo"),
-        TK = cms.InputTag("ak4L1TK"),
-        TKV = cms.InputTag("ak4L1TKV"),
-        PF = cms.InputTag("ak4L1PF"),
-        Puppi = cms.InputTag("ak4L1Puppi"),
+        AK4GenJets = cms.InputTag("ak4GenJetsNoNu"),
+        AK4RawCaloJets = cms.InputTag("ak4L1RawCalo"),
+        AK4CaloJets = cms.InputTag("ak4L1Calo"),
+        AK4TKJets = cms.InputTag("ak4L1TK"),
+        AK4TKVJets = cms.InputTag("ak4L1TKV"),
+        AK4PFJets = cms.InputTag("ak4L1PF"),
+        AK4PuppiJets = cms.InputTag("ak4L1Puppi"),
     ),
     jecs = cms.PSet(
-        Calo = JEC['L1Calo'],
-        TK = JEC['L1TK'],
-        TKV = JEC['L1TKV'],
-        PF = JEC['L1PF'],
-        Puppi = JEC['L1Puppi'],
+        AK4CaloJets = JEC['L1Calo'],
+        AK4TKJets = JEC['L1TK'],
+        AK4TKVJets = JEC['L1TKV'],
+        AK4PFJets = JEC['L1PF'],
+        AK4PuppiJets = JEC['L1Puppi'],
     ),
     sels = cms.PSet(
         #E24Pt15 = cms.string("pt > 15 && abs(eta) < 2.4"),
@@ -184,11 +210,18 @@ process.ntuple = cms.EDAnalyzer("JetNTuplizer",
         E47Pt50 = cms.string("pt > 50 && abs(eta) < 4.7"),
         #E47Pt60 = cms.string("pt > 50 && abs(eta) < 4.7"),
         #E47Pt80 = cms.string("pt > 80 && abs(eta) < 4.7"),
-    )
+    ),
+    mets = cms.PSet(
+        METGen = cms.InputTag("genMetTrue"),
+        METRawCalo = cms.InputTag("l1MetRawCalo"),
+        METCalo = cms.InputTag("l1MetCalo"),
+        METTK = cms.InputTag("l1MetTK"),
+        METTKV = cms.InputTag("l1MetTKV"),
+        METPF = cms.InputTag("l1MetPF"),
+        METPuppi = cms.InputTag("l1MetPuppi"),
+    ),
 )
 
-process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.jets + process.ntuple)
-process.TFileService = cms.Service("TFileService", fileName = cms.string("jetTuple.root"))
 
- 
-
+process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.mets + process.jets + process.ntuple)
+process.TFileService = cms.Service("TFileService", fileName = cms.string("jetmetTuple.root"))

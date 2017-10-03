@@ -38,11 +38,11 @@ def makeEffHist(name, tree, expr, thr, gvar, cut=""):
 whats = [
     ('l1pf',[
         #("Raw Calo",   "RawCalo$", ROOT.kViolet-4,  21, 1.7),
-        ("Calo",       "Calo$",    ROOT.kViolet+2, 20, 1.5),
-        ("TK",         "TK$",      ROOT.kRed+0, 21, 1.5),
-        ("TK #Deltaz", "TKV$",     ROOT.kRed+1, 24, 1.5),
-        ("PF",         "PF$",      ROOT.kOrange+7, 24, 1.5),
-        ("Puppi",      "Puppi$",   ROOT.kBlue+1, 21, 1.5),
+        ("Calo",       "AK4CaloJets$",    ROOT.kViolet+2, 20, 1.5),
+        ("TK",         "AK4TKJets$",      ROOT.kRed+0, 21, 1.5),
+        ("TK #Deltaz", "AK4TKVJets$",     ROOT.kRed+1, 24, 1.5),
+        ("PF",         "AK4PFJets$",      ROOT.kOrange+7, 24, 1.5),
+        ("Puppi",      "AK4PuppiJets$",   ROOT.kBlue+1, 21, 1.5),
     ]),
     ('il1pf',[
         ("iCalo",       "L1Calo$",    ROOT.kViolet+2, 20, 1.5),
@@ -82,7 +82,7 @@ for kind,things in whats:
         if args[3] == "rate":
             plot = makeCumulativeHTEff(name, background, rexpr)
         elif args[3] == "eff":
-            plot = makeEffHist(name, signal, rexpr, options.genht, "GenE%sPt%d_ht_raw" % (options.eta, options.pt))
+            plot = makeEffHist(name, signal, rexpr, options.genht, "AK4GenJetsE%sPt%d_ht_raw" % (options.eta, options.pt))
         elif args[3] == "isorate":
             rateplot = makeCumulativeHTEff(name, background, rexpr)
             cut = 9999
@@ -90,7 +90,7 @@ for kind,things in whats:
                 if rateplot.GetBinContent(ix) <= options.rate:
                     cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                     break
-            plot = makeEffHist(name, signal, rexpr, cut, "GenE%sPt%d_ht_raw" % (options.eta, options.pt))
+            plot = makeEffHist(name, signal, rexpr, cut, "AK4GenJetsE%sPt%d_ht_raw" % (options.eta, options.pt))
             label = "H_{T}(%s) > %.0f" % (name,cut)
         else: raise RuntimeError
         plot.SetLineWidth(3); plot.SetLineColor(col);  plot.SetMarkerColor(col)
