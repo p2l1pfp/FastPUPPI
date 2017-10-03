@@ -75,9 +75,11 @@ python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1
 
 2) For jet HT plots:
 
+```
 python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir eff -w l1pf
 python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir isorate -w l1pf
 python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir rate -w l1pf
+```
 
 3) For MET plots:
 
