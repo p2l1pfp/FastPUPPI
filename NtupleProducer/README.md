@@ -70,7 +70,7 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 
 ```
 python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1pf -p pion
-python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1pf -p jet
+python python/scripts/respPlots.py respTupleNew_TTbar_PU140.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet HT plots:
@@ -86,6 +86,20 @@ python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetme
 ```
 python python/scripts/met/compareMET.py
 ```
+
+How to derive the JECs for each algo:
+
+1) run the script ```respCorrSimple.py``` for each algo
+
+```
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Calo_pt -e L1Calo_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TK_pt -e L1TK_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TKV_pt -e L1TKV_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1PF_pt -e L1PF_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Puppi_pt -e L1Puppi_pt
+```
+
+2) and copy the results for the corresponding algo in the runJetMetNTupler.py
 
 The trigger MC can be found on DAS `dataset=/*/*PhaseIISpring17D*/*`
 
