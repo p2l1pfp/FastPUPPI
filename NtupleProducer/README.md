@@ -70,7 +70,7 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 
 ```
 python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1pf -p pion
-python python/scripts/respPlots.py respTupleNew_TTbar_PU140.root plots_dir -w l1pf -p jet
+python python/scripts/respPlots.py respTuple_TTbar_PU140.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet HT plots:
