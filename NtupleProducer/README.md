@@ -36,16 +36,70 @@ When jobs are finished you can clean up your local dir
 ```
 
 The second step runs the algorithm and creates ntuples which can be used to do analysis:
-```
-cmsRun runNtupleProducer_cfg.py
-cmsRun runJetNTupler.py
-cmsRun runRespNTupler.py
-```
-`Should we try to collate all of these?`
 
-The plotting scripts are in:
+1) Ntuple for single particle and jets response plots and calibrations:
+
+```
+cmsRun python/runRespNTupler.py
+```
+
+NB: For single particle add "goGun()" at the end of the script, remove it for jets.
+
+To run the ntuplizer over many files do for instance:
+
+```
+source python/scripts/prun.sh python/runRespNTupler.py SinglePion_PU0 SinglePion_PU0
+```
+
+2) Ntuple for jet HT and MET studies
+
+```
+cmsRun python/runJetMetNTupler.py
+```
+
+To run the ntuplizer over many files do for instance:
+
+```
+source python/scripts/prun.sh python/runJetNTupler.py TTbar_PU140 TTbar_PU140
+```
+
+The third step is to produce the plots from the ntuple. The plotting scripts are in:
 ```FastPUPPI/NtupleProducer/python/scripts```
 
+1) For single particle or jet response:
+
+```
+python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1pf -p pion
+python python/scripts/respPlots.py respTuple_TTbar_PU140.root plots_dir -w l1pf -p jet
+```
+
+2) For jet HT plots:
+
+```
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir eff -w l1pf
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir isorate -w l1pf
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir rate -w l1pf
+```
+
+3) For MET plots:
+
+```
+python python/scripts/met/compareMET.py
+```
+
+How to derive the JECs for each algo:
+
+1) run the script ```respCorrSimple.py``` for each algo
+
+```
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Calo_pt -e L1Calo_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TK_pt -e L1TK_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TKV_pt -e L1TKV_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1PF_pt -e L1PF_pt
+python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Puppi_pt -e L1Puppi_pt
+```
+
+2) and copy the results for the corresponding algo in the runJetMetNTupler.py
 
 The trigger MC can be found on DAS `dataset=/*/*PhaseIISpring17D*/*`
 

@@ -28,6 +28,9 @@
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 #include "DataFormats/JetReco/interface/GenJet.h"
 #include "DataFormats/JetReco/interface/PFJet.h"
+#include "DataFormats/METReco/interface/CaloMET.h"
+#include "DataFormats/METReco/interface/PFMET.h"
+#include "DataFormats/METReco/interface/GenMET.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -44,10 +47,10 @@
 #include <TTree.h>
 #include <TRandom3.h>
 
-class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
+class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
    public:
-      explicit JetNTuplizer(const edm::ParameterSet&);
-      ~JetNTuplizer();
+      explicit JetMetNTuplizer(const edm::ParameterSet&);
+      ~JetMetNTuplizer();
 
    private:
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
@@ -62,8 +65,13 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
       std::vector<JetInput> jets_;
       std::vector<std::pair<std::string,StringCutObjectSelector<reco::Jet>>> jetSels_;
 
-      TTree *tree_;
-      uint32_t run_, lumi_; uint64_t event_;
+      struct MetInput {
+         std::string name;
+         edm::EDGetTokenT<edm::View<reco::MET>> token;
+         MetInput() {}
+         MetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::MET>> &t) : name(n), token(t) {}
+      };
+      std::vector<MetInput> mets_;
 
       struct JetBranch {
         std::string name;
@@ -90,10 +98,28 @@ class JetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
             }
         }
       };
-      std::vector<JetBranch> branches_;
+      std::vector<JetBranch> jetbranches_;
+
+      struct MetBranch {
+       std::string name;
+       float met, met_phi;
+       MetBranch(const std::string &n) : name(n) {}
+       void makeBranches(TTree *tree) {
+         tree->Branch((name).c_str(),   &met,   (name+"/F").c_str());
+         tree->Branch((name+"_phi").c_str(), &met_phi, (name+"_phi/F").c_str());
+       }
+       void fill(const edm::View<reco::MET> & recoMets) {  
+         met = 0; met_phi = 0;
+         for (reco::MET recoMet : recoMets) { met = recoMet.et(); met_phi = recoMet.phi(); }
+       }
+      };
+      std::vector<MetBranch> metbranches_;      
+       
+      TTree *tree_;
+      uint32_t run_, lumi_; uint64_t event_;      
 };
 
-JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig) 
+JetMetNTuplizer::JetMetNTuplizer(const edm::ParameterSet& iConfig) 
 {
     usesResource("TFileService");
     edm::Service<TFileService> fs;
@@ -102,6 +128,7 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig)
     tree_->Branch("lumi", &lumi_, "lumi/i");
     tree_->Branch("event", &event_, "event/l");
 
+    // jet branches
     edm::ParameterSet jets = iConfig.getParameter<edm::ParameterSet>("jets");
     edm::ParameterSet jecs = iConfig.getParameter<edm::ParameterSet>("jecs");
     for (const std::string & name : jets.getParameterNamesForType<edm::InputTag>()) {
@@ -111,21 +138,29 @@ JetNTuplizer::JetNTuplizer(const edm::ParameterSet& iConfig)
     for (const std::string & name : sels.getParameterNamesForType<std::string>()) {
         jetSels_.emplace_back(name, StringCutObjectSelector<reco::Jet>(sels.getParameter<std::string>(name)));
     }
-    branches_.reserve(jets_.size() * jetSels_.size());
+    jetbranches_.reserve(jets_.size() * jetSels_.size());
     for (const auto & j : jets_) {
         for (const auto & s : jetSels_) {
-            branches_.emplace_back(j.name + s.first);
+            jetbranches_.emplace_back(j.name + s.first);
         }
     }
-    for (auto & b : branches_) b.makeBranches(tree_);
-    
+    for (auto & b : jetbranches_) b.makeBranches(tree_);
+
+    //met branches
+    edm::ParameterSet mets = iConfig.getParameter<edm::ParameterSet>("mets");
+    for (const std::string & name : mets.getParameterNamesForType<edm::InputTag>()) {
+        mets_.emplace_back(name, consumes<edm::View<reco::MET> >(mets.getParameter<edm::InputTag>(name)));
+    }
+    metbranches_.reserve(mets_.size());
+    for (const auto & m : mets_) metbranches_.emplace_back(m.name);
+    for (auto & b : metbranches_) b.makeBranches(tree_);    
 }
 
-JetNTuplizer::~JetNTuplizer() { }
+JetMetNTuplizer::~JetMetNTuplizer() { }
 
 // ------------ method called for each event  ------------
 void
-JetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+JetMetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
     run_  = iEvent.id().run();
     lumi_ = iEvent.id().luminosityBlock();
@@ -136,12 +171,20 @@ JetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
         edm::Handle<edm::View<reco::Jet>> jets;
         iEvent.getByToken(j.token, jets);
         for (const auto & s : jetSels_) {
-            branches_[ibranch++].fill(*jets, j.jec, s.second);
+            jetbranches_[ibranch++].fill(*jets, j.jec, s.second);
         } 
     }
+
+    ibranch = 0;
+    for (const auto & m : mets_) {
+        edm::Handle<edm::View<reco::MET>> mets;
+        iEvent.getByToken(m.token, mets);
+        metbranches_[ibranch++].fill(*mets);
+    }
+    
     tree_->Fill();
 }
 
 //define this as a plug-in
 #include "FWCore/Framework/interface/MakerMacros.h"
-DEFINE_FWK_MODULE(JetNTuplizer);
+DEFINE_FWK_MODULE(JetMetNTuplizer);
