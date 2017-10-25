@@ -96,6 +96,12 @@ RegionMapper::RegionMapper( const edm::ParameterSet& iConfig )  :
                 }
             }
         }
+        std::string trackRegionMode = "any";
+        if (iConfig.existsAs<std::string>("trackRegionMode")) trackRegionMode = iConfig.getParameter<std::string>("trackRegionMode");
+        if (trackRegionMode == "atVertex")    trackRegionMode_ = atVertex;
+        else if (trackRegionMode == "atCalo") trackRegionMode_ = atCalo;
+        else if (trackRegionMode == "any")    trackRegionMode_ = any;
+        else throw cms::Exception("Configuration", "Unsupported value for trackRegionMode: " + trackRegionMode+" (allowed are 'atVertex', 'atCalo', 'any')");
         std::cout << "L1 RegionMapper: made " << regions_.size() << " regions" << std::endl;
     } else {
         // start off with a dummy region
@@ -110,7 +116,13 @@ void RegionMapper::addTrack( const l1tpf::Particle & t ) {
     // we propagate in floating point the track to the calo
     // we add the track to the region corresponding to its vertex (eta,phi) coordinates AND its (eta,phi) calo coordinates
    for (Region &r : regions_) {
-        if (r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi())) {
+        bool inside = true;
+        switch (trackRegionMode_) {
+            case atVertex: inside = r.contains(t.eta(), t.phi()); break;
+            case atCalo  : inside = r.contains(t.caloEta(), t.caloPhi()); break;
+            case any     : inside = r.contains(t.eta(), t.phi()) || r.contains(t.caloEta(), t.caloPhi()); break;
+        }
+        if (inside) {
             PropagatedTrack prop;
             prop.fillInput(t.pt(), r.localEta(t.eta()), r.localPhi(t.phi()), t.charge(), t.dz(), 0);
             prop.fillPropagated(t.pt(), t.sigma(), t.caloSigma(), r.localEta(t.caloEta()), r.localPhi(t.caloPhi()), 0);

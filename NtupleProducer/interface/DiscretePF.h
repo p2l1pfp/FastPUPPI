@@ -99,6 +99,7 @@ namespace l1tpf_int {
     protected:
         std::vector<Region> regions_;
         bool useRelativeRegionalCoordinates_; // whether the eta,phi in each region are global or relative to the region center
+        enum TrackAssoMode { atVertex, atCalo, any=999 } trackRegionMode_;
   };
 
   class PFAlgo {

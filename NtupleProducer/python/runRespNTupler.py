@@ -129,7 +129,7 @@ def goRegional(inParallel=False):
     else:
         process.InfoOut.regions = regions
         process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-def gbr(neta,nphi,etaex=0.3,phiex=0.2):
+def gbr(neta,nphi,etaex=0.3,phiex=0.2,mode="any"):
     regions = cms.VPSet(
             cms.PSet(
                 etaBoundaries = cms.vdouble(*[(-1.5+3*i/neta) for i in xrange(neta+1)]),
@@ -140,6 +140,7 @@ def gbr(neta,nphi,etaex=0.3,phiex=0.2):
     )
     process.InfoOut.regions = regions
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+    process.InfoOut.trackRegionMode = cms.string(mode)
 if False:
     process.InfoOut.fillTrackTree = cms.untracked.int32(1)
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
@@ -150,10 +151,14 @@ if False: # run bitwise PF for Vivado
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.linking.algo = "BitwisePF"
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SinglePion_PU0/inputs_17D_SinglePion_PU0_job1.root', ]
-if False: # prepare dump file for Vivado
+if True: # prepare dump file for Vivado (PF IP core)
     goRegional()
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
+if True: # prepare dump file for Vivado (Regionizer)
+    gbr(1,12,0,0,"atCalo")
+    process.InfoOut.regionDumpFileName = cms.untracked.string("barrel_sectors_1x12_TTbar_PU140.dump")
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
      
 if False:
