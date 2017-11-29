@@ -10,6 +10,8 @@ class PFAlgo3 : public PFAlgo {
         PFAlgo3( const edm::ParameterSet& ) ;
         virtual void runPF(Region &r) const override;
     protected:
+        float drMatchMu_;
+        enum MuMatchMode { BoxBestByPtRatio, DrBestByPtRatio, DrBestByPtDiff } muMatchMode_;
         enum TkCaloLinkMetric { BestByDR=0, BestByDRPt=1 };
         float drMatchEm_, ptMinFracMatchEm_, drMatchEmHad_;
         TkCaloLinkMetric tkCaloLinkMetric_;
@@ -18,6 +20,9 @@ class PFAlgo3 : public PFAlgo {
         unsigned int tightTrackMinStubs_; float tightTrackMaxChi2_, tightTrackMaxInvisiblePt_;
         enum GoodTrackStatus { GoodTK_Calo_TkPt=0, GoodTK_Calo_TkCaloPt=1, GoodTk_Calo_CaloPt=2, GoodTK_NoCalo=3 };
         enum BadTrackStatus { BadTK_NoCalo=1 };
+
+        /// do muon track linking (also sets track.muonLink)
+        void link_tk2mu(Region &r, std::vector<int> & tk2mu, std::vector<int> & mu2tk) const ;
 
         /// match all tracks to the closest EM cluster
         //  tk2em[itrack] = iem, or -1 if unmatched

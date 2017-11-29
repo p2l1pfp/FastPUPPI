@@ -12,10 +12,16 @@ using namespace l1tpf_int;
 
 PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
     PFAlgo(iConfig),
-    drMatchEm_(0.2), drMatchEmHad_(0.2)
+    drMatchMu_(0.2), drMatchEm_(0.2), drMatchEmHad_(0.2)
 {
     debug_ = iConfig.getUntrackedParameter<int>("altDebug", debug_);
     edm::ParameterSet linkcfg = iConfig.getParameter<edm::ParameterSet>("linking");
+    drMatchMu_ = linkcfg.getParameter<double>("trackMuDR");
+    std::string muMatchMode = linkcfg.getParameter<std::string>("trackMuMatch");
+    if      ( muMatchMode == "boxBestByPtRatio") muMatchMode_ = BoxBestByPtRatio;
+    else if ( muMatchMode ==  "drBestByPtRatio") muMatchMode_ =  DrBestByPtRatio;
+    else if ( muMatchMode ==  "drBestByPtDiff" ) muMatchMode_ =  DrBestByPtDiff;
+    else throw cms::Exception("Configuration", "bad value for trackMuMatch configurable");
     std::string tkCaloLinkMetric = linkcfg.getParameter<std::string>("trackCaloLinkMetric");
     if (tkCaloLinkMetric == "bestByDR") tkCaloLinkMetric_ = BestByDR;
     else if (tkCaloLinkMetric == "bestByDRPt") tkCaloLinkMetric_ = BestByDRPt;
@@ -38,8 +44,6 @@ void PFAlgo3::runPF(Region &r) const {
     initRegion(r);
 
     /// ------------- first step (can all go in parallel) ----------------
-
-    muonTrackLink(r);
 
     if (debug_) {
         printf("ALT \t region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
@@ -66,6 +70,9 @@ void PFAlgo3::runPF(Region &r) const {
         }
 
     }
+
+    std::vector<int> tk2mu(r.track.size(), -1), mu2tk(r.muon.size(), -1);
+    link_tk2mu(r, tk2mu, mu2tk);
 
     // match all tracks to the closest EM cluster
     std::vector<int> tk2em(r.track.size(), -1);
@@ -123,6 +130,67 @@ void PFAlgo3::runPF(Region &r) const {
     unlinkedcalo_algo(r);
     // finally do muons
     if(!skipMuons_) save_muons(r);
+}
+
+
+void PFAlgo3::link_tk2mu(Region &r, std::vector<int> & tk2mu, std::vector<int> & mu2tk) const {
+    // do a rectangular match for the moment; make a box of the same are as a 0.2 cone
+    int intDrMuonMatchBox = std::ceil(drMatchMu_ * CaloCluster::ETAPHI_SCALE * std::sqrt(M_PI/4));
+    for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
+        tk2mu[itk] = false;
+    }
+    for (int imu = 0, nmu = r.muon.size(); imu < nmu; ++imu) {
+        const auto & mu = r.muon[imu];
+        if (debug_) printf("ALT \t muon  %3d (pt %7.2f, eta %+5.2f, phi %+5.2f) \n", imu, mu.floatPt(), mu.floatEta(), mu.floatPhi() );
+        float minDistance = 9e9; 
+        switch (muMatchMode_) {
+            case BoxBestByPtRatio: minDistance = 4.; break;
+            case DrBestByPtRatio:  minDistance = 4.; break;
+            case DrBestByPtDiff:   minDistance = 0.5 * mu.floatPt(); break;
+        }
+        int imatch = -1;
+        for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
+            const auto & tk = r.track[itk];
+            int deta = std::abs(mu.hwEta - tk.hwEta);
+            int dphi = std::abs((mu.hwPhi - tk.hwPhi) % CaloCluster::PHI_WRAP);
+            float dr = floatDR(mu,tk);
+            float dpt  = std::abs(mu.floatPt() - tk.floatPt());
+            float dptr = (mu.hwPt > tk.hwPt ? mu.floatPt()/tk.floatPt() : tk.floatPt()/mu.floatPt());
+            bool  ok = false; float distance = 9e9;
+            switch (muMatchMode_) {
+                case BoxBestByPtRatio: 
+                    ok = (deta < intDrMuonMatchBox) && (dphi < intDrMuonMatchBox); 
+                    distance = dptr;
+                    break;
+                case DrBestByPtRatio:  
+                    ok = (dr < drMatchMu_); 
+                    distance = dptr;
+                    break;
+                case DrBestByPtDiff:  
+                    ok = (dr < drMatchMu_); 
+                    distance = dpt;
+                    break;
+            }
+            if (debug_ && dr < 0.4) {
+                printf("ALT \t\t possible match with track %3d (pt %7.2f, caloeta %+5.2f, calophi %+5.2f, dr %.2f, eta %+5.2f, phi %+5.2f, dr %.2f):  angular %1d, distance %.3f (vs %.3f)\n",
+                              itk, tk.floatPt(), tk.floatEta(), tk.floatPhi(), dr,
+                              tk.floatVtxEta(), tk.floatVtxPhi(), deltaR(mu.floatEta(), mu.floatPhi(), tk.floatVtxEta(), tk.floatVtxPhi()),
+                              (ok ? 1 : 0), distance, minDistance );
+            }
+            if (!ok) continue;
+            // FIXME for the moment, we do the floating point matching in pt
+            if (distance < minDistance) {
+                minDistance = distance; imatch = itk;
+            } 
+        }
+        if (debug_ && imatch >  -1) printf("ALT \t muon  %3d (pt %7.2f) linked to track %3d (pt %7.2f)\n", imu, mu.floatPt(), imatch, r.track[imatch].floatPt() );
+        if (debug_ && imatch == -1) printf("ALT \t muon  %3d (pt %7.2f) not linked to any track\n", imu, mu.floatPt() );
+        mu2tk[imu] = imatch;
+        if (imatch > -1) {
+            tk2mu[imatch] = imu;
+            r.track[imatch].muonLink = true;
+        }
+    }
 }
 
 void PFAlgo3::link_tk2em(Region &r, std::vector<int> & tk2em) const {
@@ -483,7 +551,10 @@ void PFAlgo3::unlinkedcalo_algo(Region & r) const {
 void PFAlgo3::save_muons(Region &r) const {
     // finally do muons
     for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
-        if (r.track[itk].muonLink) addTrackToPF(r, r.track[itk]);
+        if (r.track[itk].muonLink) {
+            addTrackToPF(r, r.track[itk]);
+            if (debug_) printf("ALT \t track %3d (pt %7.2f) promoted to muon.\n", itk, r.track[itk].floatPt());
+        }
     }
 }
 

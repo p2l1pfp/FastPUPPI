@@ -33,6 +33,9 @@ InfoOut = cms.EDProducer('NtupleProducer',
          vtxAdaptiveCut = cms.bool(True),
          linking = cms.PSet(
                         algo = cms.string("PFAlgo3"),
+                        # track -> mu linking configurables
+                        trackMuDR    = cms.double(0.2), # accounts for poor resolution of standalone, and missing propagations
+                        trackMuMatch = cms.string("boxBestByPtRatio"), # also drBestByPtRatio
                         # track -> em linking configurables
                         trackEmDR   = cms.double(0.04), # 1 Ecal crystal size is 0.02, and ~2 cm in HGCal is ~0.007
                         # em -> calo linking configurables
