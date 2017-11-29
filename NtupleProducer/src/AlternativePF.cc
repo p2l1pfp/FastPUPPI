@@ -327,7 +327,7 @@ void PFAlgo3::sub_em2calo(Region & r, const std::vector<int> & em2calo) const {
             if (debug_) printf("ALT \t calo  %3d (pt %7.2f +- %7.2f) has a subtracted pt of %7.2f, empt %7.2f -> %7.2f\n", ic, calo.floatPt(), calo.floatPtErr(), pt, ept0, ept);
             calo.setFloatPt(pt);
             calo.setFloatEmPt(ept);
-            if (!keepme && (pt < calo.floatPtErr() || pt < 0.1*pt0 || (calo.isEM && ept < 0.1*ept0))) {
+            if (!keepme && (pt < calo.floatPtErr() || pt < 0.125*pt0 || (calo.isEM && ept < 0.125*ept0))) {
                 if (debug_) printf("ALT \t calo  %3d (pt %7.2f)    ----> discarded\n", ic, calo.floatPt());
                 calo.used = true;
                 calo.setFloatPt(pt0); discardCalo(r, calo, 1);  // log this as discarded, for debugging

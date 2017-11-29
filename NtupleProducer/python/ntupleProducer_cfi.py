@@ -1,5 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
+from math import sqrt
+
 InfoOut = cms.EDProducer('NtupleProducer',
          #L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
          L1TrackTag  = cms.InputTag('l1tPFTkProducersFromL1Tracks'),
@@ -46,7 +48,7 @@ InfoOut = cms.EDProducer('NtupleProducer',
                         #trackCaloLinkMetric = cms.string("bestByDR"),
                         trackCaloDR = cms.double(0.12),
                         trackCaloNSigmaLow  = cms.double(2.0),
-                        trackCaloNSigmaHigh = cms.double(1.2),
+                        trackCaloNSigmaHigh = cms.double(sqrt(1.5)), # optimization gave 1.2, but sqrt(1.5) is easier to implement in hardware
                         useTrackCaloSigma = cms.bool(True), # take the uncertainty on the calo cluster from the track, for linking purposes
                         sumTkCaloErr2 = cms.bool(True), # add up track calo errors in quadrature instead of linearly
                         rescaleTracks = cms.bool(False), # if tracks exceed the calo, rescale the track momenta
