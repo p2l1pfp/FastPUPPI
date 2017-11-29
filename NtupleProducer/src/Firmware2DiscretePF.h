@@ -10,7 +10,7 @@
 namespace fw2dpf {
 
     // convert inputs from discrete to firmware
-    void convert(const PFChargedObj & src, const l1tpf_int::PropagatedTrack & track, std::vector<l1tpf_int::PFParticle> &out) {
+    inline void convert(const PFChargedObj & src, const l1tpf_int::PropagatedTrack & track, std::vector<l1tpf_int::PFParticle> &out) {
         l1tpf_int::PFParticle pf;
         pf.hwPt = src.hwPt;
         pf.hwEta = src.hwEta;
@@ -27,7 +27,7 @@ namespace fw2dpf {
         pf.hwStatus = 0;
         out.push_back(pf);
     }
-    void convert(const PFNeutralObj & src, std::vector<l1tpf_int::PFParticle> &out) {
+    inline void convert(const PFNeutralObj & src, std::vector<l1tpf_int::PFParticle> &out) {
         l1tpf_int::PFParticle pf;
         pf.hwPt = src.hwPt;
         pf.hwEta = src.hwEta;
@@ -43,6 +43,34 @@ namespace fw2dpf {
         pf.hwStatus = 0;
         out.push_back(pf);
     }
+
+    // convert inputs from discrete to firmware
+    inline void convert(const TkObj & in, l1tpf_int::PropagatedTrack & out) {
+        out.hwPt = in.hwPt;
+        out.hwCaloPtErr = in.hwPtErr;
+        out.hwEta = in.hwEta; // @calo
+        out.hwPhi = in.hwPhi; // @calo
+        out.hwZ0 = in.hwZ0;
+    }
+    inline void convert(const HadCaloObj & in, l1tpf_int::CaloCluster & out) {
+        out.hwPt = in.hwPt;
+        out.hwEmPt = in.hwEmPt;
+        out.hwEta = in.hwEta;
+        out.hwPhi = in.hwPhi;
+        out.isEM = in.hwIsEM;
+    }
+    inline void convert(const EmCaloObj & in, l1tpf_int::CaloCluster & out) {
+        out.hwPt = in.hwPt;
+        out.hwPtErr = in.hwPtErr;
+        out.hwEta = in.hwEta;
+        out.hwPhi = in.hwPhi;
+    }
+    inline void convert(const MuObj & in, l1tpf_int::Muon & out) {
+        out.hwPt = in.hwPt;
+        out.hwEta = in.hwEta; // @calo
+        out.hwPhi = in.hwPhi; // @calo
+    }
+
 
     template<unsigned int NMAX, typename In>
     void convert(const In in[NMAX], std::vector<l1tpf_int::PFParticle> &out) {
