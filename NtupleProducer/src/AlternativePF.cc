@@ -43,7 +43,7 @@ void PFAlgo3::runPF(Region &r) const {
 
     if (debug_) {
         printf("ALT \t region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
-        printf("ALT \t N(track) %3lu   N(em) %3lu   N(calo) %3lu\n", r.track.size(), r.emcalo.size(), r.calo.size());
+        printf("ALT \t N(track) %3lu   N(em) %3lu   N(calo) %3lu   N(mu) %3lu\n", r.track.size(), r.emcalo.size(), r.calo.size(), r.muon.size());
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             const auto & tk = r.track[itk]; 
             printf("ALT \t track %3d: pt %7.2f +- %5.2f  vtx eta %+5.2f  vtx phi %+5.2f  calo eta %+5.2f  calo phi %+5.2f calo ptErr %7.2f stubs %2d chi2 %7.1f\n", 
@@ -59,6 +59,12 @@ void PFAlgo3::runPF(Region &r) const {
             printf("ALT \t calo  %3d: pt %7.2f +- %5.2f  vtx eta %+5.2f  vtx phi %+5.2f  calo eta %+5.2f  calo phi %+5.2f calo ptErr %7.2f em pt %7.2f \n", 
                                 ic, calo.floatPt(), calo.floatPtErr(), calo.floatEta(), calo.floatPhi(), calo.floatEta(), calo.floatPhi(), calo.floatPtErr(), calo.floatEmPt());
         }
+        for (int im = 0, nm = r.muon.size(); im < nm; ++im) {
+            auto & mu = r.muon[im]; 
+            printf("ALT \t muon  %3d: pt %7.2f           vtx eta %+5.2f  vtx phi %+5.2f  calo eta %+5.2f  calo phi %+5.2f \n", 
+                                im, mu.floatPt(), mu.floatEta(), mu.floatPhi(), mu.floatEta(), mu.floatPhi());
+        }
+
     }
 
     // match all tracks to the closest EM cluster
