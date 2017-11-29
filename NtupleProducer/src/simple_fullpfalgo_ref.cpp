@@ -156,10 +156,11 @@ void pfalgo3_em_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkObj 
     
     for (int ih = 0; ih < NCALO; ++ih) {
         hadcalo_out[ih] = hadcalo[ih];
-        pt_t sub = 0;
+        pt_t sub = 0; bool keep = false;
         for (int ic = 0; ic < NEMCALO; ++ic) {
-            if (isEM[ic] && (em2calo[ic] == ih)) {
-                sub += emcalo[ic].hwPt;
+            if (em2calo[ic] == ih) {
+                if (isEM[ic]) sub += emcalo[ic].hwPt;
+                else keep = true;
             }
         }
         pt_t emdiff  = hadcalo[ih].hwEmPt - sub;
@@ -173,7 +174,7 @@ void pfalgo3_em_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkObj 
             hadcalo_out[ih].hwPt = 0;   // kill
             hadcalo_out[ih].hwEmPt = 0; // kill
             if (g_debug_ && (hadcalo[ih].hwPt > 0)) printf("FW  \t calo   %3d pt %7d --> discarded (zero pt)\n", ih, int(hadcalo[ih].hwPt));
-        } else if ((hadcalo[ih].hwIsEM && emdiff < ( hadcalo[ih].hwEmPt >> 3 ))) {
+        } else if ((hadcalo[ih].hwIsEM && emdiff < ( hadcalo[ih].hwEmPt >> 3 )) && !keep) {
             hadcalo_out[ih].hwPt = 0;   // kill
             hadcalo_out[ih].hwEmPt = 0; // kill
             if (g_debug_ && (hadcalo[ih].hwPt > 0)) printf("FW  \t calo   %3d pt %7d --> discarded (zero em)\n", ih, int(hadcalo[ih].hwPt));
@@ -290,7 +291,7 @@ void pfalgo3_full_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkOb
     for (int ic = 0; ic < NCALO; ++ic) {
         if (calo_sumtk[ic] > 0) {
             pt_t ptdiff = hadcalo_subem[ic].hwPt - calo_sumtk[ic];
-            int sigmamult = 4*calo_sumtkErr2[ic]; 
+            int sigmamult = (calo_sumtkErr2[ic] + (calo_sumtkErr2[ic] >> 1)); // this multiplies by 1.5 = sqrt(1.5)^2 ~ (1.2)^2
             if (g_debug_ && (hadcalo_subem[ic].hwPt > 0)) {
                 l1tpf_int::CaloCluster floatcalo; fw2dpf::convert(hadcalo_subem[ic], floatcalo); 
                 printf("FW  \t calo'  %3d pt %7d [ %7.2f ] eta %+7d [ %+5.2f ] has a sum track pt %7d, difference %7d +- %.2f \n",
