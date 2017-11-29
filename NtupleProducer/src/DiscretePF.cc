@@ -173,7 +173,13 @@ std::vector<l1tpf::Particle> RegionMapper::fetch(bool puppi, float ptMin, bool d
     for (const Region &r : regions_) {
         for (const PFParticle & p : (puppi ? r.puppi : (discarded ? r.pfdiscarded : r.pf ))) {
             if (regions_.size() > 1) {
-                if (!r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi())) continue;
+                bool inside = true;
+                switch (trackRegionMode_) {
+                    case atVertex: inside = r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi()); break;
+                    case atCalo  : inside = r.fiducialLocal(p.floatEta(), p.floatPhi()); break;
+                    case any     : inside = r.fiducialLocal(p.floatVtxEta(), p.floatVtxPhi()); break; // WARNING: this may not be the best choice
+                }
+                if (!inside) continue;
             }
             if (p.floatPt() > ptMin) {
                 ret.emplace_back( p.floatPt(), r.globalEta(p.floatVtxEta()), r.globalPhi(p.floatVtxPhi()), 0.13f, p.hwId, 0.f, p.floatDZ(), r.globalEta(p.floatEta()), r.globalPhi(p.floatPhi()), p.intCharge()  );
