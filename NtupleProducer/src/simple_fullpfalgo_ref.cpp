@@ -213,7 +213,8 @@ void pfalgo3_full_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkOb
     }
 
     // constants
-    const pt_t     TKPT_MAX = PFALGO3_TK_MAXINVPT; // 20 * PT_SCALE;
+    const pt_t     TKPT_MAX_LOOSE = PFALGO3_TK_MAXINVPT_LOOSE; // 20 * PT_SCALE;
+    const pt_t     TKPT_MAX_TIGHT = PFALGO3_TK_MAXINVPT_TIGHT; // 20 * PT_SCALE;
     const int      DR2MAX   = PFALGO3_DR2MAX_TK_CALO;
     const int      DR2MAX_TM = PFALGO3_DR2MAX_TK_MU;
 
@@ -232,13 +233,17 @@ void pfalgo3_full_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkOb
     // for each muon, find the closest track
     for (int im = 0; im < NMU; ++im) {
         if (mu[im].hwPt > 0) {
-            pt_t tkPtMin = mu[im].hwPt - 2*(mu[im].hwPtErr);
-            int  drmin = DR2MAX_TM, ibest = -1;
+            int ibest = -1;
+            int dptmin = mu[im].hwPt >> 1;
             for (int it = 0; it < NTRACK; ++it) {
-                if (track[it].hwPt <= tkPtMin) continue;
                 int dr = dr2_int(mu[im].hwEta, mu[im].hwPhi, track[it].hwEta, track[it].hwPhi);
                 //printf("deltaR2(mu %d float pt %5.1f, tk %2d float pt %5.1f) = int %d  (float deltaR = %.3f); int cut at %d\n", im, 0.25*int(mu[im].hwPt), it, 0.25*int(track[it].hwPt), dr, std::sqrt(float(dr))/229.2, PFALGO3_DR2MAX_TK_MU);
-                if (dr < drmin) { drmin = dr; ibest = it; }
+                if (dr < DR2MAX_TM) { 
+                    int dpt = std::abs(int(track[it].hwPt - mu[im].hwPt));
+                    if (dpt < dptmin) {
+                        dptmin = dpt; ibest = it; 
+                    }
+                }
             }
             if (ibest != -1) {
                 outmu[im].hwPt = track[ibest].hwPt;
@@ -270,7 +275,9 @@ void pfalgo3_full_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkOb
 
     // initialize good track bit
     bool track_good[NTRACK];
-    for (int it = 0; it < NTRACK; ++it) { track_good[it] = (track[it].hwPt < TKPT_MAX || isEle[it] || isMu[it]); }
+    for (int it = 0; it < NTRACK; ++it) { 
+        track_good[it] = (track[it].hwPt < (track[it].hwTightQuality ? TKPT_MAX_TIGHT : TKPT_MAX_LOOSE) || isEle[it] || isMu[it]); 
+    }
 
     // initialize output
     for (int ipf = 0; ipf < NTRACK; ++ipf) { outch[ipf].hwPt = 0; outch[ipf].hwEta = 0; outch[ipf].hwPhi = 0; outch[ipf].hwId = 0; outch[ipf].hwZ0 = 0; }
