@@ -20,9 +20,9 @@ namespace fw2dpf {
         pf.track = track; // FIXME: ok only as long as there is a 1-1 mapping
         pf.cluster.hwPt = 0;
         switch(src.hwId) {
-            case PID_Electron: pf.hwId =  l1tpf::Particle::EL; break;
-            case PID_Muon: pf.hwId =  l1tpf::Particle::MU; break;
-            default: pf.hwId =  l1tpf::Particle::CH; break;
+            case PID_Electron: pf.hwId =  1; break;
+            case PID_Muon: pf.hwId =  4; break;
+            default: pf.hwId = 0; break;
         };
         pf.hwStatus = 0;
         out.push_back(pf);
@@ -37,8 +37,8 @@ namespace fw2dpf {
         pf.track.hwPt = 0;
         pf.cluster.hwPt = src.hwPt;
         switch(src.hwId) {
-            case PID_Photon: pf.hwId = l1tpf::Particle::GAMMA; break;
-            default: pf.hwId = l1tpf::Particle::NH; break;
+            case PID_Photon: pf.hwId = 3; break;
+            default: pf.hwId = 2; break;
         }
         pf.hwStatus = 0;
         out.push_back(pf);
