@@ -101,25 +101,25 @@ if False:
     process.ntuple.objects.PFDiscCaloT_sel = cms.string("charge == 0 && status == 0")
     process.ntuple.objects.PFDiscCaloG_sel = cms.string("charge == 0 && status == 1")
     process.ntuple.objects.PFDiscEm_sel    = cms.string("charge == 0 && status == 2")
-def goRegional(inParallel=False):
+def goRegional(inParallel=False,mode="any"):
     regions = cms.VPSet(
             cms.PSet(
                 etaBoundaries = cms.vdouble(-5.5,-4,-3),
                 phiSlices = cms.uint32(4),
-                etaExtra = cms.double(0.2),
-                phiExtra = cms.double(0.2),
+                etaExtra = cms.double(0.25),
+                phiExtra = cms.double(0.25),
             ),
             cms.PSet(
-                etaBoundaries = cms.vdouble(-3,-1.5,0,1.5,3),
+                etaBoundaries = cms.vdouble(-3,-1.5,-0.5,0.5,1.5,3),
                 phiSlices = cms.uint32(6),
-                etaExtra = cms.double(0.2),
-                phiExtra = cms.double(0.2),
+                etaExtra = cms.double(0.25),
+                phiExtra = cms.double(0.25),
             ),
             cms.PSet(
                 etaBoundaries = cms.vdouble(3,4,5.5),
                 phiSlices = cms.uint32(4),
-                etaExtra = cms.double(0.2),
-                phiExtra = cms.double(0.2),
+                etaExtra = cms.double(0.25),
+                phiExtra = cms.double(0.25),
             ),
     )
     if inParallel:
@@ -129,6 +129,7 @@ def goRegional(inParallel=False):
     else:
         process.InfoOut.regions = regions
         process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+        process.InfoOut.trackRegionMode = cms.string(mode)
 def gbr(neta,nphi,etaex=0.3,phiex=0.2,mode="any"):
     regions = cms.VPSet(
             cms.PSet(
@@ -150,41 +151,65 @@ if False: # run bitwise PF for Vivado
     goRegional()
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.linking.algo = "BitwisePF"
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/SinglePion_PU0/inputs_17D_SinglePion_PU0_job1.root', ]
-if True: # prepare dump file for Vivado (PF IP core)
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] 
+if False: # prepare dump file for Vivado (PF IP core)
     goRegional()
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
-if True: # prepare dump file for Vivado (Regionizer)
+if False: # prepare dump file for Vivado (Regionizer)
     gbr(1,12,0,0,"atCalo")
     process.InfoOut.regionDumpFileName = cms.untracked.string("barrel_sectors_1x12_TTbar_PU140.dump")
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
-     
+
+def comp4():
+    process.InfoOutGlobal = process.InfoOut.clone()
+    goRegional(mode="atCalo")
+    process.InfoOutRegional = process.InfoOut.clone()
+    process.InfoOut.linking.ecalPriority = False 
+    process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
+    process.InfoOutSimpler = process.InfoOut.clone()
+    process.InfoOut.linking.algo = "BitwisePF"
+    process.p.replace(process.InfoOut, process.InfoOutGlobal + process.InfoOutRegional + process.InfoOutSimpler + process.InfoOut)
+    process.ntuple.objects.L1PFGlobal = cms.VInputTag("InfoOutGlobal:PF",)
+    process.ntuple.objects.L1PFRegional = cms.VInputTag("InfoOutRegional:PF",)
+    process.ntuple.objects.L1PFSimpler = cms.VInputTag("InfoOutSimpler:PF",)
 if False:
-    #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
-    #process.InfoOutBackup = process.InfoOut.clone()
-    #process.p.replace(process.CaloInfoOut, process.CaloInfoOutBackup + process.CaloInfoOut)
-    #process.p.replace(process.InfoOut, process.InfoOutBackup + process.InfoOut)
-    #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_SinglePion0_PU0_job42.root']
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job2.root']
-    #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU140_job10.root']
+    if 1:
+        goRegional(mode="atCalo")
+        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+        process.InfoOut.linking.ecalPriority = False 
+        process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
+        process.InfoOut.altDebug = cms.untracked.int32(1)
+        #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
+        process.InfoOutBackup = process.InfoOut.clone()
+        #process.p.replace(process.CaloInfoOut, process.CaloInfoOutBackup + process.CaloInfoOut)
+        process.p.replace(process.InfoOut, process.InfoOutBackup + process.InfoOut)
+        process.InfoOut.linking.algo = "BitwisePF"
+        process.InfoOut.bitwiseDebug = cms.untracked.int32(1)
+        process.ntuple.objects.L1PFBackup = cms.VInputTag("InfoOutBackup:PF",)
+    #comp4();
+    #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] 
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU0/inputs_17D_TTbar_PU0_job51.root'] 
     process.out = cms.OutputModule("PoolOutputModule",
             fileName = cms.untracked.string("l1pf_remade.root"),
     )
     process.e = cms.EndPath(process.out)
     #process.source.skipEvents = cms.untracked.uint32(10)
-    process.maxEvents.input = 20
+    process.maxEvents.input = 500
     process.MessageLogger.cerr.FwkReport.reportEvery = 1
     #process.InfoOut.debug = cms.untracked.int32(1)
-    if False:
+    process.source.eventsToProcess = cms.untracked.VEventRange("1:505:24891",)
+    if 0:
         process.InfoOut.altDebug = cms.untracked.int32(1)
         #process.CaloInfoOut.debug = cms.untracked.int32(1)
         process.TFileService.fileName = cms.string("respTupleNew_1.root")
         process.out.fileName = cms.untracked.string("l1pf_remade_1.root")
-        process.source.eventsToProcess = cms.untracked.VEventRange("1:33:1379",)
-        process.InfoOut.debugEta = cms.untracked.double(-0.8)
-        process.InfoOut.debugPhi = cms.untracked.double(+2.3)
-        process.InfoOut.debugR   = cms.untracked.double(0.8)
-
-#goGun()
+        process.source.eventsToProcess = cms.untracked.VEventRange("1:979:48261",)
+    if 1:
+        for X in "InfoOut", "InfoOutBackup",:
+            P = getattr(process,X,None)
+            if P:
+                P.debugEta = cms.untracked.double(+0.58)
+                P.debugPhi = cms.untracked.double(+1.87)
+                P.debugR   = cms.untracked.double(0.6)
