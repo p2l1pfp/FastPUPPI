@@ -46,7 +46,7 @@ void PFAlgo3::runPF(Region &r) const {
     /// ------------- first step (can all go in parallel) ----------------
 
     if (debug_) {
-        printf("ALT \t region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
+        printf("ALT\nALT region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
         printf("ALT \t N(track) %3lu   N(em) %3lu   N(calo) %3lu   N(mu) %3lu\n", r.track.size(), r.emcalo.size(), r.calo.size(), r.muon.size());
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             const auto & tk = r.track[itk]; 
@@ -362,7 +362,7 @@ void PFAlgo3::link_tk2calo(Region & r, std::vector<int> & tk2calo) const {
                     break;
             }
         }
-        if (debug_ && tk2calo[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to calo %3d (pt %7.2f) with dr %.3f\n", itk, tk.floatPt(), tk2calo[itk], tk2calo[itk] == -1 ? 0.0 : r.calo[tk2calo[itk]].floatPt(), drbest );
+        if (debug_ && tk2calo[itk] != -1) printf("ALT \t track %3d (pt %7.2f) matches to calo %3d (pt %7.2f) with dist %.3f\n", itk, tk.floatPt(), tk2calo[itk], tk2calo[itk] == -1 ? 0.0 : r.calo[tk2calo[itk]].floatPt(), drbest );
         // now we re-do this for debugging sake, it may be done for real later
         if (debug_ && tk2calo[itk] == -1) {
             int ibest = -1; drbest = 0.3;

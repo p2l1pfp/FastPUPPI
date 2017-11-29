@@ -5,7 +5,9 @@
 #include <cmath>
 #include <algorithm>
 
-bool g_debug_ = 0;
+bool g_debug_ = 1;
+
+void pfalgo3_full_ref_set_debug(bool debug) { g_debug_ = debug; }
 
 template <typename T> int sqr(const T & t) { return t*t; }
 

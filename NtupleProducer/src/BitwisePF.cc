@@ -18,13 +18,14 @@ BitwisePF::BitwisePF( const edm::ParameterSet & iConfig ) :
     PFAlgo(iConfig)
 {
     debug_ = iConfig.getUntrackedParameter<int>("bitwiseDebug", debug_);
+    pfalgo3_full_ref_set_debug(debug_);
 }
 
 void BitwisePF::runPF(Region &r) const {
     initRegion(r);
 
     if (debug_) {
-        printf("BW  \t region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
+        printf("BW\nBW  region Eta [ %+5.2f , %+5.2f ],  Phi [ %+5.2f , %+5.2f ] \n", r.etaMin, r.etaMax, r.phiCenter-r.phiHalfWidth, r.phiCenter+r.phiHalfWidth );
         printf("BW  \t N(track) %3lu   N(em) %3lu   N(calo) %3lu   N(mu) %3lu\n", r.track.size(), r.emcalo.size(), r.calo.size(), r.muon.size());
         for (int itk = 0, ntk = r.track.size(); itk < ntk; ++itk) {
             const auto & tk = r.track[itk]; 
