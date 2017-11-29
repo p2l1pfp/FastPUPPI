@@ -41,6 +41,9 @@ namespace dpf2fw {
         for (unsigned int i = 0, n = std::min<unsigned int>(NMAX, in.size()); i < n; ++i) {
             convert(in[i], out[i]);
         }
+        for (unsigned int i = in.size(); i < NMAX; ++i) {
+            clear(out[i]);
+        }
     }
 
 
