@@ -12,7 +12,7 @@ class PFAlgo3 : public PFAlgo {
     protected:
         float drMatchMu_;
         enum MuMatchMode { BoxBestByPtRatio, DrBestByPtRatio, DrBestByPtDiff } muMatchMode_;
-        enum TkCaloLinkMetric { BestByDR=0, BestByDRPt=1 };
+        enum TkCaloLinkMetric { BestByDR=0, BestByDRPt=1, BestByDR2Pt2=2 };
         float drMatchEm_, ptMinFracMatchEm_, drMatchEmHad_;
         TkCaloLinkMetric tkCaloLinkMetric_;
         bool caloReLinkStep_; float caloReLinkDr_, caloReLinkThreshold_;

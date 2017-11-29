@@ -25,6 +25,7 @@ PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
     std::string tkCaloLinkMetric = linkcfg.getParameter<std::string>("trackCaloLinkMetric");
     if (tkCaloLinkMetric == "bestByDR") tkCaloLinkMetric_ = BestByDR;
     else if (tkCaloLinkMetric == "bestByDRPt") tkCaloLinkMetric_ = BestByDRPt;
+    else if (tkCaloLinkMetric == "bestByDR2Pt2") tkCaloLinkMetric_ = BestByDR2Pt2;
     else throw cms::Exception("Configuration", "bad value for tkCaloLinkMetric configurable");
     drMatchEm_ = linkcfg.getParameter<double>("trackEmDR");
     ptMinFracMatchEm_ = linkcfg.getParameter<double>("caloEmPtMinFrac");
@@ -345,6 +346,7 @@ void PFAlgo3::link_tk2calo(Region & r, std::vector<int> & tk2calo) const {
         switch (tkCaloLinkMetric_) {
             case BestByDR:   drbest = drMatch_; break;
             case BestByDRPt: drbest = 1.0; dptscale = drMatch_ / tk.floatCaloPtErr(); break;
+            case BestByDR2Pt2: drbest = 1.0; dptscale = drMatch_ / tk.floatCaloPtErr(); break;
         }
         float minCaloPt = tk.floatPt() - ptMatchLow_*tk.floatCaloPtErr();
         if (debug_) printf("ALT \t track %3d (pt %7.2f) to be matched to calo, min pT %7.2f\n", itk, tk.floatPt(), minCaloPt );
@@ -358,6 +360,12 @@ void PFAlgo3::link_tk2calo(Region & r, std::vector<int> & tk2calo) const {
                     break;
                 case BestByDRPt:
                     dq = dr + std::max<float>(tk.floatPt()-calo.floatPt(), 0.)*dptscale;
+                    //if (debug_ && dr < 0.2) printf("ALT \t\t\t track %3d (pt %7.2f) vs calo %3d (pt %7.2f): dr %.3f, dq %.3f\n", itk, tk.floatPt(), ic, calo.floatPt(), dr, dq);
+                    if (dr < drMatch_ && dq < drbest) { tk2calo[itk] = ic; drbest = dq; }
+                    break;
+                case BestByDR2Pt2:
+                    dq = hypot(dr, std::max<float>(tk.floatPt()-calo.floatPt(), 0.)*dptscale);
+                    //if (debug_ && dr < 0.2) printf("ALT \t\t\t track %3d (pt %7.2f) vs calo %3d (pt %7.2f): dr %.3f, dq %.3f\n", itk, tk.floatPt(), ic, calo.floatPt(), dr, dq);
                     if (dr < drMatch_ && dq < drbest) { tk2calo[itk] = ic; drbest = dq; }
                     break;
             }

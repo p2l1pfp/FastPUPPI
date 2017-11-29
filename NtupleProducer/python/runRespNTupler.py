@@ -168,6 +168,7 @@ def comp4():
     process.InfoOutRegional = process.InfoOut.clone()
     process.InfoOut.linking.ecalPriority = False 
     process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
+    process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
     process.InfoOutSimpler = process.InfoOut.clone()
     process.InfoOut.linking.algo = "BitwisePF"
     process.p.replace(process.InfoOut, process.InfoOutGlobal + process.InfoOutRegional + process.InfoOutSimpler + process.InfoOut)
@@ -180,6 +181,7 @@ if False:
         process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
         process.InfoOut.linking.ecalPriority = False 
         process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
+        process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
         process.InfoOut.altDebug = cms.untracked.int32(1)
         #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
         process.InfoOutBackup = process.InfoOut.clone()
