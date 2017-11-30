@@ -168,15 +168,15 @@ void pfalgo3_em_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkObj 
         pt_t emdiff  = hadcalo[ih].hwEmPt - sub;
         pt_t alldiff = hadcalo[ih].hwPt - sub;
         if (g_debug_ && (hadcalo[ih].hwPt > 0)) {
-            printf("FW  \t calo   %3d pt %7d has a subtracted pt of %7d, empt %7d -> %7d\n",
-                        ih, int(hadcalo[ih].hwPt), int(alldiff), int(hadcalo[ih].hwEmPt), int(emdiff));
+            printf("FW  \t calo   %3d pt %7d has a subtracted pt of %7d, empt %7d -> %7d   isem %d keep %d \n",
+                        ih, int(hadcalo[ih].hwPt), int(alldiff), int(hadcalo[ih].hwEmPt), int(emdiff), int(hadcalo[ih].hwIsEM), keep);
                     
         }
-        if (alldiff < ( hadcalo[ih].hwPt >>  4 ) ) {
+        if (alldiff <= ( hadcalo[ih].hwPt >>  4 ) ) {
             hadcalo_out[ih].hwPt = 0;   // kill
             hadcalo_out[ih].hwEmPt = 0; // kill
             if (g_debug_ && (hadcalo[ih].hwPt > 0)) printf("FW  \t calo   %3d pt %7d --> discarded (zero pt)\n", ih, int(hadcalo[ih].hwPt));
-        } else if ((hadcalo[ih].hwIsEM && emdiff < ( hadcalo[ih].hwEmPt >> 3 )) && !keep) {
+        } else if ((hadcalo[ih].hwIsEM && emdiff <= ( hadcalo[ih].hwEmPt >> 3 )) && !keep) {
             hadcalo_out[ih].hwPt = 0;   // kill
             hadcalo_out[ih].hwEmPt = 0; // kill
             if (g_debug_ && (hadcalo[ih].hwPt > 0)) printf("FW  \t calo   %3d pt %7d --> discarded (zero em)\n", ih, int(hadcalo[ih].hwPt));
