@@ -28,6 +28,8 @@ PFAlgo3::PFAlgo3( const edm::ParameterSet & iConfig ) :
     else if (tkCaloLinkMetric == "bestByDR2Pt2") tkCaloLinkMetric_ = BestByDR2Pt2;
     else throw cms::Exception("Configuration", "bad value for tkCaloLinkMetric configurable");
     drMatchEm_ = linkcfg.getParameter<double>("trackEmDR");
+    trackEmUseAlsoTrackSigma_ = linkcfg.getParameter<bool>("trackEmUseAlsoTrackSigma");
+    emCaloUseAlsoCaloSigma_ = linkcfg.getParameter<bool>("emCaloUseAlsoCaloSigma");
     ptMinFracMatchEm_ = linkcfg.getParameter<double>("caloEmPtMinFrac");
     drMatchEmHad_ = linkcfg.getParameter<double>("emCaloDR");
     caloReLinkStep_ = linkcfg.getParameter<bool>("caloReLink");
@@ -260,7 +262,7 @@ void PFAlgo3::emcalo_algo(Region & r, const std::vector<int> & em2ntk, const std
             continue;
         } 
         float ptdiff = em.floatPt() - em2sumtkpt[iem];
-        float pterr  = std::max<float>(em2sumtkpterr[iem],em.floatPtErr());
+        float pterr  = trackEmUseAlsoTrackSigma_ ? std::max<float>(em2sumtkpterr[iem],em.floatPtErr()) : em.floatPtErr(); 
         if (ptdiff > -ptMatchLow_*pterr) {
             em.isEM = true;
             em.used = true;
@@ -328,7 +330,7 @@ void PFAlgo3::sub_em2calo(Region & r, const std::vector<int> & em2calo) const {
             if (debug_) printf("ALT \t calo  %3d (pt %7.2f +- %7.2f) has a subtracted pt of %7.2f, empt %7.2f -> %7.2f, isem %d\n", ic, calo.floatPt(), calo.floatPtErr(), pt, ept0, ept, calo.isEM);
             calo.setFloatPt(pt);
             calo.setFloatEmPt(ept);
-            if (!keepme && (pt < calo.floatPtErr() || pt <= 0.125*pt0 || (calo.isEM && ept <= 0.125*ept0))) { // the <= is important since in firmware the pt0/8 can be zero
+            if (!keepme && ((emCaloUseAlsoCaloSigma_ ? pt < calo.floatPtErr() : false) || pt <= 0.125*pt0 || (calo.isEM && ept <= 0.125*ept0))) { // the <= is important since in firmware the pt0/8 can be zero
                 if (debug_) printf("ALT \t calo  %3d (pt %7.2f)    ----> discarded\n", ic, calo.floatPt());
                 calo.used = true;
                 calo.setFloatPt(pt0); discardCalo(r, calo, 1);  // log this as discarded, for debugging

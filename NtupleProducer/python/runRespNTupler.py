@@ -169,6 +169,8 @@ def comp4():
     process.InfoOut.linking.ecalPriority = False 
     process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
     process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
+    process.InfoOut.linking.trackEmUseAlsoTrackSigma = False 
+    process.InfoOut.linking.emCaloUseAlsoCaloSigma = False
     process.InfoOutSimpler = process.InfoOut.clone()
     process.InfoOut.linking.algo = "BitwisePF"
     process.p.replace(process.InfoOut, process.InfoOutGlobal + process.InfoOutRegional + process.InfoOutSimpler + process.InfoOut)
@@ -182,6 +184,8 @@ if False:
         process.InfoOut.linking.ecalPriority = False 
         process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
         process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
+        process.InfoOut.linking.trackEmUseAlsoTrackSigma = False 
+        process.InfoOut.linking.emCaloUseAlsoCaloSigma = False
         process.InfoOut.altDebug = cms.untracked.int32(1)
         #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
         process.InfoOutBackup = process.InfoOut.clone()
@@ -190,7 +194,8 @@ if False:
         process.InfoOut.linking.algo = "BitwisePF"
         process.InfoOut.bitwiseDebug = cms.untracked.int32(1)
         process.ntuple.objects.L1PFBackup = cms.VInputTag("InfoOutBackup:PF",)
-    #comp4();
+    else:
+        comp4();
     #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] 
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU0/inputs_17D_TTbar_PU0_job51.root'] 
     process.out = cms.OutputModule("PoolOutputModule",

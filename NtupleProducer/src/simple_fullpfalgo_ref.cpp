@@ -112,21 +112,24 @@ void pfalgo3_em_ref(EmCaloObj emcalo[NEMCALO], HadCaloObj hadcalo[NCALO], TkObj 
         pt_t photonPt;
         if (calo_sumtk[ic] > 0) {
             pt_t ptdiff = emcalo[ic].hwPt - calo_sumtk[ic];
-            if (ptdiff*ptdiff <= 4*sqr(emcalo[ic].hwPtErr)) {
+            int sigma2 = sqr(emcalo[ic].hwPtErr);
+            int sigma2Lo = 4*sigma2, sigma2Hi = sigma2 + (sigma2>>1);
+            int ptdiff2 = ptdiff*ptdiff;
+            if ((ptdiff > 0 && ptdiff2 <= sigma2Hi) || (ptdiff < 0 && ptdiff2 < sigma2Lo)) {
                 // electron
                 photonPt = 0; 
                 isEM[ic] = true;
-                if (g_debug_) printf("FW  \t emcalo %3d pt %7d flagged as electron\n", ic, int(emcalo[ic].hwPt));
+                if (g_debug_) printf("FW  \t emcalo %3d pt %7d ptdiff %7d [match window: -%.2f / +%.2f] flagged as electron\n", ic, int(emcalo[ic].hwPt), int(ptdiff), std::sqrt(float(sigma2Lo)), std::sqrt(float(sigma2Hi)));
             } else if (ptdiff > 0) {
                 // electron + photon
                 photonPt = ptdiff; 
                 isEM[ic] = true;
-                if (g_debug_) printf("FW  \t emcalo %3d pt %7d flagged as electron + photon of pt %7d\n", ic, int(emcalo[ic].hwPt), int(photonPt));
+                if (g_debug_) printf("FW  \t emcalo %3d pt %7d ptdiff %7d [match window: -%.2f / +%.2f] flagged as electron + photon of pt %7d\n", ic, int(emcalo[ic].hwPt), int(ptdiff), std::sqrt(float(sigma2Lo)), std::sqrt(float(sigma2Hi)), int(photonPt));
             } else {
                 // pion
                 photonPt = 0;
                 isEM[ic] = false;
-                if (g_debug_) printf("FW  \t emcalo %3d pt %7d flagged as pion\n", ic, int(emcalo[ic].hwPt));
+                if (g_debug_) printf("FW  \t emcalo %3d pt %7d ptdiff %7d [match window: -%.2f / +%.2f] flagged as pion\n", ic, int(emcalo[ic].hwPt), int(ptdiff), std::sqrt(float(sigma2Lo)), std::sqrt(float(sigma2Hi)));
             }
         } else {
             // photon
