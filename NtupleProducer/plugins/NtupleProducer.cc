@@ -293,6 +293,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
       tk.setCaloSigma(simpleResolHad_(tk.pt(), std::abs(tk.eta())));
       if (fDebug > 1) printf("tk %7.2f eta %+4.2f has sigma %4.2f  sigma/pt %5.3f, calo sigma/pt %5.3f, stubs %2d, chi2 %7.1f\n", tk.pt(), tk.eta(), tk.sigma(), tk.sigma()/tk.pt(), tk.caloSigma()/tk.pt(), int(tk.quality()),tk.normalizedChi2());
       // adding objects to PF
+      if (fDebugR > 0 && deltaR(tk.eta(),tk.phi(),fDebugEta,fDebugPhi) > fDebugR) continue;
       if(tk.pt() > trkPt_ && unsigned(tk.quality()) >= trkMinStubs_ && tk.normalizedChi2() < trkMaxChi2_ ) l1regions_.addTrack(tk);      
       /// filling the tree    
       if (!fTrkInfoTree) continue;
@@ -327,7 +328,7 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   std::vector<l1tpf::Particle> l1mus(*hl1mus);
   for (l1tpf::Particle & mu : l1mus) { // no const & since we modify it to set the sigma
       // possible debug filtering of inputs in some area
-      if (fDebugR > 0 && deltaR(mu.eta(),mu.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
+      if (fDebugR > 0 && deltaR(mu.eta(),mu.phi(),fDebugEta,fDebugPhi) > fDebugR) continue;
       // set resolution
       mu.setSigma(simpleResolTrk_(mu.pt(), std::abs(mu.eta())));  // this needs to be updated with the muon resolutions!
       // add to inputs
@@ -380,11 +381,11 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
   // pass to the PF algo
   for (const l1tpf::Particle & calo : calos) {
-      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
+      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) > fDebugR) continue;
       l1regions_.addCalo(calo); 
   }
   for (const l1tpf::Particle & calo : emcalos) {
-      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) < fDebugR) continue;
+      if (fDebugR > 0 && deltaR(calo.eta(),calo.phi(),fDebugEta,fDebugPhi) > fDebugR) continue;
       l1regions_.addEmCalo(calo); 
   }
 

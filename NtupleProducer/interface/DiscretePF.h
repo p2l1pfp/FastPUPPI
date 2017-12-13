@@ -44,13 +44,27 @@ namespace l1tpf_int {
     unsigned int nOutput(OutputType type, bool puppi) const ;
 
     // global coordinates
-    bool contains(float eta, float phi) const { return (etaMin-etaExtra <= eta && eta <= etaMax+etaExtra && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth+phiExtra); }
+    bool contains(float eta, float phi) const { 
+        float dphi = deltaPhi(phiCenter,phi);
+        return (etaMin-etaExtra < eta && eta <= etaMax+etaExtra && 
+                -phiHalfWidth-phiExtra < dphi && dphi <= phiHalfWidth+phiExtra); 
+    }
     // global coordinates
-    bool fiducial(float eta, float phi) const { return (etaMin <= eta && eta <= etaMax && std::abs(deltaPhi(phiCenter,phi)) <= phiHalfWidth); }
+    bool fiducial(float eta, float phi) const { 
+        float dphi = deltaPhi(phiCenter,phi);
+        return (etaMin < eta && eta <= etaMax && 
+                -phiHalfWidth < dphi && dphi <= phiHalfWidth); 
+    }
     // possibly local coordinates
     bool fiducialLocal(float localEta, float localPhi) const { 
-        if (relativeCoordinates) return (etaMin <= localEta+etaCenter && localEta+etaCenter <= etaMax && std::abs(deltaPhi(0.f,localPhi)) <= phiHalfWidth); 
-        return (etaMin <= localEta && localEta <= etaMax && std::abs(deltaPhi(phiCenter,localPhi)) <= phiHalfWidth); 
+        if (relativeCoordinates) {
+            float dphi = deltaPhi(0.f,localPhi);
+            return (etaMin < localEta+etaCenter && localEta+etaCenter <= etaMax && 
+                -phiHalfWidth < dphi && dphi <= phiHalfWidth); 
+        }
+        float dphi = deltaPhi(phiCenter,localPhi);
+        return (etaMin < localEta && localEta <= etaMax && 
+                -phiHalfWidth < dphi && dphi <= phiHalfWidth); 
     }
     float regionAbsEta() const { return std::abs(etaCenter); }
     float globalAbsEta(float localEta) const { return std::abs(relativeCoordinates ? localEta + etaCenter : localEta); }
@@ -99,6 +113,7 @@ namespace l1tpf_int {
     protected:
         std::vector<Region> regions_;
         bool useRelativeRegionalCoordinates_; // whether the eta,phi in each region are global or relative to the region center
+        enum TrackAssoMode { atVertex, atCalo, any=999 } trackRegionMode_;
   };
 
   class PFAlgo {

@@ -15,6 +15,7 @@ namespace dpf2fw {
         out.hwEta = in.hwEta; // @calo
         out.hwPhi = in.hwPhi; // @calo
         out.hwZ0 = in.hwZ0;
+        out.hwTightQuality = (in.hwStubs >= 6 && in.hwChi2 < 500);
     }
     void convert(const l1tpf_int::CaloCluster & in, HadCaloObj & out) {
         out.hwPt = in.hwPt;
@@ -40,6 +41,9 @@ namespace dpf2fw {
     void convert(const std::vector<In> & in, Out out[NMAX]) {
         for (unsigned int i = 0, n = std::min<unsigned int>(NMAX, in.size()); i < n; ++i) {
             convert(in[i], out[i]);
+        }
+        for (unsigned int i = in.size(); i < NMAX; ++i) {
+            clear(out[i]);
         }
     }
 

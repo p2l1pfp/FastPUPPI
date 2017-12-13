@@ -1,5 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 
+from math import sqrt
+
 InfoOut = cms.EDProducer('NtupleProducer',
          #L1TrackTag  = cms.InputTag('l1tPFTkProducersFromOfflineTracksStrips'),
          L1TrackTag  = cms.InputTag('l1tPFTkProducersFromL1Tracks'),
@@ -33,17 +35,22 @@ InfoOut = cms.EDProducer('NtupleProducer',
          vtxAdaptiveCut = cms.bool(True),
          linking = cms.PSet(
                         algo = cms.string("PFAlgo3"),
+                        # track -> mu linking configurables
+                        trackMuDR    = cms.double(0.2), # accounts for poor resolution of standalone, and missing propagations
+                        trackMuMatch = cms.string("boxBestByPtRatio"), # also drBestByPtRatio
                         # track -> em linking configurables
                         trackEmDR   = cms.double(0.04), # 1 Ecal crystal size is 0.02, and ~2 cm in HGCal is ~0.007
+                        trackEmUseAlsoTrackSigma = cms.bool(True), # also use the track uncertainty for electron linking
                         # em -> calo linking configurables
                         emCaloDR    = cms.double(0.10),    # 1 Hcal tower size is ~0.09
                         caloEmPtMinFrac = cms.double(0.5), # Calo object must have an EM Et at least half of that of the EM cluster to allow linking
+                        emCaloUseAlsoCaloSigma = cms.bool(True), # also use the track uncertainty for electron linking
                         # track -> calo linking configurables
                         trackCaloLinkMetric = cms.string("bestByDRPt"),
                         #trackCaloLinkMetric = cms.string("bestByDR"),
                         trackCaloDR = cms.double(0.12),
                         trackCaloNSigmaLow  = cms.double(2.0),
-                        trackCaloNSigmaHigh = cms.double(1.2),
+                        trackCaloNSigmaHigh = cms.double(sqrt(1.5)), # optimization gave 1.2, but sqrt(1.5) is easier to implement in hardware
                         useTrackCaloSigma = cms.bool(True), # take the uncertainty on the calo cluster from the track, for linking purposes
                         sumTkCaloErr2 = cms.bool(True), # add up track calo errors in quadrature instead of linearly
                         rescaleTracks = cms.bool(False), # if tracks exceed the calo, rescale the track momenta

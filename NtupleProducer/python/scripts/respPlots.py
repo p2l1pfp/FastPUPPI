@@ -294,6 +294,12 @@ whats = [
         ("APuppiCh",       "AltPuppiCharged$",           ROOT.kGreen+3, 21, 1.1),
         ("APuppiNh",       "AltPuppi$-AltPuppiCharged$", ROOT.kGreen+1, 21, 1.1),
     ]),
+    ('pfcomp4',[
+        ("Global",    "L1PFGlobal$",   ROOT.kGreen+1,  20, 1.2),
+        ("Regional",  "L1PFRegional$", ROOT.kAzure+1,  24, 1.2),
+        ("Simpler",   "L1PFSimpler$",  ROOT.kViolet+1, 21, 1.1),
+        ("Firmware",  "L1PF$",         ROOT.kOrange+7, 34, 1.2),
+    ]),
 
 
 
