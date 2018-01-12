@@ -1,14 +1,24 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_9_2_0
-cd CMSSW_9_2_0/src
+cmsrel CMSSW_9_3_2
+cd CMSSW_9_3_2/src
 cmsenv
+git cms-init
+
 git cms-init
 git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
 git fetch cms-l1t-offline
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v1.14.1
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 92X
+git cms-merge-topic -u cms-l1t-offline:l1t-phase2-932-v1.5.1
+git remote add rekovic git@github.com:rekovic/cmssw.git
+git fetch rekovic
+git cms-merge-topic -u rekovic:skinnari-Tracklet_93X_resolved_932
+
+git remote add pfcaldev https://github.com/PFCal-dev/cmssw.git
+git fetch pfcaldev
+git cms-merge-topic -u PFCal-dev:tdr-v2.0_932
+
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 93X
 scram b -j8
 ```
 
