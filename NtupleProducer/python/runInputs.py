@@ -1,14 +1,14 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2C2_timing)
+process = cms.Process("IN", eras.Phase2_timing)
 process.load('Configuration.StandardSequences.Services_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D4Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '93X_upgrade2023_realistic_v2', '')
 
 #process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 #process.load('Configuration.StandardSequences.L1TrackTrigger_cff')
@@ -39,9 +39,7 @@ process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_c
 #process.load('FastPUPPI.NtupleProducer._cfi')
 
 process.source = cms.Source("PoolSource",
-                fileNames = cms.untracked.vstring(
-                '/store/mc/PhaseIISpring17D/SingleNeutrino/GEN-SIM-DIGI-RAW/PU140_90X_upgrade2023_realistic_v9-v1/70002/0ADAA3FC-7B2A-E711-A0CD-0242AC130003.root'
-                ),
+                fileNames = cms.untracked.vstring( '/store/group/upgrade/sandhya/SMP-PhaseIIFall17D-00001.root' ),
                 duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
