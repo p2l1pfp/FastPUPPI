@@ -406,11 +406,12 @@ NtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
 
 
   // then do the vertexing, and save it out
-  float z0;
+  float z0, genZ0 = genOrigin.Z();  
   l1pfalgo_->doVertexing(l1regions_.regions(), vtxAlgo_, z0);
   iEvent.put(std::make_unique<float>(z0), "z0");
   if (fRegionDump) {
     fwrite(&z0, sizeof(float), 1, fRegionDump);
+    fwrite(&genZ0, sizeof(float), 1, fRegionDump);
   } 
 
   // then also save the tracks with a vertex cut

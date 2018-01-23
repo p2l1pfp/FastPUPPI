@@ -101,7 +101,7 @@ if False:
     process.ntuple.objects.PFDiscCaloT_sel = cms.string("charge == 0 && status == 0")
     process.ntuple.objects.PFDiscCaloG_sel = cms.string("charge == 0 && status == 1")
     process.ntuple.objects.PFDiscEm_sel    = cms.string("charge == 0 && status == 2")
-def goRegional(inParallel=False,mode="any"):
+def goRegional(inParallel=False,mode="atCalo"):
     regions = cms.VPSet(
             cms.PSet(
                 etaBoundaries = cms.vdouble(-5.5,-4,-3),
@@ -142,6 +142,21 @@ def gbr(neta,nphi,etaex=0.3,phiex=0.2,mode="any"):
     process.InfoOut.regions = regions
     process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
     process.InfoOut.trackRegionMode = cms.string(mode)
+def gbrExt(nphi,mode="atCalo"): ## take the barrel calo but include the full tracker
+    process.CaloInfoOut.EcalTPTags = [ cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters') ]
+    process.CaloInfoOut.HcalTPTags = [ cms.InputTag('l1tPFHcalProducerFromTPDigis') ]
+    process.InfoOut.EmClusterTags = [ cms.InputTag('l1tPFEcalProducerFromL1EGCrystalClusters') ]
+    regions = cms.VPSet(
+            cms.PSet(
+                etaBoundaries = cms.vdouble([-3,3]),
+                phiSlices = cms.uint32(nphi),
+                etaExtra = cms.double(0),
+                phiExtra = cms.double(0),
+            ),
+    )
+    process.InfoOut.regions = regions
+    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
+    process.InfoOut.trackRegionMode = cms.string(mode)
 if False:
     process.InfoOut.fillTrackTree = cms.untracked.int32(1)
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
@@ -160,6 +175,10 @@ if False: # prepare dump file for Vivado (PF IP core)
 if False: # prepare dump file for Vivado (Regionizer)
     gbr(1,12,0,0,"atCalo")
     process.InfoOut.regionDumpFileName = cms.untracked.string("barrel_sectors_1x12_TTbar_PU140.dump")
+    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
+if False: # prepare dump file for Vivado (Vertexing)
+    gbrExt(12,"atCalo")
+    process.InfoOut.regionDumpFileName = cms.untracked.string("barrel_alltracks_sectors_1x12_TTbar_PU140.dump")
     process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
 
 def comp4():
