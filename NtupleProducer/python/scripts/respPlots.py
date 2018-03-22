@@ -327,6 +327,7 @@ if __name__ == "__main__":
     for (particle, pdgIdCut, minPt, maxEta) in [ 
             ("pion", "abs(mc_id) == 211", 10, 5),
             ("pizero", "abs(mc_id) == 111", 10, 5),
+            ("klong", "abs(mc_id) == 130", 10, 5),
             ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 10, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),

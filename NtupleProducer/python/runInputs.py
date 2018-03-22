@@ -39,12 +39,12 @@ process.load('FastPUPPI.NtupleProducer.l1tPFEcalProducerFromL1EGCrystalCluster_c
 #process.load('FastPUPPI.NtupleProducer._cfi')
 
 process.source = cms.Source("PoolSource",
-                fileNames = cms.untracked.vstring( '/store/group/upgrade/sandhya/SMP-PhaseIIFall17D-00001.root' ),
+                fileNames = cms.untracked.vstring( 'file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/93X/TTbar/GEN-SIM-DIGI-RAW/TTbar_job1_sub14.GEN-SIM-DIGI-RAW.root' ),
                 duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.load('FWCore.MessageService.MessageLogger_cfi')
-process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
   
 process.s = cms.Sequence(
     process.reprocess_L1Phase2_MC +

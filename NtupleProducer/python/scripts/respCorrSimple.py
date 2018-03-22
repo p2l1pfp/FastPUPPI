@@ -67,7 +67,7 @@ if __name__ == "__main__":
             emfmin = emfbins[i-1] if i > 0 else 0
             emfs.append((emfmax, "emf_%04.0f_%04.0f" % (emfmin*1000,emfmax*1000), "%g <= %s && min(%s,.99999) <= %g" % (emfmin, definition, definition, emfmax)))
     for (particle, pdgIdCut, minPt, maxEta) in [ 
-            ("pion", "abs(mc_id) == 211", 2, 5),
+            ("pion", "abs(mc_id) == 211", 2, 2),
             ("pizero", "abs(mc_id) == 111", 2, 5),
             ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
