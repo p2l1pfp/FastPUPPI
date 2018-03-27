@@ -9,26 +9,27 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 
 ##### EXAMPLE USAGE:
 # 1) ECAL Corrections from Pi0
-#       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU.root plots/corr/em -p pizero -w TPEcal_pt02 -e TPEcal_pt02 -E 3.0
+#       python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/em-barrel -p pizero -w L1RawEcal_pt02 -e L1RawEcal_pt02 --fitrange 20 50 -E 3.0 --ptmax 50 --root ecorr.root
 #
 #    Check closure, after re-running Pi0 with Ecal calibration applied
 #       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/em/closure -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02 -E 3.0
 #       
 #       
 # 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
-#       python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/had -p pion -w L1RawCalo_pt02 -e L1RawCalo_pt02 --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.5,0.875
+#       python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --semicoarse-eta --ptmax 50
 #
 #    Check closure, after re-running Pi with Ecal + Had calibration applied 
-#       python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/had/closure -p pion -w L1Calo_pt02 -e L1Calo_pt02 --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.5,0.875
-#   
+#  
+#    python scripts/respPlots.py respTuple_HadronGun_PU0.root plots/corr/ -w l1pf -p pizero,pimix,pion --no-resol
 #    
 # 3) Resolutions, after all the corrections
 #    Hadrons, calo
-#        python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/resolution -p pion -w L1Calo_pt02 -e L1Calo_pt02  -r
+#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pion -w L1Calo_pthighest -e L1Calo_pthighest  -r --ptmin 5 --ptmax 50
 #    EM, calo
-#        python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/resolution -p pizero -w L1Calo_pt02 -e L1Calo_pt02  -r
+#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02  -r --ptmin 5 --ptmax 50
 #    Hadrons, track
-#        python scripts/respCorrSimple.py respTupleNew_SinglePion_NoPU_C.root plots/corr/resolution -p pion -w TPTK_pthighest -e TPTK_pthighest   -r
+#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pion -w TPTK_pthighest -e TPTK_pthighest   -r --ptmin 5 --ptmax 50
+
 
 if __name__ == "__main__":
     from optparse import OptionParser
@@ -44,6 +45,7 @@ if __name__ == "__main__":
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
+    parser.add_option("--ptmax", dest="ptmax", nargs=1, default=0, type="float")
     parser.add_option("--ptbins", dest="ptbins", nargs=1, default=None, type="string")
     parser.add_option("--fitrange", dest="fitrange", nargs=2, default=(0,999), type="float")
     parser.add_option("--emf-slices", dest="emfSlices", nargs=2, default=None)
@@ -70,6 +72,7 @@ if __name__ == "__main__":
             ("pion", "abs(mc_id) == 211", 2, 2),
             ("pizero", "abs(mc_id) == 111", 2, 5),
             ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 2, 5),
+            ("piswitch", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1 && abs(mc_eta) > 2.5))", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -181,7 +184,7 @@ if __name__ == "__main__":
             p.SetLineWidth(3); p.SetLineColor(1);  p.SetMarkerColor(1)
         for plot,ptype,pfix in (prof,"response","_resp"),(pres,"resolution","_resol"),(profg,"response","_resp_gaus"),(presg,"resolution","_resol_gaus"):
                 if not plot: continue
-                frame = ROOT.TH1F("stk","stk",100,0.0,250.0 if "jet" in oname else 100.0)
+                frame = ROOT.TH1F("stk","stk",100,0.0,options.ptmax if options.ptmax else (250.0 if "jet" in oname else 100.0))
                 frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                 frame.GetYaxis().SetDecimals(True)
                 if "resolution" in ptype:
@@ -263,9 +266,9 @@ if __name__ == "__main__":
                     pextra.SetLineColor(ROOT.kGray+1); pextra.SetMarkerColor(ROOT.kGray+1) 
                     pextra.SetLineWidth(2); pextra.SetMarkerStyle(6); pextra.Draw("PXL SAME")
                     pclone.SetMarkerStyle(8); pclone.Draw("PX SAME")
-                    tf1 = ROOT.TF1("_p1","pol1", 0, 100)
-                    pclone.Fit(tf1, "WNQ0C EX0", "", 20, 100)
-                    tf1.SetRange(0, 100)
+                    tf1 = ROOT.TF1("_p1","pol1", 0,  options.ptmax if options.ptmax else 100)
+                    pclone.Fit(tf1, "WNQ0C EX0", "", 20,  options.ptmax if options.ptmax else 100)
+                    tf1.SetRange(0, options.ptmax if options.ptmax else 100)
                     tf1.SetLineWidth(3)
                     tf1.SetLineColor(ROOT.kGreen+2)
                     tf1.Draw("SAME")

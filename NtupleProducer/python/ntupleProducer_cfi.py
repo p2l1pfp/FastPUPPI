@@ -13,12 +13,12 @@ InfoOut = cms.EDProducer('NtupleProducer',
          MuonTPTag   = cms.InputTag('l1tPFMuProducerFromL1Mu'), 
          genParTag   = cms.InputTag('genParticles'),
          genOriginTag = cms.InputTag('genParticles','xyz0'),
-         corrector   = cms.string("FastPUPPI/NtupleProducer/data/pion_eta_phi.root"),
+         corrector   = cms.string("FastPUPPI/NtupleProducer/data/hadcorr.root"),
          ecorrector  = cms.string("FastPUPPI/NtupleProducer/data/ecorr.root"),
          trackres    = cms.string("FastPUPPI/NtupleProducer/data/tkres.root"),
          eleres      = cms.string("FastPUPPI/NtupleProducer/data/eres.root"),
          pionres     = cms.string("FastPUPPI/NtupleProducer/data/pionres.root"),
-         correctorEmfBins = cms.uint32(11),
+         correctorEmfBins = cms.uint32(8),
          correctorEmfMax  = cms.double(1.0),
          trkPtCut    = cms.double(2.0),
 	 trkMinStubs = cms.uint32(4),
@@ -74,23 +74,23 @@ InfoOut = cms.EDProducer('NtupleProducer',
 # these below are temporary resolutions, to be improved later
 if True:
     InfoOut.simpleResolHad = cms.PSet(
-	    etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
-	    offset  = cms.vdouble( 3.378,  2.673,  3.143,  1.976,  1.205, -1.147),
-	    scale   = cms.vdouble( 0.109,  0.344,  0.139,  0.236,  0.158,  0.427),
-            ptMin   = cms.vdouble( 10.00,  10.00,  10.00,  10.00,  10.00,  10.00),
+            etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
+            offset  = cms.vdouble( 2.644,  1.975,  2.287,  1.113,  0.772,  0.232),
+            scale   = cms.vdouble( 0.155,  0.247,  0.130,  0.266,  0.205,  0.302),
+            ptMin   = cms.vdouble( 5.000,  5.000,  5.000,  5.000,  5.000,  5.000),
             ptMax   = cms.vdouble(999999, 999999, 999999, 999999, 999999, 999999),
             kind    = cms.string('calo'),
             )
     InfoOut.simpleResolEm = cms.PSet(
-	    etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200,  4.000,  5.000),
-	    offset  = cms.vdouble( 1.642,  2.546,  1.373,  1.381,  1.008, -2.637),
-	    scale   = cms.vdouble( 0.002,  0.094, -0.002,  0.267,  0.124,  0.497),
+            etaBins = cms.vdouble( 1.300,  1.700,  2.800,  3.200),
+            offset  = cms.vdouble( 1.158,  1.545,  0.732,  0.551),
+            scale   = cms.vdouble( 0.014,  0.024,  0.028,  0.031),
 	    kind    = cms.string('calo'),
             )
     InfoOut.simpleResolTrk  = cms.PSet(
-	    etaBins = cms.vdouble( 0.800,  1.200,  1.500,  2.000,  2.500),
-	    offset  = cms.vdouble( 0.007,  0.009,  0.011,  0.015,  0.024),
-	    scale   = cms.vdouble( 0.271,  0.392,  0.493,  0.453,  1.093),
+            etaBins = cms.vdouble( 0.800,  1.200,  1.500,  2.000,  2.500),
+            offset  = cms.vdouble( 0.007,  0.009,  0.011,  0.015,  0.025),
+            scale   = cms.vdouble( 0.275,  0.404,  0.512,  0.480,  1.132),
             kind    = cms.string('track'),
             )
 

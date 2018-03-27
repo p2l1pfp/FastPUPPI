@@ -66,7 +66,7 @@ def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250]
     else:
-        return [2.5,5,7.5,10,15,20,25,30,35,40,45,50,55,60,70,80,90,100]
+        return [2.5,5,7.5,10,15,20,25,30,35,40,45,50] #,55,60,70,80,90,100]
 def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     ptbins = ptBins(oname)
     ROOT.gROOT.cd()

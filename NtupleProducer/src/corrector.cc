@@ -54,7 +54,7 @@ corrector::corrector(const std::string iFile, int iNFrac, double iFracMax, int d
             float eta = std::min(std::abs(l1tpf::towerEta(i0-fNEta/2)), 4.999f);
             int   etaBin = std::min(std::max(etaAxis->FindBin(eta), 1), index->GetNbinsX());
             if (emfAxis) {
-                float emf = i2/float(fNFrac-1);
+                float emf = (i2+0.5)/float(fNFrac); // should be at the center of a bin
                 int   emfBin = std::min(std::max(emfAxis->FindBin(emf), 1), index->GetNbinsY());
                 if (eta > 3.0) emfBin = 1; // no EMF bins in HF
                 snprintf(buff, 1022, "eta_bin%d_emf_bin%d", etaBin, emfBin);
