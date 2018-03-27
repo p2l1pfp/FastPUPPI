@@ -19,9 +19,9 @@ from L1Trigger.TrackFindingTracklet.L1TrackletTracks_cff import *
 L1TrackTrigger_step = cms.Sequence(L1TrackletTracks)
 
 reprocess_L1Phase2_MC = cms.Sequence(
-    L1simulation_step + 
-    hgcl1tpg_step + 
+    #hgcl1tpg_step +
     #EcalEBtp_step + 
-    L1TrackTrigger_step 
+    L1TrackTrigger_step +
     #HcalTPsimulation_step
+    L1simulation_step
 )

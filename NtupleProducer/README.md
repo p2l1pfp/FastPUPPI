@@ -1,24 +1,28 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_9_3_2
-cd CMSSW_9_3_2/src
+cmsrel CMSSW_10_1_0_pre3
+cd CMSSW_10_1_0_pre3/src
 cmsenv
 git cms-init
-
-git cms-init
 git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
-git fetch cms-l1t-offline
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-932-v1.5.1
+git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_0_pre3
+git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.6
+#
+# Tracklet Tracks
+#
 git remote add rekovic git@github.com:rekovic/cmssw.git
-git fetch rekovic
-git cms-merge-topic -u rekovic:skinnari-Tracklet_93X_resolved_932
+git fetch rekovic Tracklet-10_1_0_pre3
+git cms-merge-topic -u rekovic:Tracklet-10_1_0_pre3-from-skinnari
 
-git remote add pfcaldev https://github.com/PFCal-dev/cmssw.git
-git fetch pfcaldev
-git cms-merge-topic -u PFCal-dev:tdr-v2.0_932
+git cms-addpkg L1Trigger/L1TCommon
 
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 93X
+git remote add PFCal-dev https://github.com/PFCal-dev/cmssw.git
+git fetch PFCal-dev
+git cms-merge-topic PFCal-dev:hgc-tpg-integration-180327
+
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 10X
+
 scram b -j8
 ```
 
@@ -31,7 +35,7 @@ cmsRun runInputs.py
 Example how to submit jobs to the lxbatch:
 ```
 cd FastPUPPI/NtupleProducer/python
-./scripts/cmsSplit.pl --dataset /SingleE_FlatPt-8to100/PhaseIISpring17D-NoPU_90X_upgrade2023_realistic_v9-v1/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
+./scripts/cmsSplit.pl --dataset /RelValTTbar_14TeV/CMSSW_9_3_7-93X_upgrade2023_realistic_v5_2023D17noPU-v2/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
 ./runInputs_test_bsub.sh
 ```
 For more options for job splitting:
@@ -58,7 +62,8 @@ NB: For single particle add "goGun()" at the end of the script, remove it for je
 To run the ntuplizer over many files do for instance:
 
 ```
-source python/scripts/prun.sh python/runRespNTupler.py SinglePion_PU0 SinglePion_PU0
+source python/scripts/prun.sh python/runRespNTupler.py TTbar_PU0 TTbar_PU0
+source python/scripts/prun.sh python/runRespNTupler.py SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
 ```
 
 2) Ntuple for jet HT and MET studies
@@ -114,5 +119,5 @@ python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p 
 The trigger MC can be found on DAS `dataset=/*/*PhaseIISpring17D*/*`
 
 Other resources: <br>
-[Correlator code](https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideL1TPhase2Instructions#CMSSW_9_2_0_and_l1t_phase2_v1_10) <br>
-[Track trigger code](https://twiki.cern.ch/twiki/bin/view/CMS/L1Tracklet90X#Recipe_for_CMSSW_9_2_0) <br>
+[Correlator code](https://twiki.cern.ch/twiki/bin/view/CMSPublic/SWGuideL1TPhase2Instructions) <br>
+[Track trigger code](https://twiki.cern.ch/twiki/bin/view/CMS/L1Tracklet90X) <br>

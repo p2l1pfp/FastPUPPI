@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2_timing)
+process = cms.Process("IN", eras.phase2_trigger)
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
@@ -54,7 +54,7 @@ process.s = cms.Sequence(
     process.reprocess_L1Phase2_MC +
     #process.ecalDigis + process.ecalPreshowerDigis + process.hcalDigis + process.bunchSpacingProducer + process.ecalLocalRecoSequence + process.hcalLocalRecoSequence + process.hcalGlobalRecoSequence + process.hgcalLocalRecoSequence +
     process.L1TkElectrons + process.L1TkPhotons + process.L1TkJets + process.L1TkPrimaryVertex + process.L1TkEtMiss + process.L1TkHTMissVtx +  process.L1TkIsoElectrons + process.L1TkTauFromCalo + 
-    # process.L1TkMuons + ## <<< muons need a fix, see https://hypernews.cern.ch/HyperNews/CMS/get/L1TriggerUpgrades/278/1.html
+    process.L1TkMuons +
     #process.l1tPFEcalProducerFromOfflineRechits + process.l1tPFHcalProducerFromOfflineRechits + process.l1tPFHFProducerFromOfflineRechits + process.l1tPFHGCalEEProducerFromOfflineRechits + process.l1tPFHGCalFHProducerFromOfflineRechits + process.l1tPFHGCalBHProducerFromOfflineRechits +
     process.l1tPFEcalProducerFromTPDigis +
     process.L1EGammaCrystalsProducer + process.l1tPFEcalProducerFromL1EGCrystalClusters +
