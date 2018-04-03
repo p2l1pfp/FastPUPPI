@@ -27,12 +27,24 @@ if args[1].startswith("l1tPF"):
     pf1 = Handle("std::vector<l1tpf::Particle>")
 elif "InfoOut" in args[1]:
     pf1   = Handle("std::vector<reco::PFCandidate>")
+elif args[1].startswith("pfClu"):
+    pf1   = Handle("std::vector<l1t::PFCluster>")
+elif args[1].startswith("pfTr"):
+    pf1   = Handle("std::vector<l1t::PFTrack>")
+elif args[1].startswith("l1pf"):
+    pf1   = Handle("std::vector<l1t::PFCandidate>")
 else:
     pf1   = Handle("edm::OwnVector<reco::Candidate>")
 if args[2].startswith("l1tPF"):
     pf2 = Handle("std::vector<l1tpf::Particle>")
 elif "InfoOut" in args[2]:
     pf2   = Handle("std::vector<reco::PFCandidate>")
+elif args[2].startswith("pfClu"):
+    pf2   = Handle("std::vector<l1t::PFCluster>")
+elif args[2].startswith("pfTr"):
+    pf2   = Handle("std::vector<l1t::PFTrack>")
+elif args[2].startswith("l1pf"):
+    pf2   = Handle("std::vector<l1t::PFCandidate>")
 else:
     pf2   = Handle("edm::OwnVector<reco::Candidate>")
 genj  = Handle("std::vector<reco::GenJet>")

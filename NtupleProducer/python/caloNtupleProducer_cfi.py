@@ -18,6 +18,7 @@ CaloInfoOut = cms.EDProducer('CaloNtupleProducer',
          zeroSuppress = cms.bool(False),
          corrector   = cms.string("FastPUPPI/NtupleProducer/data/hadcorr.root"),
          ecorrector  = cms.string("FastPUPPI/NtupleProducer/data/ecorr.root"),
+         correctIndividualEms = cms.bool(False),
          correctorEmfBins = cms.uint32(8),
          correctorEmfMax  = cms.double(1.0),
          caloClusterer = cms.PSet(

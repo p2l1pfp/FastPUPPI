@@ -141,9 +141,12 @@ namespace l1pf_calo {
             SingleCaloClusterer(const edm::ParameterSet &pset) ;
             ~SingleCaloClusterer() ;
             void clear() { rawet_.zero(); }
-            void add(const l1tpf::Particle &particle) { 
-                if (particle.pt() > 0) {
-                    rawet_(particle.eta(), particle.phi()) += particle.pt(); 
+            void add(const l1tpf::Particle &particle) {
+               add(particle.pt(), particle.eta(), particle.phi());
+            }
+            void add(float pt, float eta, float phi) {
+                if (pt > 0) {
+                    rawet_(eta, phi) += pt;
                 }
             }
             void run() ; 

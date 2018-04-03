@@ -90,6 +90,7 @@ private:
   // simplified corrections
   l1tpf::SimpleCorrEm simpleCorrEm_;
   l1tpf::SimpleCorrHad simpleCorrHad_;
+  bool correctIndividualEms_;
 
   // new calo clusterer (float)
   l1pf_calo::SingleCaloClusterer ecalClusterer_, hcalClusterer_;
@@ -133,6 +134,7 @@ CaloNtupleProducer::CaloNtupleProducer(const edm::ParameterSet& iConfig):
   ecorrector_           (new corrector(ECorrectorTag_,1,1.0,iConfig.getUntrackedParameter<int>("debug",0))),
   simpleCorrEm_         (iConfig, "simpleCorrEm"),
   simpleCorrHad_        (iConfig, "simpleCorrHad"),
+  correctIndividualEms_ (iConfig.getParameter<bool>("correctIndividualEms")),
   ecalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("ecal")),
   hcalClusterer_        (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("hcal")),
   caloLinker_           (iConfig.getParameter<edm::ParameterSet>("caloClusterer").getParameter<edm::ParameterSet>("linker"), ecalClusterer_, hcalClusterer_),
@@ -188,23 +190,39 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   for (const auto & token : TokEcalTPTags_) {
       iEvent.getByToken(token, ecals);
       for (const l1tpf::Particle & it : *ecals) {
-          ecalClusterer_.add(it);
+          if (correctIndividualEms_) {
+              float ptcorr = it.pt();
+              if (simpleCorrEm_.empty()) {
+                  ptcorr = ecorrector_->correct(0., it.pt(), it.iEta(), it.iPhi());
+                  std::cout << "adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
+              } else {
+                  ptcorr = simpleCorrEm_(it.pt(), std::abs(it.eta()));
+                  std::cout << "adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << std::endl;
+              }
+              ecalClusterer_.add(ptcorr, it.eta(), it.phi());
+          } else {
+              std::cout << "adding EM rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
+              ecalClusterer_.add(it);
+          }
       }
   }
 
   ecalClusterer_.run();
-  //// ---- Dummy calibration == no calibration
-  // ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
-  //    
   //// ---- Calibration from Phil's workflow
-  if (simpleCorrEm_.empty()) {
-      ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-              return ecorrector_->correct(0., c.et, ieta, iphi);
-              } );
+  if (!correctIndividualEms_) {
+      if (simpleCorrEm_.empty()) {
+          ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double {
+                  std::cout << "correcting EM  rawpt " << c.et << "  eta " << c.eta << "  phi " << c.phi << "  ieta " << ieta << "  iphi " << iphi << " --> " << ecorrector_->correct(0., c.et, ieta, iphi) << std::endl;
+                  return ecorrector_->correct(0., c.et, ieta, iphi);
+                  } );
+      } else {
+          ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double {
+                  return simpleCorrEm_(c.et, std::abs(c.eta));
+                  } );
+      }
   } else {
-      ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { 
-              return simpleCorrEm_(c.et, std::abs(c.eta));
-              } );
+      // no correction
+      ecalClusterer_.correct( [](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double { return c.et; } );
   }
   // write debug output tree
   if (!fOutputName.empty()) {

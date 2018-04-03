@@ -85,8 +85,8 @@ double corrector::correct(double iTotal,double iEcal,int iEta,int iPhi) {
   //std::cout << "for iTotal = " << iTotal << " iEcal = " << iEcal << " iEta " << iEta << " iPhi " << iPhi << std::endl;
   if(abs(iEta) > fNEta/2-1) return fTotal; //overflow
   if(fEcal > fTotal) fTotal = fEcal;
-  double lFrac = fEcal/(fTotal); 
-  int    lIFrac=int(floor(lFrac*(fNFrac-1)));
+  double lFrac = fEcal/(fTotal); // 0 to 1 inclusive
+  int    lIFrac = std::min<int>(floor(lFrac*fNFrac), fNFrac-1); // must avoid the == fNFrac case, from lFrac == 1.0
   int lIEta = iEta+fNEta/2;
   int lIPhi = iPhi-1;
   if(lIFrac > fNFrac-1) lIFrac = 0; 
