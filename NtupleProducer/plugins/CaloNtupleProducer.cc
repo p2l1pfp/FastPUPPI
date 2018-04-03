@@ -194,14 +194,14 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               float ptcorr = it.pt();
               if (simpleCorrEm_.empty()) {
                   ptcorr = ecorrector_->correct(0., it.pt(), it.iEta(), it.iPhi());
-                  std::cout << "adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
+                  if (fDebug) std::cout << "FastPUPPI: adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
               } else {
                   ptcorr = simpleCorrEm_(it.pt(), std::abs(it.eta()));
-                  std::cout << "adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << std::endl;
+                  if (fDebug) std::cout << "FastPUPPI: adding EM ptcorr " << ptcorr << " rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << std::endl;
               }
               ecalClusterer_.add(ptcorr, it.eta(), it.phi());
           } else {
-              std::cout << "adding EM rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
+              if (fDebug) std::cout << "FastPUPPI: adding EM rawpt " << it.pt() << "  eta " << it.eta() << "  phi " << it.phi() << "  ieta " << it.iEta() << "  iphi " << it.iPhi() << std::endl;
               ecalClusterer_.add(it);
           }
       }
@@ -212,7 +212,7 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   if (!correctIndividualEms_) {
       if (simpleCorrEm_.empty()) {
           ecalClusterer_.correct( [&](const l1pf_calo::Cluster &c, int ieta, int iphi) -> double {
-                  std::cout << "correcting EM  rawpt " << c.et << "  eta " << c.eta << "  phi " << c.phi << "  ieta " << ieta << "  iphi " << iphi << " --> " << ecorrector_->correct(0., c.et, ieta, iphi) << std::endl;
+                  if (fDebug) std::cout << "FastPUPPI: correcting EM  rawpt " << c.et << "  eta " << c.eta << "  phi " << c.phi << "  ieta " << ieta << "  iphi " << iphi << " --> " << ecorrector_->correct(0., c.et, ieta, iphi) << std::endl;
                   return ecorrector_->correct(0., c.et, ieta, iphi);
                   } );
       } else {
@@ -275,6 +275,7 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   for (const auto & token : TokHcalTPTags_) {
       iEvent.getByToken(token, hcals);
       for (const l1tpf::Particle & it : *hcals) {
+          if (fDebug) std::cout << "FastPUPPI: adding HCal input pt " << it.pt() << ", eta " << it.eta() << ", phi " << it.phi() << std::endl;
           hcalClusterer_.add(it);
       }
   }
@@ -288,6 +289,7 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   //// ---- Calibration from Phil's workflow
   if (simpleCorrHad_.empty()) {
       caloLinker_.correct( [&](const l1pf_calo::CombinedCluster &c, int ieta, int iphi) -> double { 
+              if (fDebug) std::cout << "FastPUPPI: raw linked cluster pt " << c.et << ", eta " << c.eta << ", phi " << c.phi << ", emPt " << c.ecal_et << std::endl;
               return corrector_->correct(c.et, c.ecal_et, ieta, iphi); 
               } );
   } else {
@@ -296,7 +298,7 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
               } );
   }
   // write debug output tree and/or standard output
-  if (!fOutputName.empty() || fDebug) {
+  if (!fOutputName.empty()) {
       const auto & clusters = caloLinker_.clusters();
       unsigned int nh = 0;
       for (unsigned int i = 0, ncells = clusters.size(); i < ncells; ++i) {
@@ -338,6 +340,9 @@ CaloNtupleProducer::produce(edm::Event& iEvent, const edm::EventSetup& iSetup) {
   // Get particles from the clusterer
   std::unique_ptr<L1PFCollection> RawCalo  = caloLinker_.fetch(false);
   std::unique_ptr<L1PFCollection> CorrCalo = caloLinker_.fetch(true);
+  for (const auto & c : *CorrCalo) {
+        if (fDebug) std::cout << "FastPUPPI: calibrated linked cluster pt " << c.pt() << ", eta " << c.eta() << ", phi " << c.phi() << ", emPt " << c.emEt() << std::endl;
+  }
 
   addPF(*RawCalo,  "RawCalo",  iEvent);
   addPF(*CorrCalo, "Calo",     iEvent);
