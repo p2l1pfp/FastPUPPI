@@ -205,6 +205,19 @@ whats = [
         ("PF",         "L1PF$",      ROOT.kOrange+7, 34, 1.2),
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
     ]),
+    ('stage2',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Clusters",   "Stage2CaloClusters$", ROOT.kViolet-4,  21, 1.7),
+        ("Towers",     "Stage2CaloTowers$",    ROOT.kGreen+1,  21, 1.7),
+        ("Jets",       "Stage2CaloJets$",    ROOT.kRed+2, 34, 1.5),
+    ]),
+    ('comp',[
+        ("S2 Jets",    "Stage2CaloJets$", ROOT.kRed+2, 34, 1.5),
+        ("L1TkJets",   "RefL1TkJets$",    ROOT.kGreen+1, 34, 1.5),
+        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
+        ("PF",         "L1PF$",      ROOT.kOrange+7, 34, 1.2),
+        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
+        ]),
     ('pfdebug',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
         ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),

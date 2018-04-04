@@ -1,7 +1,7 @@
 CODE=${1/.py/}; shift
 #MAIN=/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/$1/
 #MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/93X/Inputs/$1/
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/Inputs/280318/$1
+MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/040418/$1
 PREFIX="inputs_"
 
 INPUT=$1; shift
