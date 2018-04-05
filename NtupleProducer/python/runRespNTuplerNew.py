@@ -4,13 +4,15 @@ from Configuration.StandardSequences.Eras import eras
 process = cms.Process("RESP", eras.phase2_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
+process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:test.root'),
+    #fileNames = cms.untracked.vstring('file:test.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/040418/SingleTauFlat_PU0/inputs_SingleTauFlat_PU0_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
@@ -26,9 +28,10 @@ process.runPF = cms.Sequence(
 )
 
 process.caloStage2 = cms.EDProducer("CandProducerFromStage2",
-        srcCluster = cms.InputTag("simCaloStage2Digis","MP"),
-        srcTower = cms.InputTag("simCaloStage2Digis","MP"),
-        srcJet = cms.InputTag("simCaloStage2Digis","MP"),
+    srcCluster = cms.InputTag("simCaloStage2Digis","MP"),
+    srcTower = cms.InputTag("simCaloStage2Digis","MP"),
+    srcJet = cms.InputTag("simCaloStage2Digis","MP"),
+    MP = cms.bool(True),
 )
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
@@ -146,3 +149,13 @@ def gbr(neta,nphi,etaex=0.3,phiex=0.2,mode="atCalo"):
     process.l1pfProducer.regions = regions
     process.l1pfProducer.useRelativeRegionalCoordinates = cms.bool(True)
     process.l1pfProducer.trackRegionMode = cms.string(mode)
+if False:
+    process.dumpGen = cms.EDAnalyzer("ParticleListDrawer",
+        maxEventsToPrint = cms.untracked.int32(100),
+        printVertex = cms.untracked.bool(False),
+        printOnlyHardInteraction = cms.untracked.bool(False), # Print only status=3 particles. This will not work for Pythia8, which does not have any such particles.
+        src = cms.InputTag("genParticles")
+    )
+    process.p.replace(process.ntuple, process.dumpGen+process.ntuple)
+    process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
+    process.MessageLogger.cerr.FwkReport.reportEvery = 1

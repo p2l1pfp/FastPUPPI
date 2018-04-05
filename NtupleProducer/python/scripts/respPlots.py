@@ -75,7 +75,7 @@ def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     prof = ROOT.TProfile(name,name,len(ptbins),array('f',[0]+ptbins))
     tree.Draw(expr+":mc_pt>>"+name, cut, "PROF", maxEntries);
     return prof;
-def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=False, fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999), maxEntries=999999999):
+def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=False, fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999), maxEntries=999999999, respCorr="simple"):
     ptbins = ptBins(oname)
     ys = [[] for ipt in ptbins]
     npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "", maxEntries);
@@ -128,12 +128,74 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
     retg.Fit(tf1g, fitopt, "", fitrange[0], fitrange[1])
     retg.fit = tf1
     ret.gaus = retg
-    ## Now we do the approximate response corrected resolution
-    scale = ret.fit.GetParameter(1)
+    retc = ROOT.TGraphAsymmErrors()
+    retc.SetName(name+"_corr")
+    retcg = ROOT.TGraphAsymmErrors()
+    retcg.SetName(name+"_corr_gauss")
+    #print oname, expr
+    if respCorr in ("gen","exact"):
+        if respCorr == "exact":
+            invret = ROOT.TGraph(ret.GetN())
+            for i in xrange(ret.GetN()):
+                ptgen = ret.GetX()[i]
+                ptrec = ret.GetY()[i]*ptgen
+                invret.SetPoint(i, ptrec, ptgen)
+                #if i % 2 == 1: print "JEC: %5.1f -> %5.1f" % (ptrec, ptgen)
+            invret.Sort()
+            ret.inv = invret
+        ycs = [[] for ipt in ptbins]
+        iprint = 3
+        for i in xrange(graph.GetN()):
+            if yi[i] == 0: continue
+            if respCorr == "gen":
+                yic = yi[i] / ret.Eval(xi[i]);
+            elif respCorr == "exact":
+                yic = invret.Eval(yi[i]*xi[i]) / xi[i];
+                #if i == iprint:
+                #    print "%8d   xi %5.1f  yi %7.3f   ptrec %5.1f   ptcorr %5.1f  yic %7.3f" % (i, xi[i], yi[i], yi[i]*xi[i], invret.Eval(yi[i]*xi[i]), yic)
+                #    iprint *= 3
+            for ipt,ptmax in enumerate(ptbins):
+                if xi[i] < ptmax:
+                    ycs[ipt].append(yic)
+                    break
+        resols, resolsg = [], []
+        for ipt,ptmax in enumerate(ptbins):
+            if len(ycs[ipt]) == 0: continue
+            ptmin = ptbins[ipt-1] if ipt else 0
+            ptc   = 0.5*(ptmin+ptmax)
+            ptd   = 0.5*(ptmax-ptmin)
+            (median,lo,hi) = quantiles(ycs[ipt])
+            if not median: continue
+            ipoint = retc.GetN()
+            retc.Set(ipoint+1)
+            retc.SetPoint(ipoint, ptc, median)
+            retc.SetPointError(ipoint, ptd, ptd, (median-lo)/sqrt(len(ycs[ipt])),(hi-median)/sqrt(len(ycs[ipt])))
+            ## Now we also try an approximate Gaussian fit
+            avg = median; rms2 = (hi - lo);
+            for niter in xrange(3):
+                truncated = [y for y in ycs[ipt] if abs(y-avg) < rms2]
+                if len(truncated) <= 2: break
+                avg = sum(truncated)/len(truncated)
+                rms2 = 2*sqrt(sum((t-avg)**2 for t in truncated)/(len(truncated)-1))
+            retcg.Set(ipoint+1)
+            retcg.SetPoint(ipoint, ptc, avg)
+            retcg.SetPointError(ipoint, ptd, ptd, 0.5*rms2/sqrt(len(ycs[ipt])), 0.5*rms2/sqrt(len(ycs[ipt])))
+            if median > 0.2:
+                resols.append((ptc,ptd,(hi-lo)/2,0))
+                #print "for %s %s at pt ~ %6.1f  reco pt ~ %6.1f  [ %6.1f , %6.1f ]" % (oname,name, ptc, median, lo, hi)
+            if avg >  0.2:
+                resolsg.append((ptc,ptd,0.5*rms2,0))
+        ret.corr = retc
+        retg.corr = retcg
+        scale = 1
+    else:
+        ## Now we do the approximate response corrected resolution
+        scale = ret.fit.GetParameter(1)
     if scale < 0.1 or len(resols) < 3: return (ret,None)
     resol = ROOT.TGraphAsymmErrors(len(resols))
     resol.SetName(name+"_res")
     for ipoint,(ptc,ptd,res,err) in enumerate(resols):
+        if respCorr == "divide": scale = ret.Eval(ptc)
         resol.SetPoint(ipoint, ptc, res/scale)
         resol.SetPointError(ipoint, ptd, ptd, 0, 0)
     if ("Trk" in name or "TK" in name) and "jet" not in oname and "ele" not in oname:
@@ -147,13 +209,13 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
         resolg = ROOT.TGraphAsymmErrors(len(resolsg))
         resolg.SetName(name+"_gauss_res")
         for ipoint,(ptc,ptd,res,err) in enumerate(resolsg):
+            if respCorr == "divide": scale = ret.Eval(ptc)
             resolg.SetPoint(ipoint, ptc, res/scale)
             resolg.SetPointError(ipoint, ptd, ptd, 0, 0)
         resol.gaus = resolg
         rtf1g = rtf1.Clone(name+"_rf1g")
         resolg.Fit(rtf1g, fitopt+"W", "", fitrange[0], fitrange[1])
         resolg.fit = rtf1g
-
     return (ret,resol)
 
 whats = [
@@ -207,8 +269,8 @@ whats = [
     ]),
     ('stage2',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
-        ("Clusters",   "Stage2CaloClusters$", ROOT.kViolet-4,  21, 1.7),
         ("Towers",     "Stage2CaloTowers$",    ROOT.kGreen+1,  21, 1.7),
+        ("Clusters",   "Stage2CaloClusters$", ROOT.kViolet-4,  21, 1.7),
         ("Jets",       "Stage2CaloJets$",    ROOT.kRed+2, 34, 1.5),
     ]),
     ('comp',[
@@ -328,6 +390,7 @@ if __name__ == "__main__":
     parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
     parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
+    parser.add_option("--corr-resol", dest="respCorr", default="exact", help="response correction for resolution: exact (compute & apply JECs as function of pt reco, then get resolution), gen (JECs vs pt gen), divide (divide by response), simple (divide by response at infinity)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("-M", "--max-entries", dest="maxEntries",  default=999999999, type=int)
@@ -398,7 +461,7 @@ if __name__ == "__main__":
                 ptdefs += [ "ptbest", "mindr025", "n025", "n010" ]
             if options.ptdef: ptdefs = [ options.ptdef ]
             for ptdef in ptdefs:
-                resps = []; resols = []; gresps = []; gresols = [] 
+                resps = []; resols = []; gresps = []; gresols = []; cresps = []; cgresps = []
                 for name,expr,col,msty,msiz in things:
                     exprptdef = expr.replace("$","_"+ptdef)
                     cutptdef = cut
@@ -414,7 +477,7 @@ if __name__ == "__main__":
                         if "pt" in oname:
                             prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,maxEntries=options.maxEntries), None
                         else:
-                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries)
+                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries,respCorr=options.respCorr)
                     else:
                         if "pt" in oname:
                             prof, pres = doEtaProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
@@ -425,6 +488,8 @@ if __name__ == "__main__":
                     if options.gauss:
                         if prof: allplots.append( (getattr(prof,'gaus',None),gresps) )
                         if pres: allplots.append( (getattr(pres,'gaus',None),gresols) )
+                    #if options.respCorrExact:
+                    if prof: allplots.append( (getattr(prof,'corr',None), cresps) )
                     for (p,ps) in allplots:
                         if not p: continue
                         if getattr(p,'fit',None):
@@ -436,6 +501,7 @@ if __name__ == "__main__":
                 if options.gauss:
                     allplots += [ (gresps, "response_gauss", "_gauss") ]
                     allplots += [ (gresols, "resolution_gauss", "_res_gauss") ]
+                #allplots += [ (cresps, "response_corr", "_corr") ]
                 for plots,ptype,pfix in allplots:
                     if "resolution" in ptype  and options.noResol: continue
                     if not plots: 
@@ -465,14 +531,12 @@ if __name__ == "__main__":
                     else:
                         frame = ROOT.TH1F("stk","stk",100,0.0,ptBins(oname)[-1])
                         if "resolution" in ptype:
-                            frame.GetYaxis().SetTitle("#sigma_{eff}(p_{T}^{corr})/p_{T}^{corr}")
-                            frame.GetYaxis().SetRangeUser(0.0,0.8)
+                            frame.GetYaxis().SetTitle("#sigma(p_{T}^{corr})/p_{T}^{corr}")
+                            frame.GetYaxis().SetRangeUser(0.0, 1.2 if "PU200" in odir else 0.8)
                         else:
                             if ptdef.startswith("pt"):
                                 frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
-                                frame.GetYaxis().SetRangeUser(0,2.2)
-                                if "PU140" in odir and "jet" in oname:
-                                    frame.GetYaxis().SetRangeUser(0,2.7)
+                                frame.GetYaxis().SetRangeUser(0, 2.7 if "PU200" in odir else 2.2)
                             else:
                                 frame.GetYaxis().SetTitle("< "+ptdef+" >")
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))

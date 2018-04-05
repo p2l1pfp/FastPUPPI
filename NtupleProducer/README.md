@@ -7,7 +7,8 @@ cmsenv
 git cms-init
 git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
 git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_0_pre3
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.6
+git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.7
+
 #
 # Tracklet Tracks
 #
@@ -15,11 +16,16 @@ git remote add rekovic git@github.com:rekovic/cmssw.git
 git fetch rekovic Tracklet-10_1_0_pre3
 git cms-merge-topic -u rekovic:Tracklet-10_1_0_pre3-from-skinnari
 
-git cms-addpkg L1Trigger/L1TCommon
+# Remove tracklets from history
+git reset --soft cms-l1t-offline/l1t-phase2-v2.7
+git reset HEAD L1Trigger
 
-git remote add PFCal-dev https://github.com/PFCal-dev/cmssw.git
-git fetch PFCal-dev
-git cms-merge-topic PFCal-dev:hgc-tpg-integration-180327
+# Get L1PF_CMSSW
+git remote add p2l1pfp git@github.com:p2l1pfp/cmssw.git
+git fetch p2l1pfp L1PF_CMSSW
+echo -e '/DataFormats/Phase2L1ParticleFlow/\n/L1Trigger/Phase2L1ParticleFlow/' >> .git/info/sparse-checkout
+git read-tree -mu HEAD
+git checkout -b L1PF_CMSSW p2l1pfp/L1PF_CMSSW
 
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 10X
 
@@ -28,14 +34,14 @@ scram b -j8
 
 The first step is to produce the inputs:
 ```
-cd FastPUPPI/NtupleProducer/python/runInputs.py
-cmsRun runInputs.py
+cd FastPUPPI/NtupleProducer/python/
+cmsRun runNewInputs.py
 ```
 
 Example how to submit jobs to the lxbatch:
 ```
 cd FastPUPPI/NtupleProducer/python
-./scripts/cmsSplit.pl --dataset /RelValTTbar_14TeV/CMSSW_9_3_7-93X_upgrade2023_realistic_v5_2023D17noPU-v2/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
+./scripts/cmsSplit.pl --dataset /RelValTTbar_14TeV/CMSSW_9_3_7-93X_upgrade2023_realistic_v5_2023D17noPU-v2/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runNewInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
 ./runInputs_test_bsub.sh
 ```
 For more options for job splitting:
@@ -54,7 +60,7 @@ The second step runs the algorithm and creates ntuples which can be used to do a
 1) Ntuple for single particle and jets response plots and calibrations:
 
 ```
-cmsRun python/runRespNTupler.py
+cmsRun python/runRespNTuplerNew.py
 ```
 
 NB: For single particle add "goGun()" at the end of the script, remove it for jets.
@@ -62,8 +68,8 @@ NB: For single particle add "goGun()" at the end of the script, remove it for je
 To run the ntuplizer over many files do for instance:
 
 ```
-source python/scripts/prun.sh python/runRespNTupler.py TTbar_PU0 TTbar_PU0
-source python/scripts/prun.sh python/runRespNTupler.py SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
+source python/scripts/prun.sh python/runRespNTuplerNew.py TTbar_PU0 TTbar_PU0
+source python/scripts/prun.sh python/runRespNTuplerNew.py SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
 ```
 
 2) Ntuple for jet HT and MET studies

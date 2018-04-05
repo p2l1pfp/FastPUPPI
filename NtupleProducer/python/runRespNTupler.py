@@ -50,6 +50,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1TKV = cms.VInputTag("InfoOut:TKVtx",),
         L1PF = cms.VInputTag("InfoOut:PF",),
         L1Puppi = cms.VInputTag("InfoOut:Puppi",),
+        #---
+        RefL1TkJets = cms.VInputTag("L1TkJets:Central",),
     ),
     copyUInts = cms.VInputTag(),
 )
