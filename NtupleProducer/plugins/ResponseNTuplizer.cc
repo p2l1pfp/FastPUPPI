@@ -97,17 +97,15 @@ namespace {
                 auto first = std::lower_bound(objects.begin(), objects.end(), eta-dr-0.01f); // small offset to avoid dealing with ==
                 auto end   = std::lower_bound(objects.begin(), objects.end(), eta+dr+0.01f);
                 float dr2 = dr*dr;
+                sum04 = 0;
                 for (auto it = first; it < end; ++it) {
                     float mydr2 = ::deltaR2(eta,phi, it->eta,it->phi);
                     if (mydr2 < dr2) ptdr2.emplace_back(it->pt, mydr2);
+                    if (mydr2 < 0.16f) sum04 += it->pt;
                 }
             }
-            float sum() const { 
-                float mysum = 0;
-                for (const auto & p : ptdr2) mysum += p.first;
-                return mysum;
-            }
-            float sum(float dr) const { 
+            float sum(float dr=0.4) const { 
+                if (dr == 0.4f) return sum04;
                 float dr2 = dr*dr;
                 float mysum = 0;
                 for (const auto & p : ptdr2) {
@@ -137,16 +135,17 @@ namespace {
                 }
                 return best.first;
             }
-            float max() const {
-                float best = 0;
+            float max(float dr=0.4) const {
+                float best = 0, dr2 = dr*dr;
                 for (const auto & p : ptdr2) {
-                    if (p.first > best) best = p.first;
+                    if (p.first > best && p.second < dr2) best = p.first;
                 }
                 return best;
             }
 
         private:
             std::vector<std::pair<float,float>> ptdr2;
+            float sum04;
     };
 
 }
@@ -176,7 +175,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
       TTree *tree_;
       uint32_t run_, lumi_; uint64_t event_;
       struct McVars {
-         float pt, pt02, eta, phi, iso02, iso04;
+         float pt, pt02, eta, phi, iso02, iso04, iso08;
          int charge; float caloeta, calophi;
          int   id;
          void makeBranches(TTree *tree) {
@@ -186,6 +185,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
             tree->Branch("mc_phi", &phi, "mc_phi/F");
             tree->Branch("mc_iso02", &iso02, "mc_iso02/F");
             tree->Branch("mc_iso04", &iso04, "mc_iso04/F");
+            tree->Branch("mc_iso08", &iso08, "mc_iso08/F");
             tree->Branch("mc_id", &id, "mc_id/I");
             tree->Branch("mc_q", &charge, "mc_q/I");
             tree->Branch("mc_caloeta", &caloeta, "mc_caloeta/F");
@@ -208,10 +208,11 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, ptbest, pthighest, mindr025; int n025, n010;
+         float pt, pt02, pt08, ptbest, pthighest, mindr025; int n025, n010;
          void makeBranches(const std::string &prefix, TTree *tree) {
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
              tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
+             tree->Branch((prefix+"_pt08").c_str(), &pt08, (prefix+"_pt08/F").c_str());
              tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
              tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
              tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
@@ -219,9 +220,10 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
              tree->Branch((prefix+"_n010").c_str(), &n010, (prefix+"_n010/I").c_str());
          }
          void fill(const std::vector<::SimpleObject> & objects, float eta, float phi) {
-             ::InCone incone(objects, eta, phi, 0.4);
+             ::InCone incone(objects, eta, phi, 0.8);
              pt = incone.sum();
              pt02 = incone.sum(0.2);
+             pt08 = incone.sum(0.8);
              ptbest = incone.nearest();
              pthighest = incone.max();
              mindr025 =  incone.mindr(0.25);
@@ -381,6 +383,11 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             mc_.id = 0;
             mc_.iso02 = 0;
             mc_.iso04 = 0;
+        }
+        mc_.iso08 = mc_.iso04;
+        for (const reco::GenJet & j2 : *genjets) {
+            if (&j2 == &j) continue;
+            if (::deltaR2(j,j2) < 0.64f) mc_.iso08 += j2.pt()/mc_.pt;
         }
         for (auto & recopair : reco_) {
             recopair.second.fill(recopair.first.objects(),

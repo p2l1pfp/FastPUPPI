@@ -21,11 +21,14 @@ process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
 process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
 
+process.l1pfProducerTightTK = process.l1pfProducer.clone(trkMinStubs = 6)
 process.runPF = cms.Sequence( 
     process.pfClustersFromL1EGClustersRaw +
     process.pfClustersFromHGC3DClustersEMRaw +
     process.l1pfProducer 
+    + process.l1pfProducerTightTK
 )
+
 
 process.caloStage2 = cms.EDProducer("CandProducerFromStage2",
     srcCluster = cms.InputTag("simCaloStage2Digis","MP"),
@@ -48,6 +51,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1Calo = cms.VInputTag("l1pfProducer:Calo",),
         L1TK = cms.VInputTag("l1pfProducer:TK",),
         L1TKV = cms.VInputTag("l1pfProducer:TKVtx",),
+        L1TightTK = cms.VInputTag("l1pfProducerTightTK:TK",),
+        L1TightTKV = cms.VInputTag("l1pfProducerTightTK:TKVtx",),
         L1PF = cms.VInputTag("l1pfProducer:PF",),
         L1Puppi = cms.VInputTag("l1pfProducer:Puppi",),
         # -- stage1
