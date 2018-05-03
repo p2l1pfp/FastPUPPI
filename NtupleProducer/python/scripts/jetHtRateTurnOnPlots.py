@@ -16,7 +16,7 @@ def makeCumulativeHTEff(name, tree, expr, cut="", norm=40E3):
     htemp = ROOT.gROOT.FindObject("htemp")
     tot, msum = norm/htemp.Integral(), 0
     nbins = htemp.GetNbinsX()
-    for ib in xrange(0, nbins-1):
+    for ib in xrange(0, nbins):
         msum += htemp.GetBinContent(nbins-ib) * tot
         htemp.SetBinContent(nbins-ib, msum)
     ret = htemp.Clone("ceff_"+name)
@@ -44,6 +44,25 @@ whats = [
         ("PF",         "AK4PFJets$",      ROOT.kOrange+7, 24, 1.5),
         ("Puppi",      "AK4PuppiJets$",   ROOT.kBlue+1, 21, 1.5),
     ]),
+    ('comp',[
+        #("Stage2",     "AK4Stage2Calo$", ROOT.kGreen+2, 21, 1.4),
+        ("Calo",       "AK4CaloJets$",    ROOT.kViolet+1, 21, 1.3),
+        #("TK",         "AK4TKJets$",      ROOT.kAzure+10, 20, 1.2),
+        #("TK (tight)", "AK4TightTKJets$",  ROOT.kAzure+10, 20, 1.2),
+        ("TK #Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
+        #("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
+        ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
+        ]),
+    ('comptp',[
+        ("Stage2",     "AK4Stage2Calo$", ROOT.kGray+1, 21, 1.4),
+        ("TP Vtx",     "TP_TkHTVtx",    ROOT.kGreen+2, 21, 1.4),
+        ("Calo",       "AK4CaloJets$",    ROOT.kViolet+1, 21, 1.3),
+        #("TK",         "AK4TKJets$",      ROOT.kAzure+10, 20, 1.2),
+        #("TK", "AK4TightTKJets$",  ROOT.kAzure+10, 20, 1.2),
+        ("TK #Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
+        #("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
+        ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
+        ]),
     ('il1pf',[
         ("iCalo",       "L1Calo$",    ROOT.kViolet+2, 20, 1.5),
         ("iTK",         "L1TK$",      ROOT.kRed+1, 21, 1.5),
@@ -98,7 +117,7 @@ for kind,things in whats:
         plots.append((label,plot))
     if args[3] == "rate":
         c1.SetLogy(True)
-        frame = ROOT.TH1D("",";L1 H_{T} cut (p_{T}^{corr} > %.0f, |#eta| < %.1f); Minbias rate @ PU140 [kHz]" % (options.pt, float(options.eta)/10), 100, 0, 1000)
+        frame = ROOT.TH1D("",";L1 H_{T} cut (p_{T}^{corr} > %.0f, |#eta| < %.1f); Minbias rate @ PU200 [kHz]" % (options.pt, float(options.eta)/10), 100, 0, 1000)
         frame.GetYaxis().SetDecimals(True)
         frame.GetXaxis().SetNdivisions(505)
         frame.GetYaxis().SetRangeUser(0.5, 100e3)
@@ -111,7 +130,8 @@ for kind,things in whats:
     elif args[3] == "isorate":
         frame = ROOT.TH1D("",";Gen H_{T} (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 rate %.0f kHz)" % (options.pt, float(options.eta)/10, options.rate), 100, 0, 800)
         frame.GetYaxis().SetDecimals(True)
-        leg = ROOT.TLegend(0.20,0.99,0.55,0.99-0.055*len(things))
+        #leg = ROOT.TLegend(0.20,0.99,0.55,0.99-0.055*len(things))
+        leg = ROOT.TLegend(0.5,0.19,0.99,0.19+0.08*len(things))
         plotname = 'ht%s-%s_eta%s_pt%d_%.0fkHz' % (args[3], kind, options.eta, options.pt, options.rate)
     frame.Draw()
     if args[3] == "rate":

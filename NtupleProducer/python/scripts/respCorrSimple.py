@@ -37,6 +37,7 @@ if __name__ == "__main__":
     parser.add_option("-w", dest="what",  default=None)
     parser.add_option("-e", dest="expr",  default=None)
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
+    parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
     parser.add_option("--xpt", "--xpt", dest="xpt",  default=("mc_pt","p_{T}^{gen}"), nargs=2)
@@ -50,6 +51,7 @@ if __name__ == "__main__":
     parser.add_option("--fitrange", dest="fitrange", nargs=2, default=(0,999), type="float")
     parser.add_option("--emf-slices", dest="emfSlices", nargs=2, default=None)
     parser.add_option("-r","--resolution", dest="resolution", default=False, action="store_true")
+    parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
     options, args = parser.parse_args()
     selparticles = options.particle.split(",") if options.particle else []
@@ -71,6 +73,7 @@ if __name__ == "__main__":
     for (particle, pdgIdCut, minPt, maxEta) in [ 
             ("pion", "abs(mc_id) == 211", 2, 2),
             ("pizero", "abs(mc_id) == 111", 2, 5),
+            ("klong", "mc_id == 130", 2, 5),
             ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 2, 5),
             ("piswitch", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1 && abs(mc_eta) > 2.5))", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
@@ -101,11 +104,11 @@ if __name__ == "__main__":
             for ieta in range(0,50,5):
                 if ieta*0.1 >= options.etaMax: break
                 etas.append((0.1*(ieta),0.1*(ieta+5)))
+
+        if options.extracut:
+            particle += "_"+options.extracut[0]
+            pdgIdCut += " && ("+options.extracut[1]+")"
         
-	#print etas
-	#print emfs
-	#sys.exit()
-	
 	for etamin,etamax in etas:
             sels.append(("%s_eta_%02d_%02d"  % (particle,int(etamin*10),int(etamax*10)), "abs(mc_eta) > %.1f && abs(mc_eta) < %.1f && mc_pt > %g &&  %s" % (etamin,etamax,max(options.ptmin,minPt),pdgIdCut)))
     if options.emfSlices:
@@ -188,6 +191,7 @@ if __name__ == "__main__":
                 frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                 frame.GetYaxis().SetDecimals(True)
                 if "resolution" in ptype:
+                    if options.noResol: continue
                     frame.GetYaxis().SetTitle("#sigma_{eff}(p_{T}^{corr})/p_{T}^{corr}")
                     frame.SetMaximum(1.0)
                     #frame.GetYaxis().SetRangeUser(0.008,2.0)
@@ -260,6 +264,7 @@ if __name__ == "__main__":
                     frame.GetYaxis().SetTitle("p_{T}^{corr} (GeV)")
                     frame.GetYaxis().SetRangeUser(0.0, 150.0)
                     frame.Draw() 
+                    line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),150.0)
                     pextra = ROOT.TGraph(199)
                     for i in xrange(200):
                         pextra.SetPoint(i, 0.5*(i+1), pclone.Eval(0.5*(i+1)))
