@@ -66,7 +66,7 @@ def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250]
     else:
-        return [2.5,5,7.5,10,15,20,25,30,35,40,45,50] #,55,60,70,80,90,100]
+        return [2.5,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50] #,55,60,70,80,90,100]
 def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     ptbins = ptBins(oname)
     ROOT.gROOT.cd()
@@ -264,8 +264,8 @@ whats = [
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
-        ("PF",         "L1PF$",      ROOT.kOrange+7, 34, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
+        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
+        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
     ]),
     ('stage2',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
@@ -274,11 +274,21 @@ whats = [
         ("Jets",       "Stage2CaloJets$",    ROOT.kRed+2, 34, 1.5),
     ]),
     ('comp',[
-        ("S2 Jets",    "Stage2CaloJets$", ROOT.kRed+2, 34, 1.5),
-        ("L1TkJets",   "RefL1TkJets$",    ROOT.kGreen+1, 34, 1.5),
-        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
-        ("PF",         "L1PF$",      ROOT.kOrange+7, 34, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 25, 1.4),
+        ("Stage2",     "Stage2CaloJets$", ROOT.kGreen+2, 21, 1.4),
+        ("Calo",       "L1Calo$",    ROOT.kViolet+1, 21, 1.3),
+        #("L1TkJets",   "RefL1TkJets$",    ROOT.kGreen+1, 34, 1.5),
+        ("TK",         "L1TK$",      ROOT.kAzure+1, 20, 1.2),
+        #("Tight TK",   "L1TightTK$",  ROOT.kViolet+1, 21, 1.2),
+        ("TK #Deltaz", "L1TKV$",     ROOT.kAzure+2, 20, 1.2),
+        #("Tight TK #Deltaz", "L1TightTKV$", ROOT.kViolet+2, 21, 1.2),
+        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
+        ("Puppi",      "L1Puppi$",   ROOT.kRed+1, 20, 1.2),
+        ]),
+    ('tcomp',[
+        ("TK",         "L1TK$",      ROOT.kAzure+1, 20, 1.2),
+        ("Tight TK",   "L1TightTK$",  ROOT.kViolet+1, 21, 1.2),
+        ("TK #Deltaz", "L1TKV$",     ROOT.kAzure+2, 20, 1.2),
+        ("Tight TK #Deltaz", "L1TightTKV$", ROOT.kViolet+2, 21, 1.2),
         ]),
     ('pfdebug',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
@@ -386,9 +396,11 @@ if __name__ == "__main__":
     parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
     parser.add_option("--ptdef", dest="ptdef", default=None, help="Pt definition")
+    parser.add_option("--ptminFit", dest="ptminFit", default=0, type="float", help="Pt definition")
     parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
     parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
     parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
+    parser.add_option("--no-fit", dest="noFit", default=False, action="store_true", help="skip fits")
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("--corr-resol", dest="respCorr", default="exact", help="response correction for resolution: exact (compute & apply JECs as function of pt reco, then get resolution), gen (JECs vs pt gen), divide (divide by response), simple (divide by response at infinity)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
@@ -494,6 +506,7 @@ if __name__ == "__main__":
                         if not p: continue
                         if getattr(p,'fit',None):
                             p.fit.SetLineWidth(2); p.fit.SetLineColor(col)
+                            p.fit.SetRange(options.ptminFit, p.fit.GetXmax())
                         p.SetLineWidth(3); p.SetLineColor(col);  p.SetMarkerColor(col)
                         p.SetMarkerStyle(msty); p.SetMarkerSize(msiz)
                         ps.append((name,p))
@@ -541,7 +554,9 @@ if __name__ == "__main__":
                                 frame.GetYaxis().SetTitle("< "+ptdef+" >")
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
                         frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
-                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.042*(len(plots)+0.5))
+                        legsize = 0.042*(len(plots)+0.5)
+                        if options.noFit: legsize /= 2;
+                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-legsize)
                         leg.SetTextSize(0.035);
                         leg.SetNColumns(2)
                     frame.GetYaxis().SetDecimals(True)
@@ -556,10 +571,10 @@ if __name__ == "__main__":
                         line.DrawLine(3.0,0,3.0,ymax)
                     for n,p in plots: 
                         p.Draw("P SAME" if "TGraph" in p.ClassName() else "SAME")
-                        if hasattr(p,'fit'): p.fit.Draw("SAME")
+                        if hasattr(p,'fit') and not options.noFit: p.fit.Draw("SAME")
                     for n,p in plots: 
                         leg.AddEntry(p, n, "LP")
-                        if hasattr(p,'fit'): 
+                        if hasattr(p,'fit') and not options.noFit: 
                             if "resolution" in ptype:
                                 if ("Trk" in n or "TK" in n) and ("jet" not in oname) and ("ele" not in oname):
                                     eq = ("%.1f #times p_{T}^{2} #oplus %.3f #times p_{T} [TeV]" % (p.fit.GetParameter(1), p.fit.GetParameter(0)))

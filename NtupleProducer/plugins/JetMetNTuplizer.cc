@@ -41,6 +41,7 @@
 #include "FWCore/ServiceRegistry/interface/Service.h"
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "CommonTools/Utils/interface/StringObjectFunction.h"
 #include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
 
 #include <cstdint>
@@ -57,19 +58,19 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
 
       struct JetInput {
          std::string name;
-         edm::EDGetTokenT<edm::View<reco::Jet>> token;
+         edm::EDGetTokenT<edm::View<reco::LeafCandidate>> token;
          l1tpf::SimpleCorrEm jec;
          JetInput() {}
-         JetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::Jet>> &t, const l1tpf::SimpleCorrEm & c) : name(n), token(t), jec(c) {}
+         JetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::LeafCandidate>> &t, const l1tpf::SimpleCorrEm & c) : name(n), token(t), jec(c) {}
       };
       std::vector<JetInput> jets_;
-      std::vector<std::pair<std::string,StringCutObjectSelector<reco::Jet>>> jetSels_;
+      std::vector<std::pair<std::string,StringCutObjectSelector<reco::LeafCandidate>>> jetSels_;
 
       struct MetInput {
          std::string name;
-         edm::EDGetTokenT<edm::View<reco::MET>> token;
+         edm::EDGetTokenT<edm::View<reco::LeafCandidate>> token;
          MetInput() {}
-         MetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::MET>> &t) : name(n), token(t) {}
+         MetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::LeafCandidate>> &t) : name(n), token(t) {}
       };
       std::vector<MetInput> mets_;
 
@@ -87,15 +88,17 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
             tree->Branch((name+"_mht_corr").c_str(),   &mht_corr,   (name+"_mht_corr/F").c_str());
             tree->Branch((name+"_num_corr").c_str(), &count_corr, (name+"_num_corr/I").c_str());
         }
-        void fill(const edm::View<reco::Jet> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::Jet> & sel) {  
+        void fill(const edm::View<reco::LeafCandidate> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::LeafCandidate> & sel) {  
             count_raw = 0; ht_raw = 0;
             count_corr = 0; ht_corr = 0;
             reco::Particle::LorentzVector sum_raw, sum_corr;
-            for (reco::Jet jet : jets) {
+            for (reco::LeafCandidate jet : jets) {
                 if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); sum_raw += jet.p4(); }
                 jet.setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
                 if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); }
             }
+            mht_raw = sum_raw.Pt();
+            mht_corr = sum_corr.Pt();
         }
       };
       std::vector<JetBranch> jetbranches_;
@@ -108,12 +111,32 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
          tree->Branch((name).c_str(),   &met,   (name+"/F").c_str());
          tree->Branch((name+"_phi").c_str(), &met_phi, (name+"_phi/F").c_str());
        }
-       void fill(const edm::View<reco::MET> & recoMets) {  
+       void fill(const edm::View<reco::LeafCandidate> & recoMets) {  
          met = 0; met_phi = 0;
-         for (reco::MET recoMet : recoMets) { met = recoMet.et(); met_phi = recoMet.phi(); }
+         for (reco::LeafCandidate recoMet : recoMets) { met = recoMet.et(); met_phi = recoMet.phi(); }
        }
       };
-      std::vector<MetBranch> metbranches_;      
+      std::vector<MetBranch> metbranches_;
+
+      struct SpecialBranch {
+        std::string name;
+        edm::EDGetTokenT<edm::View<reco::Candidate>> token;
+        StringCutObjectSelector<reco::Candidate> sel;
+        StringObjectFunction<reco::Candidate> func;
+        float val;
+        SpecialBranch() : sel(""), func("1") {}
+        SpecialBranch(const std::string &n, const edm::EDGetTokenT<edm::View<reco::Candidate>> &t, const std::string & cut, const std::string & expr) : name(n), token(t), sel(cut,true), func(expr,true) {}
+        void makeBranches(TTree *tree) {
+            tree->Branch((name).c_str(), &val, (name+"/F").c_str());
+        }
+        void fill(const edm::View<reco::Candidate> & view) {
+            val = 0;
+            for (const reco::Candidate & c : view) {
+                if (sel(c)) { val += func(c); }
+            } 
+        }
+      };
+      std::vector<SpecialBranch> specials_;
        
       TTree *tree_;
       uint32_t run_, lumi_; uint64_t event_;      
@@ -132,11 +155,11 @@ JetMetNTuplizer::JetMetNTuplizer(const edm::ParameterSet& iConfig)
     edm::ParameterSet jets = iConfig.getParameter<edm::ParameterSet>("jets");
     edm::ParameterSet jecs = iConfig.getParameter<edm::ParameterSet>("jecs");
     for (const std::string & name : jets.getParameterNamesForType<edm::InputTag>()) {
-        jets_.emplace_back(name, consumes<edm::View<reco::Jet>>(jets.getParameter<edm::InputTag>(name)), l1tpf::SimpleCorrEm(jecs, name));
+        jets_.emplace_back(name, consumes<edm::View<reco::LeafCandidate>>(jets.getParameter<edm::InputTag>(name)), l1tpf::SimpleCorrEm(jecs, name));
     }
     edm::ParameterSet sels = iConfig.getParameter<edm::ParameterSet>("sels");
     for (const std::string & name : sels.getParameterNamesForType<std::string>()) {
-        jetSels_.emplace_back(name, StringCutObjectSelector<reco::Jet>(sels.getParameter<std::string>(name)));
+        jetSels_.emplace_back(name, StringCutObjectSelector<reco::LeafCandidate>(sels.getParameter<std::string>(name)));
     }
     jetbranches_.reserve(jets_.size() * jetSels_.size());
     for (const auto & j : jets_) {
@@ -149,11 +172,21 @@ JetMetNTuplizer::JetMetNTuplizer(const edm::ParameterSet& iConfig)
     //met branches
     edm::ParameterSet mets = iConfig.getParameter<edm::ParameterSet>("mets");
     for (const std::string & name : mets.getParameterNamesForType<edm::InputTag>()) {
-        mets_.emplace_back(name, consumes<edm::View<reco::MET> >(mets.getParameter<edm::InputTag>(name)));
+        mets_.emplace_back(name, consumes<edm::View<reco::LeafCandidate> >(mets.getParameter<edm::InputTag>(name)));
     }
     metbranches_.reserve(mets_.size());
     for (const auto & m : mets_) metbranches_.emplace_back(m.name);
-    for (auto & b : metbranches_) b.makeBranches(tree_);    
+    for (auto & b : metbranches_) b.makeBranches(tree_);
+
+    edm::ParameterSet specials = iConfig.getParameter<edm::ParameterSet>("specials");
+    for (const std::string & name : specials.getParameterNamesForType<edm::ParameterSet>()) {
+        edm::ParameterSet conf = specials.getParameter<edm::ParameterSet>(name);
+        specials_.emplace_back(name, 
+                               consumes<edm::View<reco::Candidate>>(conf.getParameter<edm::InputTag>("src")),
+                               conf.getParameter<std::string>("cut"),
+                               conf.getParameter<std::string>("expr"));
+    }
+    for (auto & b : specials_) b.makeBranches(tree_);
 }
 
 JetMetNTuplizer::~JetMetNTuplizer() { }
@@ -168,7 +201,7 @@ JetMetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     
     int ibranch = 0;
     for (const auto & j : jets_) {
-        edm::Handle<edm::View<reco::Jet>> jets;
+        edm::Handle<edm::View<reco::LeafCandidate>> jets;
         iEvent.getByToken(j.token, jets);
         for (const auto & s : jetSels_) {
             jetbranches_[ibranch++].fill(*jets, j.jec, s.second);
@@ -177,11 +210,16 @@ JetMetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     ibranch = 0;
     for (const auto & m : mets_) {
-        edm::Handle<edm::View<reco::MET>> mets;
+        edm::Handle<edm::View<reco::LeafCandidate>> mets;
         iEvent.getByToken(m.token, mets);
         metbranches_[ibranch++].fill(*mets);
     }
-    
+
+    for (SpecialBranch & s : specials_) {
+        edm::Handle<edm::View<reco::Candidate>> specials;
+        iEvent.getByToken(s.token, specials);
+        s.fill(*specials);
+    }
     tree_->Fill();
 }
 

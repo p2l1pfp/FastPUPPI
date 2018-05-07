@@ -49,6 +49,7 @@ l1tpf::CandProducerFromStage2::produce(edm::Event &iEvent, const edm::EventSetup
         if (it->hwPt() == 0) continue;
         l1t::CaloCluster copy(*it);
         copy.setP4(isMP_ ? l1t::CaloTools::p4MP(&copy) : l1t::CaloTools::p4Demux(&copy));
+        copy.setPdgId(130);
         outCluster->push_back(0, copy);
     }
     iEvent.put(std::move(outCluster), "CaloCluster");
@@ -60,6 +61,7 @@ l1tpf::CandProducerFromStage2::produce(edm::Event &iEvent, const edm::EventSetup
         if (it->hwPt() == 0) continue;
         l1t::CaloTower copy(*it);
         copy.setP4(isMP_ ? l1t::CaloTools::p4MP(&copy) : l1t::CaloTools::p4Demux(&copy));
+        copy.setPdgId(130);
         outTower->push_back(0, copy);
     }
     iEvent.put(std::move(outTower), "CaloTower");

@@ -19,14 +19,30 @@ parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-n", "--events", type=int, nargs=1, default=3, help="Number of events to consider")
 parser.add_option("-E", "--select-events", type=str, nargs=1, action="append", default=[], help="Specific event to select (run:lumi:event)")
 parser.add_option("-g", "--global", dest="ged", action="store_true", default=False, help="Look at the global event description instead of individual PFJets")
+parser.add_option("--min-pt", dest="minPt", type=float, default=20, help="Number of events to consider")
 parser.add_option("--max-eta", dest="maxEta", type=float, default=5, help="Number of events to consider")
+parser.add_option("--ld", "--link-debug", dest="linkDebug", default=None, help="show linking information")
 options, args = parser.parse_args()
 
 events = Events(args[0])
 
-ihpf = Handle("std::vector<l1tpf::Particle>")
-hpf  = Handle("std::vector<reco::PFCandidate>")
-hop  = Handle("edm::OwnVector<reco::Candidate>")
+handles_ = {}; loadedCaloTools_ = False
+def getHandle(coll):
+    global handles_, loadedCaloTools_
+    if coll not in handles_: 
+        handles_[coll] = Handle(coll)
+        if coll in ("BXVector<l1t::CaloTower>","BXVector<l1t::CaloCluster>") and not loadedCaloTools_:
+            ROOT.gSystem.Load("libL1TriggerL1TCalorimeter.so");
+            ROOT.gInterpreter.ProcessLine("#include <L1Trigger/L1TCalorimeter/interface/CaloTools.h>")
+            loadedCaloTools_ = True
+    return handles_[coll]
+hipf = getHandle("std::vector<l1tpf::Particle>")
+hopf = getHandle("std::vector<reco::PFCandidate>")
+hpf1 = getHandle("std::vector<l1t::PFCandidate>")
+hpfc = getHandle("std::vector<l1t::PFCluster>")
+hpft = getHandle("std::vector<l1t::PFTrack>")
+hop  = getHandle("edm::OwnVector<reco::Candidate>")
+
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 geno  = Handle("math::XYZPointF")
@@ -81,7 +97,7 @@ for iev,event in enumerate(events):
         if j:
             if abs(j.eta()) > 2.5: continue
             #if j.mcId != 1 or j.pt() < 20: continue
-            if j.pt() < 20: continue
+            if j.pt() < options.minPt: continue
             print "------------------------"     
             print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
             daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
@@ -94,7 +110,7 @@ for iev,event in enumerate(events):
         ptsum = 0
         for d in daus:
             ptsum += d.pt()
-            print "        dau pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum) 
+            print "        dau pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d charge %+1d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), d.charge(), ptsum) 
         print "   total pt from charged particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() != 0 and d.pt() > 2 and abs(d.eta()) < 2.5)
         print "   total pt from neutral particles in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pt() > 1)
         print "   total pt from photons           in acceptance: %7.2f" % sum(d.pt() for d in daus if d.charge() == 0 and d.pdgId() == 22 and d.pt() > 1)
@@ -112,18 +128,34 @@ for iev,event in enumerate(events):
         n_tomatch = [g for g in daus if g.charge() == 0 and g.pt() > 1]
         a_tomatch = c_tomatch + n_tomatch
 
-        for a in args[1:]:
-            if a.startswith("l1t"): h = ihpf
-            elif "InfoOut" in a: h = hpf
+        layers = {}
+        for ia,a in enumerate(args[1:]):
+            layerlabel = chr(ia+ord("A"))
+            layers[layerlabel] = []
+            alabel = a
+            if "@" in a:
+                (atype,alabel) = a.split("@")
+                h = getHandle(atype)
+            elif a.startswith("l1tPF"): h = ihpf
+            elif a.startswith("pfClu"): h = hpfc
+            elif a.startswith("pfTra"): h = hpft
+            elif a.startswith("l1pf") : h = hpf1
+            elif "InfoOut" in a: h = hopf
             else: h = hop
-            event.getByLabel(a, h)
-            print "   --> ",a
+            event.getByLabel(alabel, h)
+            print "    %s   --> %s " %(layerlabel,a)
+            objs = h.product()
+            if ("l1t::CaloTower" in a) or ("l1t::CaloCluster" in a):
+                objs = [ o for o in objs if o.hwPt() > 0 ]
+                p4unpack = ROOT.l1t.CaloTools.p4MP if ":MP" in a else ROOT.l1t.CaloTools.p4Demux
+                for o in objs: 
+                    o.setP4(p4unpack(o))
             if j:
-                matches = [ p for p in h.product() if deltaR(p,j) < 0.5 ]
+                matches = [ p for p in objs if deltaR(p,j) < 0.5 ]
                 for d in matches: d.dr = deltaR(d,j)
                 matches.sort(key = lambda p : p.dr)
             else:
-                matches = [ p for p in h.product() if abs(p.eta()) < options.maxEta ]
+                matches = [ p for p in objs if abs(p.eta()) < options.maxEta ]
                 for d in matches: d.dr = 0
                 matches.sort(key = lambda p : -p.pt())
 
@@ -154,16 +186,19 @@ for iev,event in enumerate(events):
                 for g in gen_notused:
                     d, dr2 = bestMatch(g, rematch)
                     if dr2 < 0.01: mcmatch[d].append(g) 
-            elif "Calo" in a: 
+            elif "Calo" in a or "Cluster" in a: 
                 mcmatch =  dict((d,[]) for d in matches )
                 for g in a_tomatch:
                     d, dr2 = bestMatch(g, matches)
                     if dr2 < 0.02: mcmatch[d].append(g)
-            for d in matches:
+            for im,d in enumerate(matches):
                 if d.dr < 0.4: ptsum += d.pt()
-                print "        cand  pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum),
+                print "  %s%02d   cand  pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (layerlabel,im, d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum),
+                layers[layerlabel].append(("%s%02d"%(layerlabel,im), d, (d.caloEta(), d.caloPhi()) if "pfTrack" in a else (d.eta(), d.phi())))
                 if "Track" in a or "TK" in a:
-                    print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0),
+                    if "pfTrack" in a:
+                        print "  calo eta %+5.2f phi %+5.2f " % (d.caloEta(), d.caloPhi()),
+                    print "  charge %+1d  dz %+7.2f "% (d.charge(), d.vertex().Z()-rec_Z0),
                     g, dr2 = bestMatch(d, c_tomatch)
                     if (dr2 < .01): 
                         print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
@@ -174,7 +209,11 @@ for iev,event in enumerate(events):
                         print " --> unmatched",
                 elif "PF" in a or "Puppi" in a or "Calo" in a:
                         if "Calo" not in a:
-                            print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0 if d.charge() else 0),
+                            print "  charge %+1d"% (d.charge()),
+                            if d.charge():
+                                print "  dz %+7.2f "% (d.vertex().Z()-rec_Z0),
+                            else:
+                                print "     "+" "*7+" ",
                         incone = mcmatch[d]
                         if len(incone) == 0:
                             print " --> unmatched",
@@ -186,12 +225,34 @@ for iev,event in enumerate(events):
                             for g in incone:
                                 print "%+d[pt %.1f, dr %.2f]" % (g.pdgId(), g.pt(), deltaR(g,d)),
                 print ""
-            print "   total pt within 0.4: %7.2f" %ptsum
+            if len(matches) > 1: print "   total pt within 0.4: %7.2f" %ptsum
             if "PF" in a or "Puppi" in a:
                 print "   total charged pt within 0.4: %7.2f" % sum(d.pt() for d in charged if d.dr < 0.4)
                 print "   total neutral pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4)
                 print "   total photon  pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4 and d.pdgId() == 22)
                 print "   total neu had pt within 0.4: %7.2f" % sum(d.pt() for d in neutral if d.dr < 0.4 and d.pdgId() != 22)
 
+            print ""
+        if options.linkDebug:
+            for link in options.linkDebug.split(","):
+                layernames, drmax = link, 0.2
+                if ":" in link:
+                    layernames = link.split(":")[0]
+                    drmax = float(link.split(":")[1])
+                for (ifrom, ofrom, (etafrom,phifrom)) in layers[layernames[0]]:
+                    print "   %s pt %6.2f -> " % (ifrom, ofrom.pt()),
+                    ptsum = 0; matches = []
+                    for (ito, oto, (etato,phito)) in layers[layernames[1]]:
+                        dr = deltaR(etafrom,phifrom,etato,phito)
+                        if dr < drmax: 
+                            matches.append( (ito,oto.pt(),dr,oto.pt()-ofrom.pt()) );
+                            ptsum += oto.pt()
+                    matches.sort(key = lambda (i,pt,dr,dpt) : dr)
+                    for m in matches:
+                        print " %s pt %6.2f (dr %.3f, dpt %5.2f)   " % m,
+                    if len(matches) > 1:
+                        print " SUM pt %6.2f (dpt %5.2f)   " % (ptsum, ptsum-ofrom.pt()),
+                    print ""
+                print ""
             print ""
     print "\n========================\n"     
