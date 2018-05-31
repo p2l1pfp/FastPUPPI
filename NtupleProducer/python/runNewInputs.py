@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.phase2_trigger)
+process = cms.Process("IN", eras.Phase2_trigger)
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
@@ -10,12 +10,11 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
 
-process.load('FastPUPPI.NtupleProducer.reprocess_L1Phase2_MC_cff')
+process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackFindingTracklet.L1TrackletTracks_cff')
-process.load('L1Trigger.L1TTrackMatch.L1TkObjectProducers_cff')
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
+process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "Level1TTTracks")
 
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:/eos/cms/store/relval/CMSSW_9_3_7/RelValSingleTauFlatPt2To100_pythia8/GEN-SIM-DIGI-RAW/93X_upgrade2023_realistic_v5_2023D17noPU-v2/10000/58739462-8B2C-E811-A013-0CC47A7C34D0.root'),
@@ -33,14 +32,12 @@ process.source = cms.Source("PoolSource",
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(500))
 process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
   
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
-
 
 process.p = cms.Path(
-    process.L1TrackletTracks + process.SimL1Emulator +
-    process.L1TkElectrons + process.L1TkPhotons + process.L1TkJets + process.L1TkPrimaryVertex + process.L1TkEtMiss + process.L1TkHTMissVtx +  process.L1TkIsoElectrons + process.L1TkTauFromCalo + process.L1TkMuons +
-    process.l1ParticleFlow
+    process.L1TrackletTracks + process.SimL1Emulator
 )
+# skip remaking hgcalTriggerPrimitives (not needed, slow)
+process.SimL1Emulator.remove(process.hgcalTriggerPrimitiveDigiProducer)
 
 process.out = cms.OutputModule("PoolOutputModule",
         fileName = cms.untracked.string("inputs.root"),
@@ -72,6 +69,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_L1TkIsoElectrons_*_*",
             "keep *_L1TkTauFromCalo_*_*",
             "keep *_L1TkMuons_*_*",
+            "keep *_VertexProducer_*_*",
             # --- PF OUT
             "keep l1tPFClusters_*_*_*",
             "keep l1tPFTracks_*_*_*",
