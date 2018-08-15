@@ -1,31 +1,23 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_1_5
-cd CMSSW_10_1_5/src
+cmsrel CMSSW_10_1_7
+cd CMSSW_10_1_7/src
 cmsenv
 git cms-init
 git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
-git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_5
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.16.6
+git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_7
+git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.16.15
 
-
-#
-# Tracklet Tracks
-#
-git remote add rekovic git@github.com:rekovic/cmssw.git
-git fetch rekovic Tracklet-10_1_0_pre3
-git cms-merge-topic -u rekovic:Tracklet-10_1_0_pre3-from-skinnari
-
-# Remove tracklets from history
-git reset --soft cms-l1t-offline/l1t-phase2-v2.16.6
-git reset HEAD L1Trigger
+# update HGCal
+git remote add PFCal-dev git@github.com:PFCal-dev/cmssw.git
+git fetch PFCal-dev hgc-tpg-CMSSW_10_1_7 
+git cms-merge-topic -u PFCal-dev:v2.7.3_1017
 
 # Get L1PF_CMSSW
 git remote add p2l1pfp git@github.com:p2l1pfp/cmssw.git
 git fetch p2l1pfp L1PF_CMSSW
-git read-tree -mu HEAD
-git checkout -b L1PF_CMSSW p2l1pfp/L1PF_CMSSW
+git merge p2l1pfp/L1PF_CMSSW
 
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 10X
 
