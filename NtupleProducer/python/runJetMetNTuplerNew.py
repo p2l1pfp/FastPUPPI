@@ -9,7 +9,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200))
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/040418/TTbar_PU200/inputs_TTbar_PU200_job1.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/080818/TTbar_PU200/inputs_TTbar_PU200_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
@@ -57,48 +57,61 @@ process.jets = cms.Sequence(
     process.ak4L1Calo + process.ak4L1TK + process.ak4L1TKV + process.ak4L1PF + process.ak4L1Puppi  + process.ak4L1TightTK + process.ak4L1TightTKV
 )
 
-JEC_PU200 = {
-     'Stage2Calo' : cms.PSet(
+JEC_PU200 = dict(
+### You can create this below with
+# for X in L1{Calo,TK,TKV,TightTK,TightTKV,PF,Puppi} Stage2CaloJets RefL1TkCaloJets RefL1TrackerJets; do python scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir --fitrange 30 250 -p jet -w ${X}_pt -e ${X}_pt | grep -v [Pp]lot | sed -e "s/simpleCorrEm =/    $X = /" -e "s/)$/    ),"/; done
+    L1Calo = cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 34.414,  36.972,  39.228,  54.603,  0.000,  52.360,  47.114,  50.621,  42.136,  34.445),
-                        scale   = cms.vdouble( 0.829,  0.848,  0.873,  0.082,  1.000,  0.171,  0.796,  0.994,  1.201,  1.220),
-            ),
-    'L1Calo' : cms.PSet(
+                        offset  = cms.vdouble( 9.233,  12.095,  12.911,  36.007,  63.148,  84.710,  63.820,  69.563,  60.367,  67.407),
+                        scale   = cms.vdouble( 1.025,  1.026,  1.073,  0.956,  1.022,  1.061,  0.897,  0.941,  1.092,  1.324),
+    ),
+    L1TK =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 5.619,  7.247,  12.377,  34.726,  54.554,  62.323,  58.493,  70.205,  60.618,  59.272),
-                        scale   = cms.vdouble( 1.016,  1.040,  1.006,  1.008,  0.988,  0.997,  0.816,  0.909,  1.224,  1.550),
-            ),
-    'L1TK' : cms.PSet(
+                        offset  = cms.vdouble( 1.605,  0.868,  0.838, -0.293, -1.913,  3.362,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.624,  0.617,  0.582,  0.603,  0.582,  0.010,  1.000,  1.000,  1.000,  1.000),
+    ),
+    L1TKV =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 2.711,  2.544,  1.738,  0.874, -0.379,  3.927,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.604,  0.589,  0.568,  0.586,  0.560,  0.007,  1.000,  1.000,  1.000,  1.000),
-            ),
-    'L1TightTK' : cms.PSet(
+                        offset  = cms.vdouble(-3.009, -3.711, -3.537, -3.644, -5.207,  3.173,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.553,  0.557,  0.538,  0.556,  0.548,  0.012,  1.000,  1.000,  1.000,  1.000),
+    ),
+    L1TightTK =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-0.322, -0.043,  0.115, -1.060, -0.039,  3.186,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.336,  0.291,  0.304,  0.421,  0.293,  0.001,  1.000,  1.000,  1.000,  1.000),
-            ),
-    'L1TKV' : cms.PSet(
+                        offset  = cms.vdouble(-0.793, -0.516, -0.415, -1.505, -1.413,  2.669,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.345,  0.292,  0.305,  0.426,  0.314,  0.005,  1.000,  1.000,  1.000,  1.000),
+    ),
+    L1TightTKV =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-2.628, -2.755, -2.338, -2.951, -3.166,  3.619,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.548,  0.542,  0.521,  0.542,  0.520,  0.006,  1.000,  1.000,  1.000,  1.000),
-            ),
-    'L1TightTKV' : cms.PSet(
+                        offset  = cms.vdouble(-1.676, -1.209, -1.579, -3.231, -2.825,  3.076,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.335,  0.290,  0.303,  0.417,  0.320,  0.005,  1.000,  1.000,  1.000,  1.000),
+    ),
+    L1PF =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-1.206, -0.837, -0.884, -2.664, -0.560,  3.436,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.326,  0.290,  0.300,  0.412,  0.282, -0.002,  1.000,  1.000,  1.000,  1.000),
-            ),
-    'L1PF' : cms.PSet(
+                        offset  = cms.vdouble( 12.454,  14.691,  15.236,  40.116,  73.101,  86.003,  63.820,  69.563,  60.367,  67.407),
+                        scale   = cms.vdouble( 1.126,  1.126,  1.174,  1.101,  1.131,  1.090,  0.897,  0.941,  1.092,  1.324),
+    ),
+    L1Puppi =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 8.576,  9.932,  13.988,  41.925,  74.032,  67.278,  58.493,  70.205,  60.618,  59.272),
-                        scale   = cms.vdouble( 1.130,  1.144,  1.129,  1.187,  1.161,  1.039,  0.816,  0.909,  1.224,  1.550),
-            ),
-    'L1Puppi' : cms.PSet(
+                        offset  = cms.vdouble(-9.922, -10.116, -12.620, -9.839, -3.331,  33.446,  10.677,  10.830,  5.794, -33.316),
+                        scale   = cms.vdouble( 1.123,  1.143,  1.175,  1.097,  1.199,  0.672,  0.953,  1.153,  1.343,  1.812),
+    ),
+    Stage2CaloJets =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-12.058, -12.399, -11.728, -10.557, -5.391,  4.586,  3.542,  1.825, -6.946, -17.857),
-                        scale   = cms.vdouble( 1.127,  1.155,  1.124,  1.192,  1.289,  0.912,  1.008,  1.298,  1.650,  1.402),
-            ),
-}
+                        offset  = cms.vdouble( 51.627,  62.332,  66.170,  95.151,  0.000,  76.440,  54.312,  56.799,  58.494,  66.112),
+                        scale   = cms.vdouble( 1.164,  1.362,  1.750,  0.165,  1.000,  0.099,  0.834,  0.999,  0.983,  0.711),
+    ),
+    RefL1TkCaloJets =  cms.PSet(
+                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+                        offset  = cms.vdouble( 51.624,  62.463,  66.137,  95.174,  0.000,  72.103,  54.872,  57.316,  58.744,  66.112),
+                        scale   = cms.vdouble( 1.163,  1.359,  1.750,  0.164,  1.000,  0.164,  0.826,  0.993,  0.980,  0.711),
+    ),
+    RefL1TrackerJets =  cms.PSet(
+                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+                        offset  = cms.vdouble(-2.067, -2.448, -2.396, -2.586, -2.195,  3.286,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.533,  0.535,  0.506,  0.466,  0.360,  0.012,  1.000,  1.000,  1.000,  1.000),
+    ),
+)
+
 
 JEC = JEC_PU200;
 
@@ -115,7 +128,7 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
         AK4PuppiJets = cms.InputTag("ak4L1Puppi"),
     ),
     jecs = cms.PSet(
-        AK4Stage2CaloJets = JEC['Stage2Calo'],
+        AK4Stage2CaloJets = JEC['Stage2CaloJets'],
         AK4CaloJets = JEC['L1Calo'],
         AK4TKJets = JEC['L1TK'],
         AK4TKVJets = JEC['L1TKV'],
@@ -161,15 +174,15 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
     ),
     specials = cms.PSet(
         TP_TkEtMiss = cms.PSet( 
-            src = cms.InputTag("L1TkEtMiss","MET"),
+            src = cms.InputTag("L1TrackerEtMiss","MET"),
             cut = cms.string(""),
             expr = cms.string("pt")),
         TP_TkHTMissVtx = cms.PSet( 
-            src = cms.InputTag("L1TkHTMissVtx"),
+            src = cms.InputTag("L1TkCaloHTMissVtx","L1TkCaloHTMiss"),
             cut = cms.string(""),
             expr = cms.string("et")),
         TP_TkHTVtx = cms.PSet( 
-            src = cms.InputTag("L1TkHTMissVtx"),
+            src = cms.InputTag("L1TrackerHTMiss","L1TrackerHTMiss"),
             cut = cms.string(""),
             expr = cms.string("EtTotal")),
     )
