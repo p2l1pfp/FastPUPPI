@@ -10,9 +10,13 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 from array import array
 from bisect import bisect_left
+from math import pow
 
-def makeCumulativeHTEff(name, tree, expr, cut="", norm=40E3):
-    tree.Draw("min(%s,1999)>>htemp(2000,0,2000)" % expr, cut);
+def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=40E3):
+    ROOT.gROOT.cd()
+    htemp = ROOT.gROOT.FindObject("htemp")
+    if htemp: htemp.Delete()
+    tree.Draw("min(%s,0.9998*%g)>>htemp(2000,0,%g)" % (expr,xmax,xmax), cut);
     htemp = ROOT.gROOT.FindObject("htemp")
     tot, msum = norm/htemp.Integral(), 0
     nbins = htemp.GetNbinsX()
@@ -23,10 +27,28 @@ def makeCumulativeHTEff(name, tree, expr, cut="", norm=40E3):
     ret.SetDirectory(None)
     return ret
 
-def makeEffHist(name, tree, expr, thr, gvar, cut=""):
-    tree.Draw("(%s > %s):%s>>htemp(16,0,800,2,-0.5,1.5)" % (expr,thr,gvar), cut);
+def makeEffHist(name, tree, expr, thr, gvar, xmax, cut="", logxbins=None):
+    ROOT.gROOT.cd()
     htemp = ROOT.gROOT.FindObject("htemp")
-    num, den = [ ROOT.TH1F(name+"_"+x,"",16,0,800) for x in ("pass","tot") ]
+    if htemp: htemp.Delete()
+    if logxbins:
+        nbins, nratio = int(logxbins[0]), float(logxbins[1])
+        if nratio == 1:
+            htemp = ROOT.TH2D("htemp","htemp",nbins,0,xmax,2,-0.5,1.5)
+            num, den = [ ROOT.TH1F(name+"_"+x,"",nbins,0,xmax) for x in ("pass","tot") ]
+        else:
+            step = pow(nratio, 1.0/nbins)
+            base = xmax*(step-1)/(nratio - 1)
+            edges = [0]
+            for i in xrange(nbins+1):
+                edges.append(edges[-1] + base * pow(step, i))
+            htemp = ROOT.TH2D("htemp","htemp",nbins,array('f',edges),2,array('f',[-0.5,0.5,1.5]))
+            num, den = [ ROOT.TH1F(name+"_"+x,"",nbins,array('f',edges)) for x in ("pass","tot") ]
+    else:
+        htemp = ROOT.TH2D("htemp","htemp",20,0,xmax,2,-0.5,1.5)
+        num, den = [ ROOT.TH1F(name+"_"+x,"",20,0,xmax) for x in ("pass","tot") ]
+    tree.Draw("(%s > %s):%s>>htemp" % (expr,thr,gvar), cut);
+    htemp = ROOT.gROOT.FindObject("htemp")
     for iy,h in (2,num),(1,den):
         for ix in xrange(1,htemp.GetNbinsX()+2):
             h.SetBinContent(ix, htemp.GetBinContent(ix,iy))
@@ -49,17 +71,26 @@ whats = [
         ("Calo",       "AK4CaloJets$",    ROOT.kViolet+1, 21, 1.3),
         #("TK",         "AK4TKJets$",      ROOT.kAzure+10, 20, 1.2),
         #("TK (tight)", "AK4TightTKJets$",  ROOT.kAzure+10, 20, 1.2),
-        ("TK #Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
+        ("TK#Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
         #("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
         ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
         ]),
+    ('compall',[
+        ("Calo",       "AK4CaloJets$",    ROOT.kViolet+1, 21, 1.3),
+        ("TK",         "AK4TKJets$",      ROOT.kAzure+10, 20, 1.2),
+        ("TK (tight)", "AK4TightTKJets$",  ROOT.kAzure+10, 20, 1.2),
+        ("TK #Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
+        ("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
+        ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
+        ]),
     ('comptp',[
-        ("Stage2",     "AK4Stage2Calo$", ROOT.kGray+1, 21, 1.4),
-        ("TP Vtx",     "TP_TkHTVtx",    ROOT.kGreen+2, 21, 1.4),
+        #("Stage2",     "AK4Stage2Calo$", ROOT.kGray+1, 21, 1.4),
+        ("TrackerVtx",     "TP_TrackerHTVtx",    ROOT.kBlue+0, 21, 1.4),
+        #("TkCaloVtx",     "TP_TkCaloHTVtx",    ROOT.kGreen+2, 21, 1.4),
         ("Calo",       "AK4CaloJets$",    ROOT.kViolet+1, 21, 1.3),
         #("TK",         "AK4TKJets$",      ROOT.kAzure+10, 20, 1.2),
         #("TK", "AK4TightTKJets$",  ROOT.kAzure+10, 20, 1.2),
-        ("TK #Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
+        ("TK#Deltaz", "AK4TightTKVJets$",  ROOT.kAzure+2, 20, 1.2),
         #("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
         ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
         ]),
@@ -78,6 +109,9 @@ parser.add_option("-s", dest="genht",  default=300, type="float", help="Choose g
 parser.add_option("-r", dest="rate",  default=20, type="float", help="Choose rate [kHz]")
 parser.add_option("-p", dest="pt",  default=30, type="int", help="Choose pt cut")
 parser.add_option("-e", dest="eta",  default="24", help="Choose eta")
+parser.add_option("-x", dest="htvar",  default=("ht","H_{T}"), nargs=2, help="Choose variable")
+parser.add_option("--xmax", dest="xmax",  default=1000., type=float, help="Choose variable")
+parser.add_option("--logxbins", dest="logxbins",  default=None, nargs=2, type=float, help="--logxbins N X will make N bins, the last being a factor X larger than the first")
 options, args = parser.parse_args()
 
 tfiles = [ROOT.TFile.Open(f) for f in args[:2]]
@@ -94,45 +128,46 @@ c1 = ROOT.TCanvas("c1","c1")
 for kind,things in whats:
     if options.what and (options.what != kind): continue
     plots = []
-    htexpr = "E%sPt%d_ht_corr" % (options.eta, options.pt)
+    htexpr = "E%sPt%d_%s_corr" % (options.eta, options.pt, options.htvar[0])
     for name,expr,col,msty,msiz in things:
+        if "$" not in expr and options.htvar[0] != "ht": continue
         rexpr = expr.replace("$",htexpr)
         label = name
         if args[3] == "rate":
-            plot = makeCumulativeHTEff(name, background, rexpr)
+            plot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
         elif args[3] == "eff":
-            plot = makeEffHist(name, signal, rexpr, options.genht, "AK4GenJetsE%sPt%d_ht_raw" % (options.eta, options.pt))
+            plot = makeEffHist(name, signal, rexpr, options.genht, "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0]), options.xmax, logxbins=options.logxbins)
         elif args[3] == "isorate":
-            rateplot = makeCumulativeHTEff(name, background, rexpr)
+            rateplot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
             cut = 9999
             for ix in xrange(1,rateplot.GetNbinsX()+1):
                 if rateplot.GetBinContent(ix) <= options.rate:
                     cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                     break
-            plot = makeEffHist(name, signal, rexpr, cut, "AK4GenJetsE%sPt%d_ht_raw" % (options.eta, options.pt))
-            label = "H_{T}(%s) > %.0f" % (name,cut)
+            plot = makeEffHist(name, signal, rexpr, cut, "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0]), options.xmax, logxbins=options.logxbins)
+            label = "%s(%s) > %.0f" % (options.htvar[1], name,cut)
         else: raise RuntimeError
         plot.SetLineWidth(3); plot.SetLineColor(col);  plot.SetMarkerColor(col)
         plot.SetMarkerStyle(msty); plot.SetMarkerSize(msiz)
         plots.append((label,plot))
     if args[3] == "rate":
         c1.SetLogy(True)
-        frame = ROOT.TH1D("",";L1 H_{T} cut (p_{T}^{corr} > %.0f, |#eta| < %.1f); Minbias rate @ PU200 [kHz]" % (options.pt, float(options.eta)/10), 100, 0, 1000)
+        frame = ROOT.TH1D("",";L1 %s cut (p_{T}^{corr} > %.0f, |#eta| < %.1f); Minbias rate @ PU200 [kHz]" % (options.htvar[1], options.pt, float(options.eta)/10), 100, 0, 1000)
         frame.GetYaxis().SetDecimals(True)
         frame.GetXaxis().SetNdivisions(505)
         frame.GetYaxis().SetRangeUser(0.5, 100e3)
         leg = ROOT.TLegend(0.6,0.99,0.95,0.99-0.06*len(things))
-        plotname = 'ht%s-%s_eta%s_pt%d_genHT%.0f' % (args[3], kind, options.eta, options.pt, options.genht)
+        plotname = '%s%s-%s_eta%s_pt%d_genHT%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
     elif args[3] == "eff":
-        frame = ROOT.TH1D("",";Gen H_{T} (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 H_{T} > %.0f)" % (options.pt, float(options.eta)/10, options.genht), 100, 0, 800)
+        frame = ROOT.TH1D("",";Gen %s (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 %s > %.0f)" % (options.htvar[1], options.pt, float(options.eta)/10, options.htvar[1], options.genht), 100, 0, options.xmax)
         leg = ROOT.TLegend(0.6,0.19,0.95,0.19+0.06*len(things))
-        plotname = 'ht%s-%s_eta%s_pt%d_genHT%.0f' % (args[3], kind, options.eta, options.pt, options.genht)
+        plotname = '%s%s-%s_eta%s_pt%d_genHT%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
     elif args[3] == "isorate":
-        frame = ROOT.TH1D("",";Gen H_{T} (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 rate %.0f kHz)" % (options.pt, float(options.eta)/10, options.rate), 100, 0, 800)
+        frame = ROOT.TH1D("",";Gen %s (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 rate %.0f kHz)" % (options.htvar[1], options.pt, float(options.eta)/10, options.rate), 100, 0, options.xmax)
         frame.GetYaxis().SetDecimals(True)
         #leg = ROOT.TLegend(0.20,0.99,0.55,0.99-0.055*len(things))
-        leg = ROOT.TLegend(0.5,0.19,0.99,0.19+0.08*len(things))
-        plotname = 'ht%s-%s_eta%s_pt%d_%.0fkHz' % (args[3], kind, options.eta, options.pt, options.rate)
+        leg = ROOT.TLegend(0.65,0.19,0.99,0.19+0.065*len(things))
+        plotname = '%s%s-%s_eta%s_pt%d_%.0fkHz' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.rate)
     frame.Draw()
     if args[3] == "rate":
         line = ROOT.TLine()

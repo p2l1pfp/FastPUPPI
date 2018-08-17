@@ -73,7 +73,7 @@ cmsRun python/runJetMetNTupler.py
 To run the ntuplizer over many files do for instance:
 
 ```
-source python/scripts/prun.sh python/runJetNTupler.py TTbar_PU140 TTbar_PU140
+source python/scripts/prun.sh python/runJetNTuplerNew.py TTbar_PU200 TTbar_PU200
 ```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
@@ -82,16 +82,16 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 1) For single particle or jet response:
 
 ```
-python python/scripts/respPlots.py respTuple_SinglePion_PU0.root plots_dir -w l1pf -p pion
-python python/scripts/respPlots.py respTuple_TTbar_PU140.root plots_dir -w l1pf -p jet
+python python/scripts/respPlots.py respTupleNew_SinglePion_PU0.root plots_dir -w l1pf -p pion
+python python/scripts/respPlots.py respTupleNew_TTbar_PU200.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet HT plots:
 
 ```
-python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir eff -w l1pf
-python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir isorate -w l1pf
-python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU140.root jetmetTuple_SingleNeutrino_PU140.root plots_dir rate -w l1pf
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU200.root jetmetTuple_SingleNeutrino_PU200.root plots_dir eff -w l1pf
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU200.root jetmetTuple_SingleNeutrino_PU200.root plots_dir isorate -w l1pf
+python python/scripts/jetHtRateTurnOnPlots.py jetmetTuple_TTbar_PU200.root jetmetTuple_SingleNeutrino_PU200.root plots_dir rate -w l1pf
 ```
 
 3) For MET plots:
@@ -105,11 +105,11 @@ How to derive the JECs for each algo:
 1) run the script ```respCorrSimple.py``` for each algo
 
 ```
-python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Calo_pt -e L1Calo_pt
-python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TK_pt -e L1TK_pt
-python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1TKV_pt -e L1TKV_pt
-python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1PF_pt -e L1PF_pt
-python python/scripts/respCorrSimple.py respTuple_TTbar_PU140.root plots_dir -p jet -w L1Puppi_pt -e L1Puppi_pt
+python python/scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir -p jet -w L1Calo_pt -e L1Calo_pt
+python python/scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir -p jet -w L1TK_pt -e L1TK_pt
+python python/scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir -p jet -w L1TKV_pt -e L1TKV_pt
+python python/scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir -p jet -w L1PF_pt -e L1PF_pt
+python python/scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir -p jet -w L1Puppi_pt -e L1Puppi_pt
 ```
 
 2) and copy the results for the corresponding algo in the runJetMetNTupler.py
