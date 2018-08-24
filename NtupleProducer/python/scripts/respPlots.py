@@ -303,11 +303,11 @@ whats = [
     ('pfdebug2',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
         ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+3,  20, 1.2),
+        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kRed+1,  20, 1.2),
         ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
         ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
         ("PFPh",       "L1PFPhoton$",           ROOT.kGreen+2,  34, 1.2),
-        ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kGreen+3,  34, 1.2),
+        ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kRed+1,  34, 1.2),
     ]),
     ('il1pf',[
         ("Gen #times Acc",         "GenAcc$",     ROOT.kAzure+1,  20, 1.2),

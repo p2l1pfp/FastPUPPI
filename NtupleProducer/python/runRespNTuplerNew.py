@@ -60,7 +60,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         Stage2CaloTowers  = cms.VInputTag("caloStage2:CaloTower",),
         Stage2CaloClusters  = cms.VInputTag("caloStage2:CaloCluster",),
         # -- Tech Prop --
-        RefL1TkJets = cms.VInputTag("L1TkJets:Central",),
+        RefL1TkCaloJets = cms.VInputTag("L1TkCaloJets:L1TkCaloJets",),
+        RefL1TrackerJets = cms.VInputTag("L1TrackerJets:L1TrackerJets",),
     ),
     copyUInts = cms.VInputTag(),
 )

@@ -9,26 +9,26 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 
 ##### EXAMPLE USAGE:
 # 1) ECAL Corrections from Pi0
-#       python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/em-barrel -p pizero -w L1RawEcal_pt02 -e L1RawEcal_pt02 --fitrange 20 50 -E 3.0 --ptmax 50 --root ecorr.root
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/em-barrel -p pizero -w L1RawEcal_pt02 -e L1RawEcal_pt02 --fitrange 20 50 -E 3.0 --ptmax 50 --root ecorr.root
 #
 #    Check closure, after re-running Pi0 with Ecal calibration applied
 #       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/em/closure -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02 -E 3.0
 #       
 #       
 # 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
-#       python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --semicoarse-eta --ptmax 50
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --semicoarse-eta --ptmax 50
 #
 #    Check closure, after re-running Pi with Ecal + Had calibration applied 
 #  
-#    python scripts/respPlots.py respTuple_HadronGun_PU0.root plots/corr/ -w l1pf -p pizero,pimix,pion --no-resol
+#    python scripts/respPlots.py respTupleNew_HadronGun_PU0.root plots/corr/ -w l1pf -p pizero,pimix,pion --no-resol
 #    
 # 3) Resolutions, after all the corrections
 #    Hadrons, calo
-#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pion -w L1Calo_pthighest -e L1Calo_pthighest  -r --ptmin 5 --ptmax 50
+#        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1Calo_pthighest -e L1Calo_pthighest  -r --ptmin 5 --ptmax 50
 #    EM, calo
-#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02  -r --ptmin 5 --ptmax 50
+#        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02  -r --ptmin 5 --ptmax 50
 #    Hadrons, track
-#        python scripts/respCorrSimple.py respTuple_HadronGun_PU0.root plots/corr/resol -p pion -w TPTK_pthighest -e TPTK_pthighest   -r --ptmin 5 --ptmax 50
+#        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1TK_pthighest -e L1TK_pthighest   -r --ptmin 5 --ptmax 50
 
 
 if __name__ == "__main__":
