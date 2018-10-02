@@ -7,12 +7,7 @@ cmsenv
 git cms-init
 git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
 git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_7
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.16.15
-
-# update HGCal
-git remote add PFCal-dev git@github.com:PFCal-dev/cmssw.git
-git fetch PFCal-dev hgc-tpg-CMSSW_10_1_7 
-git cms-merge-topic -u PFCal-dev:v2.7.3_1017
+git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.16.32
 
 # Get L1PF_CMSSW
 git remote add p2l1pfp git@github.com:p2l1pfp/cmssw.git
