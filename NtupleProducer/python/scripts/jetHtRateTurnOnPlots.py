@@ -94,6 +94,24 @@ whats = [
         #("PF",         "AK4PFJets$",      ROOT.kOrange+7, 20, 1.2),
         ("PF+Puppi",      "AK4PuppiJets$",   ROOT.kRed+1, 20, 1.2),
         ]),
+    ('l1met',[
+        ("Calo",       "$Calo",     ROOT.kViolet+2, 20, 1.5),
+        ("TK#Deltaz",  "$TightTKV", ROOT.kRed+1, 24, 1.5),
+        ("PF",         "$PF",       ROOT.kOrange+7, 24, 1.5),
+        ("Puppi",      "$Puppi",    ROOT.kBlue+1, 21, 1.5),
+    ]),
+    ('l1metc',[
+        ("Calo",       "$CaloCentral",  ROOT.kViolet+2, 20, 1.5),
+        ("TK#Deltaz",  "$TightTKV",     ROOT.kRed+1, 24, 1.5),
+        ("PF",         "$PFCentral",    ROOT.kOrange+7, 24, 1.5),
+        ("Puppi",      "$PuppiCentral", ROOT.kBlue+1, 21, 1.5),
+    ]),
+    ('l1metmhtc',[
+        ("Calo",       "min(METCaloCentral,AK4CaloJets$)",  ROOT.kViolet+2, 20, 1.5),
+        ("TK#Deltaz",  "min(METTightTKV,AK4TightTKVJets$)",     ROOT.kRed+1, 24, 1.5),
+        ("PF",         "min(METPFCentral,AK4PFJets$)",    ROOT.kOrange+7, 24, 1.5),
+        ("Puppi",      "min(METPuppiCentral,AK4PuppiJets$)", ROOT.kBlue+1, 21, 1.5),
+    ]),
     ('il1pf',[
         ("iCalo",       "L1Calo$",    ROOT.kViolet+2, 20, 1.5),
         ("iTK",         "L1TK$",      ROOT.kRed+1, 21, 1.5),
@@ -128,7 +146,19 @@ c1 = ROOT.TCanvas("c1","c1")
 for kind,things in whats:
     if options.what and (options.what != kind): continue
     plots = []
-    htexpr = "E%sPt%d_%s_corr" % (options.eta, options.pt, options.htvar[0])
+    if "METMHT" in options.htvar[0]:
+        genmet = options.htvar[0].replace("MHT","").replace("MET","METGen")
+        htexpr = "E%sPt%d_%s_corr" % (options.eta, options.pt, "mht")
+        genexpr = "min(%s, AK4GenJetsE%sPt%d_%s_raw)" % (genmet, options.eta, options.pt, "mht")
+        qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, float(options.eta)/10)
+    elif "MET" in options.htvar[0]:
+        htexpr ="MET" 
+        genexpr = options.htvar[0].replace("MET","METGen")
+        qualif = "|#eta| < 2.4" if "Central" in  options.htvar[0] else "|#eta| < 4.7" 
+    else:
+        htexpr = "E%sPt%d_%s_corr" % (options.eta, options.pt, options.htvar[0])
+        genexpr = "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0])
+        qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, float(options.eta)/10)
     for name,expr,col,msty,msiz in things:
         if "$" not in expr and options.htvar[0] != "ht": continue
         rexpr = expr.replace("$",htexpr)
@@ -136,7 +166,7 @@ for kind,things in whats:
         if args[3] == "rate":
             plot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
         elif args[3] == "eff":
-            plot = makeEffHist(name, signal, rexpr, options.genht, "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0]), options.xmax, logxbins=options.logxbins)
+            plot = makeEffHist(name, signal, rexpr, options.genht, genexpr, options.xmax, logxbins=options.logxbins)
         elif args[3] == "isorate":
             rateplot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
             cut = 9999
@@ -144,7 +174,7 @@ for kind,things in whats:
                 if rateplot.GetBinContent(ix) <= options.rate:
                     cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                     break
-            plot = makeEffHist(name, signal, rexpr, cut, "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0]), options.xmax, logxbins=options.logxbins)
+            plot = makeEffHist(name, signal, rexpr, cut, genexpr, options.xmax, logxbins=options.logxbins)
             label = "%s(%s) > %.0f" % (options.htvar[1], name,cut)
         else: raise RuntimeError
         plot.SetLineWidth(3); plot.SetLineColor(col);  plot.SetMarkerColor(col)
@@ -152,18 +182,18 @@ for kind,things in whats:
         plots.append((label,plot))
     if args[3] == "rate":
         c1.SetLogy(True)
-        frame = ROOT.TH1D("",";L1 %s cut (p_{T}^{corr} > %.0f, |#eta| < %.1f); Minbias rate @ PU200 [kHz]" % (options.htvar[1], options.pt, float(options.eta)/10), 100, 0, 1000)
+        frame = ROOT.TH1D("",";L1 %s cut (%s); Minbias rate @ PU200 [kHz]" % (options.htvar[1], qualif), 100, 0, 1000)
         frame.GetYaxis().SetDecimals(True)
         frame.GetXaxis().SetNdivisions(505)
         frame.GetYaxis().SetRangeUser(0.5, 100e3)
         leg = ROOT.TLegend(0.6,0.99,0.95,0.99-0.06*len(things))
-        plotname = '%s%s-%s_eta%s_pt%d_genHT%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
+        plotname = '%s%s-%s_eta%s_pt%d' % (options.htvar[0], args[3], kind, options.eta, options.pt)
     elif args[3] == "eff":
-        frame = ROOT.TH1D("",";Gen %s (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 %s > %.0f)" % (options.htvar[1], options.pt, float(options.eta)/10, options.htvar[1], options.genht), 100, 0, options.xmax)
+        frame = ROOT.TH1D("",";Gen %s (%s); Eff (L1 %s > %.0f)" % (options.htvar[1], qualif, options.htvar[1], options.genht), 100, 0, options.xmax)
         leg = ROOT.TLegend(0.6,0.19,0.95,0.19+0.06*len(things))
-        plotname = '%s%s-%s_eta%s_pt%d_genHT%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
+        plotname = '%s%s-%s_eta%s_pt%d_gen%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
     elif args[3] == "isorate":
-        frame = ROOT.TH1D("",";Gen %s (p_{T} > %.0f, |#eta| < %.1f); Eff (L1 rate %.0f kHz)" % (options.htvar[1], options.pt, float(options.eta)/10, options.rate), 100, 0, options.xmax)
+        frame = ROOT.TH1D("",";Gen %s (%s); Eff (L1 rate %.0f kHz)" % (options.htvar[1], qualif, options.rate), 100, 0, options.xmax)
         frame.GetYaxis().SetDecimals(True)
         #leg = ROOT.TLegend(0.20,0.99,0.55,0.99-0.055*len(things))
         leg = ROOT.TLegend(0.65,0.19,0.99,0.19+0.065*len(things))

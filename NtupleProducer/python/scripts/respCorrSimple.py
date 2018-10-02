@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 else:
                     frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                     #frame.GetYaxis().SetRangeUser(0,1.6)
-                    frame.SetMaximum(1.6)
+                    frame.SetMaximum(2.2)
                     #c1.SetLogy(False)
                 frame.Draw()
                 line = ROOT.TLine()

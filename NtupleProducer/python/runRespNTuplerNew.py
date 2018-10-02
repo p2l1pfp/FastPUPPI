@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP", eras.phase2_trigger)
+process = cms.Process("RESP", eras.Phase2_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
@@ -11,8 +11,8 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('file:test.root'),
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/040418/SingleTauFlat_PU0/inputs_SingleTauFlat_PU0_job1.root'),
+    fileNames = cms.untracked.vstring('file:inputs.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/080818/SingleTauFlat_PU0/inputs_SingleTauFlat_PU0_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
