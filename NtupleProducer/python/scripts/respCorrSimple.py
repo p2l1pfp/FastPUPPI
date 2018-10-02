@@ -16,7 +16,7 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #       
 #       
 # 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
-#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1Ecal_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --semicoarse-eta --ptmax 50
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1RawCaloEM_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --ptmax 50
 #
 #    Check closure, after re-running Pi with Ecal + Had calibration applied 
 #  
@@ -199,7 +199,7 @@ if __name__ == "__main__":
                 else:
                     frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                     #frame.GetYaxis().SetRangeUser(0,1.6)
-                    frame.SetMaximum(1.6)
+                    frame.SetMaximum(2.2)
                     #c1.SetLogy(False)
                 frame.Draw()
                 line = ROOT.TLine()

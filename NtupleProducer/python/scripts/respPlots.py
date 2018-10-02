@@ -219,43 +219,16 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
     return (ret,resol)
 
 whats = [
-    ('inputs',[ # On RelVals
-        ("Had",  "Hcal$", ROOT.kAzure+1,  25, 2.0),
-        ("Em",   "Ecal$", ROOT.kGreen+2,  21, 1.5),
-        ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
-        ("Trk",  "TK$",   ROOT.kRed+1, 20, 1.2),
-    ]),
-    ('debug-ecal',[
-        ("EcalT",  "EcalT$+HGCalTE$", ROOT.kAzure+1,  25, 2.0),
-        ("EcalC",  "EcalC$+HGCal3DE$", ROOT.kAzure+2,  21, 1.6),
-        ("EcalC2",  "EcalC$+HGCal3DE2$", ROOT.kBlue+1,  21, 1.6),
-        ("L1T", "L1RawEcal$", ROOT.kRed+1, 34, 1.5),
-        ("L1C", "L1RawEcalC$", ROOT.kViolet+1, 34, 1.5),
+    ('debug-em',[
+        ("Raw",  "L1RawEcal$",     ROOT.kAzure+1,  25, 2.0),
+        ("Corr",  "L1Ecal$",       ROOT.kAzure+2,  21, 1.6),
+        ("Towers", "L1RawCaloEM$", ROOT.kViolet+1, 34, 1.5),
     ]),
     ('debug-hcal',[
-        ("HcalT",  "Hcal$+HGCalTH$", ROOT.kGreen+3,  25, 2.0),
-        ("HcalC",  "Hcal$+HGCal3D$", ROOT.kGreen+1,  21, 1.5),
-        ("HcalC2", "Hcal$+HGCal3DH2$", ROOT.kBlue+1,  21, 1.5),
-        ("BH",   "HGCalTBH$", ROOT.kGreen+3,  21, 1.5),
-        ("L1T", "L1RawCalo$", ROOT.kRed+1, 34, 1.5),
-        ("L1C", "L1RawCaloC$", ROOT.kViolet+1, 34, 1.5),
-    ]),
-    ('debug-calo',[
-        ("CalT",  "EcalT$+Hcal$+HGCalTE$+HGCalTH$", ROOT.kGreen+3,  25, 2.0),
-        ("CalC",  "EcalC$+Hcal$+HGCal3D$", ROOT.kGreen+1,  21, 1.5),
-        ("L1T", "L1RawCalo$", ROOT.kRed+1, 34, 1.5),
-        ("L1C", "L1RawCaloC$", ROOT.kViolet+1, 34, 1.5),
-    ]),
-    ('OfflineInputs',[
-        ("Had",  "Hcal$", ROOT.kAzure+1,  25, 2.0),
-        ("Em",   "Ecal$", ROOT.kGreen+2,  21, 1.5),
-        ("Calo", "Calo$", ROOT.kViolet+2, 34, 1.5),
-    ]),
-    ('TPs',[
-        ("Had",  "TPHcal$", ROOT.kAzure+1,  25, 2.0),
-        ("Em",   "TPEcal$", ROOT.kGreen+2, 21, 1.5),
-        ("Calo", "TPCalo$", ROOT.kViolet+2, 34, 1.5),
-        ("Trk",  "TPTK$",   ROOT.kRed+1, 20, 1.2),
+        ("Raw",   "L1RawCalo$",   ROOT.kGreen+3,  25, 2.0),
+        ("Raw3D", "L1Raw3DCalo$", ROOT.kRed+1, 34, 1.5),
+        ("Corr",  "L1Calo$",      ROOT.kGreen+1,  21, 1.5),
+        ("RawEM", "L1RawCaloEM$", ROOT.kViolet+1, 34, 1.5),
     ]),
     ('l1pf',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),

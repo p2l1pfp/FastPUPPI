@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP", eras.phase2_trigger)
+process = cms.Process("RESP", eras.Phase2_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
@@ -11,12 +11,23 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('file:test.root'),
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/040418/SingleTauFlat_PU0/inputs_SingleTauFlat_PU0_job1.root'),
+    fileNames = cms.untracked.vstring('file:inputs.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/080818/SingleTauFlat_PU0/inputs_SingleTauFlat_PU0_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
+process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
+process.load('Configuration.StandardSequences.MagneticField_cff')
+process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
+
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
+process.l1ParticleFlow.remove(process.l1EGammaCrystalsProducer)
+
+process.load("L1Trigger.Phase2L1ParticleFlow.pfClustersFromHGC3DClusters_cfi")
 
 process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
@@ -25,7 +36,8 @@ process.l1pfProducerTightTK = process.l1pfProducer.clone(trkMinStubs = 6)
 process.runPF = cms.Sequence( 
     process.pfClustersFromL1EGClustersRaw +
     process.pfClustersFromHGC3DClustersEMRaw +
-    process.l1pfProducer 
+    process.pfClustersFromHGC3DClusters +
+    process.l1ParticleFlow   
     + process.l1pfProducerTightTK
 )
 
@@ -47,6 +59,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         RawTK  = cms.VInputTag('pfTracksFromL1Tracks',),
         L1RawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw', ),
         L1RawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated'),
+        L1RawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated'),
+        L1Raw3DCalo = cms.VInputTag('pfClustersFromHGC3DClusters'),
         L1Ecal = cms.VInputTag(cms.InputTag('l1pfProducer','EmCalo')),
         L1Calo = cms.VInputTag("l1pfProducer:Calo",),
         L1TK = cms.VInputTag("l1pfProducer:TK",),
@@ -104,19 +118,11 @@ if True:
     process.ntuple.objects.L1PFPhoton = cms.VInputTag("l1pfProducer:PF",)
     process.ntuple.objects.L1PFPhoton_sel = cms.string("pdgId == 22")
 
-def runCalo():
-    process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
-    process.load('Configuration.StandardSequences.MagneticField_cff')
-    process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
-    process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
-    from Configuration.AlCa.GlobalTag import GlobalTag
-    process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
-    process.l1ParticleFlow.remove(process.l1EGammaCrystalsProducer)
-    process.p.replace(process.l1pfProducer, process.l1ParticleFlow)
-runCalo()
-
 def goGun():
     process.ntuple.isParticleGun = True
+    # delete these two which are missing in the HadronGun inputs
+    del process.ntuple.objects.RefL1TkCaloJets
+    del process.ntuple.objects.RefL1TrackerJets
 def goRandom():
     process.ntuple.doRandom = True
 def goRegional(inParallel=False,mode="atCalo"):

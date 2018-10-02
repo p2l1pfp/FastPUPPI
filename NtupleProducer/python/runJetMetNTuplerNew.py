@@ -1,6 +1,7 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP")
+process = cms.Process("RESP", eras.Phase2_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -17,6 +18,9 @@ process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+process.load('RecoMET.Configuration.GenMETParticles_cff')
+process.load('RecoMET.METProducers.genMetTrue_cfi')
+
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
 
@@ -42,7 +46,25 @@ process.l1MetTightTKV     = pfMet.clone(src = "l1pfProducerTightTK:TKVtx")
 process.l1MetPF      = pfMet.clone(src = "l1pfProducer:PF")
 process.l1MetPuppi   = pfMet.clone(src = "l1pfProducer:Puppi")
 
-process.mets = cms.Sequence( process.l1MetCalo + process.l1MetTK + process.l1MetTKV + process.l1MetPF + process.l1MetPuppi + process.l1MetTightTK + process.l1MetTightTKV)
+process.centralPF = cms.EDFilter("CandPtrSelector", src = cms.InputTag("l1pfProducer:PF"), cut = cms.string("abs(eta) < 2.4"))
+process.centralCalo = cms.EDFilter("CandPtrSelector", src = cms.InputTag("l1pfProducer:Calo"), cut = cms.string("abs(eta) < 2.4"))
+process.centralPuppi = cms.EDFilter("CandPtrSelector", src = cms.InputTag("l1pfProducer:Puppi"), cut = cms.string("abs(eta) < 2.4"))
+process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
+process.genMetCentralTrue = process.genMetTrue.clone(src = cms.string("centralGen"))
+process.l1MetCentralCalo  = pfMet.clone(src = "centralCalo")
+process.l1MetCentralPF    = pfMet.clone(src = "centralPF")
+process.l1MetCentralPuppi = pfMet.clone(src = "centralPuppi")
+
+
+process.mets = cms.Sequence( process.l1MetCalo + process.l1MetTK + process.l1MetTKV + process.l1MetPF + process.l1MetPuppi + process.l1MetTightTK + process.l1MetTightTKV +
+        process.genParticlesForMETAllVisible +
+        process.centralGen + 
+        process.centralCalo + process.centralPF + process.centralPuppi +
+        process.genMetCentralTrue +
+        process.l1MetCentralCalo + process.l1MetCentralPF + process.l1MetCentralPuppi 
+)
+
+        
 
 from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 process.ak4L1Calo    = ak4PFJets.clone(src = 'l1pfProducer:Calo')
@@ -60,40 +82,30 @@ process.jets = cms.Sequence(
 JEC_PU200 = dict(
 ### You can create this below with
 # for X in L1{Calo,TK,TKV,TightTK,TightTKV,PF,Puppi} Stage2CaloJets RefL1TkCaloJets RefL1TrackerJets; do python scripts/respCorrSimple.py respTupleNew_TTbar_PU200.root plots_dir --fitrange 30 250 -p jet -w ${X}_pt -e ${X}_pt | grep -v [Pp]lot | sed -e "s/simpleCorrEm =/    $X = /" -e "s/)$/    ),"/; done
-    L1Calo = cms.PSet(
+    L1Calo =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 9.233,  12.095,  12.911,  36.007,  63.148,  84.710,  63.820,  69.563,  60.367,  67.407),
-                        scale   = cms.vdouble( 1.025,  1.026,  1.073,  0.956,  1.022,  1.061,  0.897,  0.941,  1.092,  1.324),
-    ),
-    L1TK =  cms.PSet(
-                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 1.605,  0.868,  0.838, -0.293, -1.913,  3.362,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.624,  0.617,  0.582,  0.603,  0.582,  0.010,  1.000,  1.000,  1.000,  1.000),
-    ),
-    L1TKV =  cms.PSet(
-                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-3.009, -3.711, -3.537, -3.644, -5.207,  3.173,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.553,  0.557,  0.538,  0.556,  0.548,  0.012,  1.000,  1.000,  1.000,  1.000),
-    ),
-    L1TightTK =  cms.PSet(
-                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-0.793, -0.516, -0.415, -1.505, -1.413,  2.669,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.345,  0.292,  0.305,  0.426,  0.314,  0.005,  1.000,  1.000,  1.000,  1.000),
-    ),
-    L1TightTKV =  cms.PSet(
-                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-1.676, -1.209, -1.579, -3.231, -2.825,  3.076,  0.000,  0.000,  0.000,  0.000),
-                        scale   = cms.vdouble( 0.335,  0.290,  0.303,  0.417,  0.320,  0.005,  1.000,  1.000,  1.000,  1.000),
+                        offset  = cms.vdouble( 14.041,  18.421,  27.169,  70.760,  100.682,  99.327,  67.345,  72.802,  67.144,  56.801),
+                        scale   = cms.vdouble( 0.913,  0.909,  0.933,  0.809,  0.792,  0.808,  0.868,  0.862,  0.960,  1.542),
     ),
     L1PF =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble( 12.454,  14.691,  15.236,  40.116,  73.101,  86.003,  63.820,  69.563,  60.367,  67.407),
-                        scale   = cms.vdouble( 1.126,  1.126,  1.174,  1.101,  1.131,  1.090,  0.897,  0.941,  1.092,  1.324),
+                        offset  = cms.vdouble( 17.467,  22.076,  31.229,  78.241,  115.035,  102.950,  67.345,  72.802,  67.144,  56.801),
+                        scale   = cms.vdouble( 1.041,  1.030,  1.064,  0.997,  0.956,  0.842,  0.868,  0.862,  0.960,  1.542),
     ),
     L1Puppi =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
-                        offset  = cms.vdouble(-9.922, -10.116, -12.620, -9.839, -3.331,  33.446,  10.677,  10.830,  5.794, -33.316),
-                        scale   = cms.vdouble( 1.123,  1.143,  1.175,  1.097,  1.199,  0.672,  0.953,  1.153,  1.343,  1.812),
+                        offset  = cms.vdouble(-6.664, -5.996, -6.798,  3.459,  13.866,  55.320,  10.236,  11.906,  7.550, -43.093),
+                        scale   = cms.vdouble( 1.052,  1.065,  1.121,  1.100,  1.157,  0.264,  0.978,  1.100,  1.276,  2.046),
+    ),
+    L1TKV =  cms.PSet(
+                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+                        offset  = cms.vdouble(-3.428, -3.409, -3.242, -3.440, -4.713,  3.134,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.560,  0.552,  0.533,  0.550,  0.541,  0.013,  1.000,  1.000,  1.000,  1.000),
+    ),
+    L1TightTKV =  cms.PSet(
+                        etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
+                        offset  = cms.vdouble(-2.218, -1.328, -1.397, -3.178, -1.838,  2.940,  0.000,  0.000,  0.000,  0.000),
+                        scale   = cms.vdouble( 0.345,  0.292,  0.299,  0.415,  0.305,  0.004,  1.000,  1.000,  1.000,  1.000),
     ),
     Stage2CaloJets =  cms.PSet(
                         etaBins = cms.vdouble( 0.500,  1.000,  1.500,  2.000,  2.500,  3.000,  3.500,  4.000,  4.500,  5.000),
@@ -120,9 +132,7 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
         AK4GenJets = cms.InputTag("ak4GenJetsNoNu"),
         AK4Stage2Calo = cms.InputTag("caloStage2:Jet"),
         AK4CaloJets = cms.InputTag("ak4L1Calo"),
-        AK4TKJets = cms.InputTag("ak4L1TK"),
         AK4TKVJets = cms.InputTag("ak4L1TKV"),
-        AK4TightTKJets = cms.InputTag("ak4L1TightTK"),
         AK4TightTKVJets = cms.InputTag("ak4L1TightTKV"),
         AK4PFJets = cms.InputTag("ak4L1PF"),
         AK4PuppiJets = cms.InputTag("ak4L1Puppi"),
@@ -130,9 +140,7 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
     jecs = cms.PSet(
         AK4Stage2CaloJets = JEC['Stage2CaloJets'],
         AK4CaloJets = JEC['L1Calo'],
-        AK4TKJets = JEC['L1TK'],
         AK4TKVJets = JEC['L1TKV'],
-        AK4TightTKJets = JEC['L1TightTK'],
         AK4TightTKVJets = JEC['L1TightTKV'],
         AK4PFJets = JEC['L1PF'],
         AK4PuppiJets = JEC['L1Puppi'],
@@ -142,6 +150,7 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
         E13Pt40 = cms.string("pt > 40 && abs(eta) < 1.3"),
         #E24Pt15 = cms.string("pt > 15 && abs(eta) < 2.4"),
         #E24Pt20 = cms.string("pt > 20 && abs(eta) < 2.4"),
+        E21Pt30 = cms.string("pt > 30 && abs(eta) < 2.1"),
         E24Pt30 = cms.string("pt > 30 && abs(eta) < 2.4"),
         E24Pt40 = cms.string("pt > 40 && abs(eta) < 2.4"),
         #E24Pt50 = cms.string("pt > 50 && abs(eta) < 2.4"),
@@ -171,6 +180,10 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
         METTightTKV = cms.InputTag("l1MetTightTKV"),
         METPF = cms.InputTag("l1MetPF"),
         METPuppi = cms.InputTag("l1MetPuppi"),
+        METGenCentral = cms.InputTag("genMetCentralTrue"),
+        METCaloCentral = cms.InputTag("l1MetCentralCalo"),
+        METPFCentral = cms.InputTag("l1MetCentralPF"),
+        METPuppiCentral = cms.InputTag("l1MetCentralPuppi"),
     ),
     specials = cms.PSet(
         TP_TkEtMiss = cms.PSet( 
@@ -181,7 +194,11 @@ process.ntuple = cms.EDAnalyzer("JetMetNTuplizer",
             src = cms.InputTag("L1TkCaloHTMissVtx","L1TkCaloHTMiss"),
             cut = cms.string(""),
             expr = cms.string("et")),
-        TP_TkHTVtx = cms.PSet( 
+        TP_TkCaloHTVtx = cms.PSet( 
+            src = cms.InputTag("L1TkCaloHTMissVtx","L1TkCaloHTMiss"),
+            cut = cms.string(""),
+            expr = cms.string("EtTotal")),
+        TP_TrackerHTVtx = cms.PSet( 
             src = cms.InputTag("L1TrackerHTMiss","L1TrackerHTMiss"),
             cut = cms.string(""),
             expr = cms.string("EtTotal")),
