@@ -177,7 +177,7 @@ def hgcAcc(pdgId,pt=10,eta=(1.6,2.6),prompt=False):
     pdgIdCut = "||".join("abs(pdgId) == %d" % p for p in pdgId)
     process.acceptance = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
-        cut = cms.string("(%s) && pt > %g && %g < abs(eta) && abs(eta) < %g%s" % (pdgIdCut, pt, eta[0], eta[1], "&& isPrompt" if prompt else "")),
+        cut = cms.string("(%s) && pt > %g && %g < abs(eta) && abs(eta) < %g%s" % (pdgIdCut, pt, eta[0], eta[1], "&& statusFlags.isPrompt" if prompt else "")),
         filter = cms.bool(True),
     )
     process.p.insert(0, process.acceptance)

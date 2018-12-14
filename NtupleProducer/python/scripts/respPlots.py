@@ -144,7 +144,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
             invret.Sort()
             ret.inv = invret
         ycs = [[] for ipt in ptbins]
-        iprint = 3
+        #iprint = 3
         for i in xrange(graph.GetN()):
             if yi[i] == 0: continue
             if respCorr == "gen":
@@ -274,26 +274,46 @@ whats = [
         ("Tight TK #Deltaz", "L1TightTKV$", ROOT.kViolet+2, 21, 1.2),
         ]),
     ('pfdebug',[
-        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
-        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
-        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
-        ("TK",         "L1TK$",                 ROOT.kRed+1,    20, 1.2),
-        ("rawTK",      "RawTK$",                ROOT.kRed+3,    20, 1.2),
-        ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
-        ("PFCh",       "L1PFCharged$",          ROOT.kGreen+1,  34, 1.2),
-        ("PFNh",       "L1PF$-L1PFCharged$",    ROOT.kGreen+3,  34, 1.2),
+        ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
+        ("PF",         "L1PF$",                 ROOT.kBlack,    20, 1.0),
+        ("Gen_Charged",  "ChGenAcc$",         ROOT.kAzure+10,  21, 1.5),
+        ("PF_Charged",       "L1PFCharged$",          ROOT.kBlue+2,   20, 1.3),
+        ("Gen_Neutral",  "GenAcc$-ChGenAcc$", ROOT.kGreen+0,  21, 1.2),
+        ("PF_Neutral",       "L1PF$-L1PFCharged$",    ROOT.kGreen+2,  20, 1.0),
+        ("RawTK",      "RawTK$",                ROOT.kRed+2,    34, 1.0),
+        ("TK",         "L1TK$",                 ROOT.kRed+0,    34, 1.0),
+        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.0),
     ]),
-    ('pfdebug2',[
-        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
-        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kRed+1,  20, 1.2),
-        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
-        ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
-        ("PFPh",       "L1PFPhoton$",           ROOT.kGreen+2,  34, 1.2),
-        ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kRed+1,  34, 1.2),
+     ('pfdebug2',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
+        ("PF",         "L1PF$",                 ROOT.kBlack,    20, 1.0),
+        ("Gen_Photon",  "PhGenAcc$",         ROOT.kGreen+0,  21, 1.2),
+        ("PF_Photon",       "L1PFPhoton$",           ROOT.kGreen+2,  20, 1.0),
+        ("Gen_NeutralHad",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kRed-4,  21, 1.2),
+        ("PF_NeutralHad",   "L1PF$-L1PFCharged$-L1PFPhoton$",  ROOT.kRed+2,  20, 1.0),
     ]),
+    ('puppidebug',[
+        ("Gen #times Acc", "GenAcc$",         ROOT.kGray+1,  21, 1.2),
+        ("PF",             "L1PF$",           ROOT.kGray+2,   24, 1.0),
+        ("Puppi",          "L1Puppi$",        ROOT.kBlack,    20, 1.0),
+        ("Gen_Charged",  "ChGenAcc$",         ROOT.kAzure+10,  21, 1.5),
+        ("PF_Charged",       "L1PFCharged$",          ROOT.kBlue+2,   24, 1.3),
+        ("Puppi_Charged",       "L1PuppiCharged$",    ROOT.kBlue+2,   20, 1.3),
+        ("Gen_Neutral",    "GenAcc$-ChGenAcc$", ROOT.kGreen+0,  21, 1.2),
+        ("PF_Neutral",     "L1PF$-L1PFCharged$",        ROOT.kGreen+2,  24, 1.0),
+        ("Puppi_Neutral",  "L1Puppi$-L1PuppiCharged$",  ROOT.kGreen+2,  20, 1.0),
+        ("TK",         "L1TK$",                 ROOT.kRed+0,    34, 1.0),
+        ("TKV",        "L1TKV$",                ROOT.kRed+2,    34, 1.0),
     ]),
+     ('puppidebug2',[
+        ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
+        ("PF",         "L1PF$",                 ROOT.kBlack,    20, 1.0),
+        ("Gen_Photon",  "PhGenAcc$",         ROOT.kGreen+0,  21, 1.2),
+        ("PF_Photon",       "L1PFPhoton$",           ROOT.kGreen+2,  20, 1.0),
+        ("Gen_NeutralHad",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kRed-4,  21, 1.2),
+        ("PF_NeutralHad",   "L1PF$-L1PFCharged$-L1PFPhoton$",  ROOT.kRed+2,  20, 1.0),
+    ]),
+
     ('pfcomp4',[
         ("Global",    "L1PFGlobal$",   ROOT.kGreen+1,  20, 1.2),
         ("Regional",  "L1PFRegional$", ROOT.kAzure+1,  24, 1.2),
@@ -498,7 +518,7 @@ if __name__ == "__main__":
                         p.Draw("P SAME" if "TGraph" in p.ClassName() else "SAME")
                         if hasattr(p,'fit') and not options.noFit: p.fit.Draw("SAME")
                     for n,p in plots: 
-                        leg.AddEntry(p, n, "LP")
+                        leg.AddEntry(p, n.replace("_"," "), "LP")
                         if hasattr(p,'fit') and not options.noFit: 
                             if "resolution" in ptype:
                                 if ("Trk" in n or "TK" in n) and ("jet" not in oname) and ("ele" not in oname):

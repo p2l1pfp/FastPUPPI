@@ -7,7 +7,7 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
@@ -102,6 +102,10 @@ if True:
     process.ntuple.objects.L1PFCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.L1PFPhoton = cms.VInputTag("l1pfCandidates:PF",)
     process.ntuple.objects.L1PFPhoton_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.L1PFMuon = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFMuon_sel = cms.string("abs(pdgId) == 13")
+    process.ntuple.objects.L1PFElectron = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFElectron_sel = cms.string("abs(pdgId) == 11")
     process.ntuple.objects.L1PuppiCharged = cms.VInputTag("l1pfCandidates:Puppi",)
     process.ntuple.objects.L1PuppiCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.L1PuppiPhoton = cms.VInputTag("l1pfCandidates:Puppi",)
@@ -142,7 +146,7 @@ def hgcAcc(pdgId,pt=10,eta=(1.6,2.6),prompt=False):
     pdgIdCut = "||".join("abs(pdgId) == %d" % p for p in pdgId)
     process.acceptance = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
-        cut = cms.string("(%s) && pt > %g && %g < abs(eta) && abs(eta) < %g%s" % (pdgIdCut, pt, eta[0], eta[1], "&& isPrompt" if prompt else "")),
+        cut = cms.string("(%s) && pt > %g && %g < abs(eta) && abs(eta) < %g%s" % (pdgIdCut, pt, eta[0], eta[1], "&& statusFlags.isPrompt" if prompt else "")),
         filter = cms.bool(True),
     )
     process.p.insert(0, process.acceptance)
