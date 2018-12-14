@@ -1,4 +1,4 @@
-import os
+import os, sys
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
@@ -32,7 +32,7 @@ def doRespEta(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
     if oname.startswith("null"):
         return doRespEtaProf(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
     return doRespEtaMedian(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
-def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=10, etamax=5.0, maxEntries=999999999):
+def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etamax=5.0, maxEntries=999999999):
     ys = [[] for ieta in xrange(etabins)]
     npoints = tree.Draw("("+expr+")/"+mcpt+":abs(mc_eta)", cut, "", maxEntries);
     #print "Draw(("+expr+")/"+mcpt+":abs(mc_eta), "+cut+") --> ",npoints
@@ -99,6 +99,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
         ptc   = 0.5*(ptmin+ptmax)
         ptd   = 0.5*(ptmax-ptmin)
         (median,lo,hi) = quantiles(ys[ipt])
+        #print "for %s %s at pt ~ %6.1f  reco pt ~ %6.1f  [ %6.1f , %6.1f ]" % (oname,name, ptc, median, lo, hi)
         if not median: continue
         ipoint = ret.GetN()
         ret.Set(ipoint+1)
@@ -116,7 +117,6 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
         retg.SetPointError(ipoint, ptd, ptd, 0.5*rms2/sqrt(len(ys[ipt])), 0.5*rms2/sqrt(len(ys[ipt])))
         if median > 0.2:
             resols.append((ptc,ptd,(hi-lo)/2,0))
-            #print "for %s %s at pt ~ %6.1f  reco pt ~ %6.1f  [ %6.1f , %6.1f ]" % (oname,name, ptc, median, lo, hi)
         if avg >  0.2:
             resolsg.append((ptc,ptd,0.5*rms2,0))
     if ret.GetN() <= 3: return (None,None)
@@ -240,6 +240,16 @@ whats = [
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
     ]),
+    ('l1pf3D',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
+        ("Ecal",       "L1BarrelEcal$",    ROOT.kGreen+1,  21, 1.7),
+        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
+        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
+        ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
+        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
+        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
+    ]),
     ('stage2',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Towers",     "Stage2CaloTowers$",    ROOT.kGreen+1,  21, 1.7),
@@ -269,6 +279,7 @@ whats = [
         ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
         ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
         ("TK",         "L1TK$",                 ROOT.kRed+1,    20, 1.2),
+        ("rawTK",      "RawTK$",                ROOT.kRed+3,    20, 1.2),
         ("PF",         "L1PF$",                 ROOT.kOrange+7, 34, 1.2),
         ("PFCh",       "L1PFCharged$",          ROOT.kGreen+1,  34, 1.2),
         ("PFNh",       "L1PF$-L1PFCharged$",    ROOT.kGreen+3,  34, 1.2),
@@ -282,75 +293,6 @@ whats = [
         ("PFPh",       "L1PFPhoton$",           ROOT.kGreen+2,  34, 1.2),
         ("PFNh",       "L1PF$-L1PFCharged$-L1PFPhoton$",    ROOT.kRed+1,  34, 1.2),
     ]),
-    ('il1pf',[
-        ("Gen #times Acc",         "GenAcc$",     ROOT.kAzure+1,  20, 1.2),
-        ("iCalo",       "L1ICalo$",    ROOT.kViolet+2, 34, 1.5),
-        ("iTK",         "L1ITK$",      ROOT.kRed+1, 20, 1.2),
-        ("iPF",         "L1IPF$",      ROOT.kOrange+7, 34, 1.2),
-        ("iPuppi",      "L1IPuppi$",   ROOT.kGray+2, 25, 1.4),
-    ]),
-    ('altpf',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
-        ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
-        ("Ecal",       "AltEcal$",   ROOT.kGreen+1,  21, 1.7),
-        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
-        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
-        ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
-        #("PF",         "L1PF$",      ROOT.kGray+1, 34, 1.2),
-        ("APF",        "AltPF$",     ROOT.kOrange+7, 34, 1.2),
-        #("Puppi",      "L1Puppi$",   ROOT.kBlue+0, 25, 1.4),
-        ("APuppi",     "AltPuppi$",  ROOT.kBlue+2, 25, 1.4),
-    ]),
-    ('altpfdebug',[
-        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
-        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
-        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
-        ("TK",         "L1TK$",                 ROOT.kRed+1,    20, 1.2),
-        ("APF",         "AltPF$",                 ROOT.kOrange+7, 34, 1.2),
-        ("APFCh",       "AltPFCharged$",          ROOT.kGreen+1,  34, 1.2),
-        ("APFNh",       "AltPF$-AltPFCharged$",    ROOT.kGreen+3,  34, 1.2),
-    ]),
-    ('altpfdebug2',[
-        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
-        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+3,  20, 1.2),
-        ("Calo",       "L1Calo$",               ROOT.kViolet+1, 34, 1.5),
-        ("APF",         "AltPF$",                 ROOT.kOrange+7, 34, 1.2),
-        ("APFPh",       "AltPFPhoton$",          ROOT.kGreen+1,  34, 1.2),
-        ("APFNh",       "AltPF$-AltPFCharged$-AltPFPhoton$",    ROOT.kGreen+3,  34, 1.2),
-    ]),
-    ('altpfdebug3c',[
-        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("TK",             "L1TK$",             ROOT.kRed+1,    20, 1.2),
-        ("TK #Deltaz",     "L1TKV$",            ROOT.kRed+2, 20, 1.2),
-        ("APFCh",          "AltPFCharged$",     ROOT.kGreen+1,  34, 1.2),
-        ("APuppiCh",       "AltPuppiCharged$",  ROOT.kBlue+2, 25, 1.4),
-    ]),
-    ('altpfdebug3n',[
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
-        ("PH #times Acc",  "PhGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$-PhGenAcc$", ROOT.kAzure+1,  20, 1.2),
-        ("APFNh",       "AltPF$-AltPFCharged$", ROOT.kGreen+3,  34, 1.2),
-        ("APFPh",       "AltPFPhoton$",          ROOT.kGreen+1,  34, 1.2),
-        ("APFNh",       "AltPF$-AltPFCharged$-AltPFPhoton$",    ROOT.kGreen+2,  34, 1.2),
-    ]),
-    ('altpfdebugD',[
-        ("D Track", "AltPFDiscTrack$",               ROOT.kViolet+1, 34, 1.5),
-        ("D Calo T",         "AltPFDiscCaloT$",                 ROOT.kOrange+7, 34, 1.2),
-        ("D Calo #gamma",       "AltPFDiscCaloG$",          ROOT.kGreen+1,  34, 1.2),
-        ("D Em",       "AltPFDiscEm$",    ROOT.kGreen+3,  34, 1.2),
-    ]),
-    ('altpuppidebug',[
-        ("Gen #times Acc", "GenAcc$",           ROOT.kAzure+1,  20, 1.2),
-        ("CH #times Acc",  "ChGenAcc$",         ROOT.kAzure+2,  20, 1.2),
-        ("NE #times Acc",  "GenAcc$-ChGenAcc$", ROOT.kAzure+3,  20, 1.2),
-        ("APF",         "AltPF$",                  ROOT.kOrange+7, 34, 1.2),
-        ("APFCh",       "AltPFCharged$",           ROOT.kRed+2,    34, 1.2),
-        ("APFNh",       "AltPF$-AltPFCharged$",    ROOT.kOrange-3, 34, 1.2),
-        ("APuppi",         "AltPuppi$",                  ROOT.kGreen+1, 21, 1.1),
-        ("APuppiCh",       "AltPuppiCharged$",           ROOT.kGreen+3, 21, 1.1),
-        ("APuppiNh",       "AltPuppi$-AltPuppiCharged$", ROOT.kGreen+1, 21, 1.1),
     ]),
     ('pfcomp4',[
         ("Global",    "L1PFGlobal$",   ROOT.kGreen+1,  20, 1.2),
@@ -377,6 +319,8 @@ if __name__ == "__main__":
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("--corr-resol", dest="respCorr", default="exact", help="response correction for resolution: exact (compute & apply JECs as function of pt reco, then get resolution), gen (JECs vs pt gen), divide (divide by response), simple (divide by response at infinity)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
+    parser.add_option("--ymax", dest="yMax",  default=1.6, type=float)
+    parser.add_option("--ymaxRes", dest="yMaxRes",  default=0.0, type=float)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("-M", "--max-entries", dest="maxEntries",  default=999999999, type=int)
     parser.add_option("--mc", "--mc", dest="mcpt",  default="mc_pt")
@@ -439,7 +383,7 @@ if __name__ == "__main__":
             elif "muon" in oname:
                 ptdefs = [ "pthighest" ]
             elif isNeutrino:
-                ptdefs = [ "pthighest", "pt", "ptbest" ]
+                ptdefs = [ "pthighest", "pt", "ptbest", "pt02" ]
             else:
                 ptdefs = [ "pt02", "pthighest" ]   
             if options.more:
@@ -458,6 +402,7 @@ if __name__ == "__main__":
                         if "TK" in expr: continue
                     if ("Puppi" in name or "TKV" in expr) and "PU0" in odir: continue
                     if "Gen" in name and  "jet" not in oname: continue
+                    if "#times Acc" in name and  "jet" not in oname: continue
                     if ptdef.startswith("pt"):
                         if "pt" in oname:
                             prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,maxEntries=options.maxEntries), None
@@ -468,7 +413,7 @@ if __name__ == "__main__":
                             prof, pres = doEtaProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
                         else:
                             prof, pres = doPtProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
-                        #print oname, kind, ptdef, name, prof, pres
+                    #print oname, kind, ptdef, name, prof, pres
                     allplots = [(prof,resps), (pres,resols)]
                     if options.gauss:
                         if prof: allplots.append( (getattr(prof,'gaus',None),gresps) )
@@ -495,17 +440,23 @@ if __name__ == "__main__":
                         print "No ",ptype," plot for ", oname, ptdef 
                         continue
                     if "pt" in oname: 
-                        frame = ROOT.TH1F("stk","stk",100,0.0,5.0)
+                        minEta = min(min(p.GetX()[i] - p.GetErrorXlow(i)  for i in xrange(p.GetN())) for (n,p) in plots)
+                        maxEta = max(max(p.GetX()[i] + p.GetErrorXhigh(i) for i in xrange(p.GetN())) for (n,p) in plots)
+                        if abs(minEta-0) < 0.05: minEta = 0
+                        if abs(maxEta-5) < 0.05: maxEta = 5
+                        frame = ROOT.TH1F("stk","stk",100,minEta,maxEta)
                         frame.GetXaxis().SetTitle("|#eta|")
-                        ymax = 2.2
+                        ymax = options.yMax
                         leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.025*len(things))
                         leg.SetTextSize(0.04);
                         leg.SetNColumns(2)
                         if ptdef.startswith("pt"):
-                            frame.GetYaxis().SetRangeUser(0,2.2)
+                            frame.GetYaxis().SetRangeUser(0,options.yMax)
                             frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                             if isNeutrino:
-                                if "TGraph" in plots[0][1].ClassName():
+                                if "--ymax" in sys.argv:
+                                    ymax = options.yMax
+                                elif "TGraph" in plots[0][1].ClassName():
                                     ymax = 1.3*max(max(p.GetY(i) for i in xrange(p.GetN())) for (n,p) in plots)
                                 else:
                                     ymax = 1.3*max(p.GetMaximum() for (n,p) in plots)
@@ -518,11 +469,12 @@ if __name__ == "__main__":
                         frame = ROOT.TH1F("stk","stk",100,0.0,ptBins(oname)[-1])
                         if "resolution" in ptype:
                             frame.GetYaxis().SetTitle("#sigma(p_{T}^{corr})/p_{T}^{corr}")
-                            frame.GetYaxis().SetRangeUser(0.0, 1.2 if "PU200" in odir else 0.8)
+                            ymax = options.yMaxRes if options.yMaxRes else  (1.2 if "PU200" in odir else 0.8) 
+                            frame.GetYaxis().SetRangeUser(0.0, ymax)
                         else:
                             if ptdef.startswith("pt"):
                                 frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
-                                frame.GetYaxis().SetRangeUser(0, 2.7 if "PU200" in odir else 2.2)
+                                frame.GetYaxis().SetRangeUser(0, options.yMax)
                             else:
                                 frame.GetYaxis().SetTitle("< "+ptdef+" >")
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))

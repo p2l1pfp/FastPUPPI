@@ -8,7 +8,7 @@ use File::Basename;
 use Cwd;
 
 my $verbose = 1; my $label = ''; 
-my ($dataset,$dbsql,$filelist,$filedir,$castor,$filesperjob,$jobs,$pretend,$args,$evjob,$triangular,$customize,$inlinecustomize,$maxfiles,$skipfiles,$json,$fnal,$AAA,$addparents,$randomize);
+my ($dataset,$dbsql,$filelist,$filedir,$castor,$filesperjob,$jobs,$pretend,$args,$evjob,$triangular,$customize,$inlinecustomize,$maxfiles,$maxevents,$skipfiles,$json,$fnal,$AAA,$addparents,$randomize);
 my ($bash,$lsf,$help,$byrun,$bysize,$nomerge,$evperfilejob,$evperfile,$eosoutdir);
 my $monitor="/afs/cern.ch/user/g/gpetrucc/pl/cmsTop.pl";#"wc -l";
 my $report= "/afs/cern.ch/user/g/gpetrucc/sh/report";   #"grep 'Events total'";
@@ -45,6 +45,7 @@ GetOptions(
     'help|h|?'=>\$help,
     'customize|c=s'=>\$customize,
     'inline-customize=s'=>\$inlinecustomize,
+    'maxevents=i'=>\$maxevents,
     'maxfiles=i'=>\$maxfiles,
     'skipfiles=i'=>\$skipfiles,
     'subprocess=i'=>\$subprocesses,
@@ -192,10 +193,12 @@ close PYTHONFILEINFO;
 my @files = ();
 if (defined($dbsql)) {
     print "Using input files from DBS Query $dbsql\n" if $verbose;
-    @files = grep(m/\/store.*.root/, qx(das_client.py --query='$dbsql' --limit 999999));
+    $maxfiles = 999999 unless defined($maxfiles);
+    @files = grep(m/\/store.*.root/, qx(dasgoclient --query='$dbsql' --limit $maxfiles));
 } elsif (defined($dataset)) {
-    print "Using input files from DBS Query for dataset $dataset at site *cern*\n" if $verbose;
-    @files = grep(m/\/store.*.root/, qx(das_client.py --limit 10000 --query='file dataset=$dataset'));
+    print "Using input files from DBS Query for dataset $dataset \n" if $verbose;
+    $maxfiles = 999999 unless defined($maxfiles);
+    @files = grep(m/\/store.*.root/, qx(dasgoclient --limit $maxfiles --query='file dataset=$dataset'));
 } elsif (defined($filelist)) {
     print "Using input files from file $filelist\n" if $verbose;
     open FILELIST, "$filelist" or die "Can't read file list $filelist\n";
@@ -220,13 +223,14 @@ if (defined($dbsql)) {
         }
         @files = ();
         print "$stdir\n";
-        foreach my $line (qx(/afs/cern.ch/project/eos/installation/cms/bin/eos.select ls $stdir)) {
+        foreach my $line (qx(eos ls $stdir)) {
             my ($thisfile) = ($line =~ m/(\S+\.root)/) or next;
             if (basename($thisfile) =~ m{$stglob}) {
                 push @files, "$stdir/$thisfile";
             }
         }
     } else {
+        if (-d $filedir) { $filedir .= "/*.root"; }
         @files = map( "file:$_", glob($filedir) );
     }
 } else {
@@ -533,6 +537,8 @@ foreach my $j (1 .. $jobs) {
         if (defined($evperfilejob)) {
             $postamble .= "process.source.skipEvents = cms.untracked.uint32(".($job2evts[$j-1]->[0]).")\n";
             $postamble .= "process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(".($job2evts[$j-1]->[1])."))\n";
+        } elsif (defined($maxevents)) {
+            $postamble .= "process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32($maxevents))\n";
         } else {
             $postamble .= "process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(-1))\n";
         }
@@ -702,6 +708,7 @@ EOF
     }
 
     print OUT <<EOF;
+sleep 10;
 while ps x | grep -q "cmsRun $jgrep"; do
     clear;
     echo "At \$(date), jobs are still running...";

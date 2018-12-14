@@ -29,7 +29,14 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02  -r --ptmin 5 --ptmax 50
 #    Hadrons, track
 #        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1TK_pthighest -e L1TK_pthighest   -r --ptmin 5 --ptmax 50
-
+#
+# ================================
+#  FOR HGCal 3D-cluster based PF with a single collection of clusters, there is one single run of calibration (still based on EMF)
+#
+#  1) python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root  plots/corr -p pimix -w L1RawHGCal_pt02 -e L1RawHGCal_pt02 --fitrange 15 50 --root hadcorr_HGCal3D.root --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmax 50 --hgcal-eta
+#
+#  2) resolutions can then extracted as before but with pimix
+#     python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0..root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  -r --ptmin 5 --ptmax 50 --hgcal-eta
 
 if __name__ == "__main__":
     from optparse import OptionParser
@@ -43,6 +50,7 @@ if __name__ == "__main__":
     parser.add_option("--xpt", "--xpt", dest="xpt",  default=("mc_pt","p_{T}^{gen}"), nargs=2)
     parser.add_option("--coarse-eta", dest="coarseEta", default=False, action="store_true")
     parser.add_option("--semicoarse-eta", dest="semiCoarseEta", default=False, action="store_true")
+    parser.add_option("--hgcal-eta", dest="hgcalEta", default=False, action="store_true")
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
@@ -89,9 +97,11 @@ if __name__ == "__main__":
             etas = [ 1.5, 3.0, 5.0 ]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.semiCoarseEta:
-            #etas = [ 1.5, 3.0, 3.5, 3.8, 4.2, 4.4, 4.7, 5.0 ]
 	    etas = [1.5, 3.0, 3.2, 3.5, 4.0, 4.5, 5.0]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+        elif options.hgcalEta:
+	    etas = [ 1.9, 2.2, 2.5, 2.8, 3.0 ]
+            etas = [ (etas[i-1] if i else 1.6, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
@@ -264,7 +274,7 @@ if __name__ == "__main__":
                     frame.GetYaxis().SetTitle("p_{T}^{corr} (GeV)")
                     frame.GetYaxis().SetRangeUser(0.0, 150.0)
                     frame.Draw() 
-                    line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),150.0)
+                    line.DrawLine(0.0,0,frame.GetXaxis().GetXmax(),frame.GetXaxis().GetXmax())
                     pextra = ROOT.TGraph(199)
                     for i in xrange(200):
                         pextra.SetPoint(i, 0.5*(i+1), pclone.Eval(0.5*(i+1)))

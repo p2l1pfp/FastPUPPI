@@ -1,8 +1,12 @@
 CODE=${1/.py/}; shift
-#MAIN=/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/$1/
-#MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1phase2/93X/Inputs/$1/
-MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/101X/NewInputs/080818/$1
+MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/101X/NewInputs/231018/$1
 PREFIX="inputs_"
+
+if [[ "$1" == "--3D" ]]; then
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/101X/NewInputs/011118/$1
+    PREFIX="reinputs_"
+fi;
 
 INPUT=$1; shift
 if [[ "$1" != "" ]]; then
@@ -12,18 +16,14 @@ else
     OUTPUT="${INPUT}";
 fi;
 
-if [[ "$1" == "--92X" ]]; then
-    MAIN=/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/$INPUT/
-    shift;
-fi;
 clean=true
 if [[ "$1" == "--noclean" ]]; then
     clean=false;
     shift
 fi
 
-#~gpetrucc/pl/cmsSplit.pl --files "$MAIN/${INPUT}/inputs_17D*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh && bash ${CODE}_${OUTPUT}_cleanup.sh
-python/scripts/cmsSplit.pl --files "$MAIN/${PREFIX}*${INPUT}*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh 
+PSCRIPT=$CMSSW_BASE/src/FastPUPPI/NtupleProducer/python/scripts/
+$PSCRIPT/cmsSplit.pl --files "$MAIN/${PREFIX}*${INPUT}*root" --label ${OUTPUT} ${CODE}.py --bash --n 8 $* && bash ${CODE}_${OUTPUT}_local.sh 
 
 if $clean; then
     REPORT=$(grep -o "tee \S\+_${OUTPUT}.report.txt" ${CODE}_${OUTPUT}_local.sh  | awk '{print $2}');
