@@ -16,13 +16,14 @@ process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackFindingTracklet.L1TrackletTracks_cff')
 process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "Level1TTTracks")
 
+process.load('L1Trigger.Phase2L1ParticleFlow.hgc3dClustersForPF_cff')
+
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('file:/eos/cms/store/relval/CMSSW_9_3_7/RelValSingleTauFlatPt2To100_pythia8/GEN-SIM-DIGI-RAW/93X_upgrade2023_realistic_v5_2023D17noPU-v2/10000/58739462-8B2C-E811-A013-0CC47A7C34D0.root'),
-    #fileNames = cms.untracked.vstring('file:/eos/cms/store/relval/CMSSW_9_3_7/RelValZMM_14/GEN-SIM-DIGI-RAW/93X_upgrade2023_realistic_v5_2023D17noPU-v1/10000/96D02123-012D-E811-868C-0CC47A4D7640.root'),
-    fileNames = cms.untracked.vstring('/store/relval/CMSSW_9_3_7/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/93X_upgrade2023_realistic_v5_2023D17noPU-v2/10000/7EC7DD7F-782C-E811-B469-0CC47A4D76A0.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/93X/HadronGun/GEN-SIM-DIGI-RAW/HadronGun_job1_sub1.GEN-SIM-DIGI-RAW.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     inputCommands = cms.untracked.vstring("keep *", 
         "drop l1tHGCalTowerMapBXVector_hgcalTriggerPrimitiveDigiProducer_towerMap_HLT",
+        "drop *_hgcalTriggerPrimitiveDigiProducer_*_*",
         "drop l1tEMTFHit2016Extras_simEmtfDigis_CSC_HLT",
         "drop l1tEMTFHit2016Extras_simEmtfDigis_RPC_HLT",
         "drop l1tEMTFHit2016s_simEmtfDigis__HLT",
@@ -35,7 +36,10 @@ process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
   
 
 process.p = cms.Path(
-    process.L1TrackletTracks + process.SimL1Emulator
+    process.L1TrackletTracks +
+    process.SimL1Emulator +
+    process.hgc3dClustersForPF_STC +
+    process.hgc3dClustersForPF_TC
 )
 
 process.out = cms.OutputModule("PoolOutputModule",
@@ -47,15 +51,20 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_genMetTrue_*_*",
             # --- PF IN
             "keep *_TTTracksFromTracklet_Level1TTTracks_*",
+            # ecal
             "keep *_l1EGammaCrystalsProducer_L1EGXtalClusterNoCuts_*",
-            "keep *_hgcalTriggerPrimitiveDigiProducer_cluster3D_IN",
-            "keep *_hgcalTriggerPrimitiveDigiProducer_cluster2D_IN",
-            "keep *_hgcalTriggerPrimitiveDigiProducer_calibratedTriggerCells_IN",
+            "keep *_l1EGammaCrystalsProducer_*_*",
+            # HGC
+            #"keep *_hgcalVFEProducer_*_IN", # uncomment to be able to re-run the concentrator
+            "keep *_hgcalConcentratorProducer*_*_IN",
+            "keep *_hgcalBackEndLayer1Producer*_*_IN",
+            "keep *_hgcalBackEndLayer2Producer*_*_IN",
+            "keep *_hgcalTowerMapProducer_*_IN",
+            "keep *_hgcalTowerProducer_*_IN",
+            # muons
             "keep *_simGmtStage2Digis__*",
+            # hcal
             "keep *_simHcalTriggerPrimitiveDigis__*",
-            # --- to be tested
-            "keep *_hgcalTriggerPrimitiveDigiProducer_tower_IN",
-            "keep *_hgcalTriggerPrimitiveDigiProducer_towerMap_IN",
             # --- Stage2 ---
             "keep *_simCaloStage2Digis_*_*",
             # --- TK IN
@@ -72,6 +81,8 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_L1TrackerHTMiss_*_*",
             "keep *_L1TrackerJets_*_*",
             "keep *_VertexProducer_*_*",
+            "keep *_l1KBmtfStubMatchedMuons_*_*",
+            "keep *_l1EGammaEEProducer_*_*",
             # --- PF OUT
             "keep l1tPFClusters_*_*_*",
             "keep l1tPFTracks_*_*_*",
@@ -83,6 +94,7 @@ process.out = cms.OutputModule("PoolOutputModule",
         fastCloning = cms.untracked.bool(False),
         overrideInputFileSplitLevels = cms.untracked.bool(True),
         eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
+        SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p")),
 )
 process.e = cms.EndPath(process.out)
 
