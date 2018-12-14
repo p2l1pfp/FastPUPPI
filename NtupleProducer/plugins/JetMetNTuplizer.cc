@@ -79,6 +79,7 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
         int   count_raw, count_corr;
         float ht_raw, ht_corr;
         float mht_raw, mht_corr;
+        float j_raw[6], j_corr[6];
         JetBranch(const std::string &n) : name(n) {}
         void makeBranches(TTree *tree) {
             tree->Branch((name+"_ht_raw").c_str(),   &ht_raw,   (name+"_ht_raw/F").c_str());
@@ -87,15 +88,26 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
             tree->Branch((name+"_ht_corr").c_str(),   &ht_corr,   (name+"_ht_corr/F").c_str());
             tree->Branch((name+"_mht_corr").c_str(),   &mht_corr,   (name+"_mht_corr/F").c_str());
             tree->Branch((name+"_num_corr").c_str(), &count_corr, (name+"_num_corr/I").c_str());
+            tree->Branch((name+"_j_raw").c_str(),   &j_raw,   (name+"_j_raw[6]/F").c_str());
+            tree->Branch((name+"_j_corr").c_str(),   &j_corr,   (name+"_j_corr[6]/F").c_str());
         }
         void fill(const edm::View<reco::LeafCandidate> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::LeafCandidate> & sel) {  
             count_raw = 0; ht_raw = 0;
             count_corr = 0; ht_corr = 0;
             reco::Particle::LorentzVector sum_raw, sum_corr;
+            std::vector<float> pt_raw, pt_corr;
             for (reco::LeafCandidate jet : jets) {
-                if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); sum_raw += jet.p4(); }
+                if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); sum_raw += jet.p4(); pt_raw.push_back(-jet.pt()); }
                 jet.setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
-                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); }
+                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); pt_corr.push_back(-jet.pt()); }
+            }
+            std::sort(pt_raw.begin(), pt_raw.end());
+            std::sort(pt_corr.begin(), pt_corr.end());
+            pt_raw.resize(6, 0.0);
+            pt_corr.resize(6, 0.0);
+            for (unsigned int i = 0; i < 6; ++i) { 
+                j_raw[i] = - pt_raw[i];
+                j_corr[i] = - pt_corr[i];
             }
             mht_raw = sum_raw.Pt();
             mht_corr = sum_corr.Pt();
