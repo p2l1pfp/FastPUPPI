@@ -12,7 +12,7 @@ from array import array
 from bisect import bisect_left
 from math import pow
 
-def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=40E3):
+def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=2760.0*11246/1000):
     ROOT.gROOT.cd()
     htemp = ROOT.gROOT.FindObject("htemp")
     if htemp: htemp.Delete()
@@ -26,6 +26,12 @@ def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=40E3):
     ret = htemp.Clone("ceff_"+name)
     ret.SetDirectory(None)
     return ret
+
+def makeROC(effsig,effbkg):
+    graph = ROOT.TGraph(effsig.GetNbinsX())
+    for i in xrange(1,graph.GetN()+1):
+        graph.SetPoint(i-1, effsig.GetBinContent(i), effbkg.GetBinContent(i))
+    return graph 
 
 def makeEffHist(name, tree, expr, thr, gvar, xmax, cut="", logxbins=None):
     ROOT.gROOT.cd()
@@ -156,8 +162,12 @@ for kind,things in whats:
         genexpr = options.htvar[0].replace("MET","METGen")
         qualif = "|#eta| < 2.4" if "Central" in  options.htvar[0] else "|#eta| < 4.7" 
     else:
-        htexpr = "E%sPt%d_%s_corr" % (options.eta, options.pt, options.htvar[0])
-        genexpr = "AK4GenJetsE%sPt%d_%s_raw" % (options.eta, options.pt, options.htvar[0])
+        pre, post = options.htvar[0], ""
+        if "[" in options.htvar[0]:
+            pre, post = options.htvar[0].split("[")
+            post = "["+post
+        htexpr = "E%sPt%d_%s_corr%s" % (options.eta, options.pt, pre, post)
+        genexpr = "AK4GenJetsE%sPt%d_%s_raw%s" % (options.eta, options.pt, pre, post)
         qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, float(options.eta)/10)
     for name,expr,col,msty,msiz in things:
         if "$" not in expr and options.htvar[0] != "ht": continue
@@ -165,8 +175,11 @@ for kind,things in whats:
         label = name
         if args[3] == "rate":
             plot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
-        elif args[3] == "eff":
-            plot = makeEffHist(name, signal, rexpr, options.genht, genexpr, options.xmax, logxbins=options.logxbins)
+        elif args[3] == "effc":
+            cut = "%s > %g" % (genexpr, options.genht) if options.genht else ""
+            plot = makeCumulativeHTEff(name, signal, rexpr, options.xmax, norm=1, cut=cut)
+        #elif args[3] == "eff":
+        #    plot = makeEffHist(name, signal, rexpr, options.genht, genexpr, options.xmax, logxbins=options.logxbins)
         elif args[3] == "isorate":
             rateplot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
             cut = 9999
@@ -176,30 +189,60 @@ for kind,things in whats:
                     break
             plot = makeEffHist(name, signal, rexpr, cut, genexpr, options.xmax, logxbins=options.logxbins)
             label = "%s(%s) > %.0f" % (options.htvar[1], name,cut)
+        elif args[3] == "roc":
+            cut = "%s > %g" % (genexpr, options.genht) if options.genht else ""
+            effsig  = makeCumulativeHTEff(name+"_s", signal, rexpr, options.xmax, norm=1, cut=cut)
+            ratebkg = makeCumulativeHTEff(name+"_b", background, rexpr, options.xmax)
+            plot = makeROC(effsig,ratebkg)
+            msty = 0
         else: raise RuntimeError
         plot.SetLineWidth(3); plot.SetLineColor(col);  plot.SetMarkerColor(col)
         plot.SetMarkerStyle(msty); plot.SetMarkerSize(msiz)
         plots.append((label,plot))
     if args[3] == "rate":
         c1.SetLogy(True)
-        frame = ROOT.TH1D("",";L1 %s cut (%s); Minbias rate @ PU200 [kHz]" % (options.htvar[1], qualif), 100, 0, 1000)
+        frame = ROOT.TH1D("",";L1 %s cut (%s); Minbias rate @ PU200 [kHz]" % (options.htvar[1], qualif), 100, 0, options.xmax)
         frame.GetYaxis().SetDecimals(True)
         frame.GetXaxis().SetNdivisions(505)
         frame.GetYaxis().SetRangeUser(0.5, 100e3)
         leg = ROOT.TLegend(0.6,0.99,0.95,0.99-0.06*len(things))
         plotname = '%s%s-%s_eta%s_pt%d' % (options.htvar[0], args[3], kind, options.eta, options.pt)
-    elif args[3] == "eff":
-        frame = ROOT.TH1D("",";Gen %s (%s); Eff (L1 %s > %.0f)" % (options.htvar[1], qualif, options.htvar[1], options.genht), 100, 0, options.xmax)
+    elif args[3] == "effc":
+        gentext, genpost = "iciency", "" 
+        if options.genht > 0:
+            gentext = " (Gen %s > %s)" % (options.htvar[1], options.genht)
+            gentpost = "_gen%.0f" % (options.genht)
+        frame = ROOT.TH1D("",";L1 %s thresh (%s); Eff%s" % (options.htvar[1], qualif, gentext), 100, 0, options.xmax)
         leg = ROOT.TLegend(0.6,0.19,0.95,0.19+0.06*len(things))
-        plotname = '%s%s-%s_eta%s_pt%d_gen%.0f' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.genht)
+        plotname = '%s%s-%s_eta%s_pt%d%s' % (options.htvar[0], args[3], kind, options.eta, options.pt, genpost)
+    #elif args[3] == "eff":
+    #   gentext, genpost = "", "" 
+    #   if options.genht > 0:
+    #       gentext = "(Gen %s > %s)" % (options.htvar[1], options.genht)
+    #       gentpost = "_gen%.0f" % (options.genht)
+    #   frame = ROOT.TH1D("",";Gen %s (%s); Eff %s" % (options.htvar[1], qualif, gentext), 100, 0, options.xmax)
+    #   leg = ROOT.TLegend(0.6,0.19,0.95,0.19+0.06*len(things))
+    #   plotname = '%s%s-%s_eta%s_pt%d%s' % (options.htvar[0], args[3], kind, options.eta, options.pt, genpost)
     elif args[3] == "isorate":
         frame = ROOT.TH1D("",";Gen %s (%s); Eff (L1 rate %.0f kHz)" % (options.htvar[1], qualif, options.rate), 100, 0, options.xmax)
         frame.GetYaxis().SetDecimals(True)
         #leg = ROOT.TLegend(0.20,0.99,0.55,0.99-0.055*len(things))
         leg = ROOT.TLegend(0.65,0.19,0.99,0.19+0.065*len(things))
         plotname = '%s%s-%s_eta%s_pt%d_%.0fkHz' % (options.htvar[0], args[3], kind, options.eta, options.pt, options.rate)
+    elif args[3] == "roc":
+        c1.SetLogy(True)
+        gentext, genpost = "iciency", "" 
+        if options.genht > 0:
+            gentext = " (Gen %s > %s)" % (options.htvar[1], options.genht)
+            gentpost = "_gen%.0f" % (options.genht)
+        frame = ROOT.TH1D("",";Eff%s; Minbias rate @ PU200 [kHz]" % (gentext), 100, 0, 1)
+        frame.GetYaxis().SetDecimals(True)
+        frame.GetXaxis().SetNdivisions(505)
+        frame.GetYaxis().SetRangeUser(0.5, 100e3)
+        leg = ROOT.TLegend(0.2,0.98,0.55,0.98-0.06*len(things))
+        plotname = '%s%s-%s_eta%s_pt%d%s' % (options.htvar[0], args[3], kind, options.eta, options.pt, genpost)
     frame.Draw()
-    if args[3] == "rate":
+    if args[3] in ("rate","roc"):
         line = ROOT.TLine()
         line.SetLineStyle(7)
         for y in 40e3, 100, 10:
@@ -207,7 +250,7 @@ for kind,things in whats:
     for n,p in plots: 
         p.Draw("PCX SAME" if ("TH1" not in p.ClassName()) else "C SAME")
     for n,p in plots: 
-        leg.AddEntry(p, n, "LP" if args[3] != "rate" else "L")
+        leg.AddEntry(p, n, "L" if args[3] in ("rate","roc") else "LP")
     leg.Draw()
     
     c1.Print('%s/%s.png' % (odir, plotname))

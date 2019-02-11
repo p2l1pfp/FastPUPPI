@@ -62,6 +62,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1Puppi = cms.VInputTag("l1pfCandidates:Puppi",),
     ),
     copyUInts = cms.VInputTag(),
+    copyFloats = cms.VInputTag(),
 )
 for X in "tot","max":
     for I in "Calo EmCalo TK Mu".split(): 

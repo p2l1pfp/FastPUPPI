@@ -58,6 +58,7 @@ def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etam
     return ret
 def doEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
     npoints = tree.Draw(expr+":abs(mc_eta)>>"+name+"(20,0,5.0)", cut, "PROF", maxEntries);
+    if npoints == 0: return None
     #print "Draw("+expr+":abs(mc_eta), "+cut+") --> ",npoints
     return ROOT.gROOT.FindObject(name);
 def doRespEtaProf(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
@@ -75,12 +76,16 @@ def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     prof = ROOT.TProfile(name,name,len(ptbins),array('f',[0]+ptbins))
     tree.Draw(expr+":mc_pt>>"+name, cut, "PROF", maxEntries);
     return prof;
-def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=False, fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999), maxEntries=999999999, respCorr="simple"):
-    ptbins = ptBins(oname)
+def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=False, fitopt="WQ0C EX0 ROB=0.95", fitrange=(0,999), maxEntries=999999999, respCorr="simple", fitfunc="lin",ptbins=None,keepGraph=False, fromGraph=None):
+    if not ptbins: ptbins = ptBins(oname)
     ys = [[] for ipt in ptbins]
-    npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "", maxEntries);
-    if npoints <= 0: return (None,None)
-    graph = ROOT.gROOT.FindObject("Graph");
+    if fromGraph == None:
+        npoints = tree.Draw("("+expr+")/("+mcpt+"):"+xpt, cut, "", maxEntries);
+        if npoints <= 0: return (None,None)
+        graph = ROOT.gROOT.FindObject("Graph");
+    else:
+        graph = fromGraph
+        npoints = graph.GetN()
     xi, yi = graph.GetX(), graph.GetY()
     for i in xrange(graph.GetN()):
         if yi[i] == 0: continue
@@ -90,7 +95,9 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
                 break
     ret = ROOT.TGraphAsymmErrors()
     ret.SetName(name)
+    if keepGraph: ret.graph = graph
     retg = ROOT.TGraphAsymmErrors()
+    if keepGraph: retg.graph = graph
     retg.SetName(name+"_gauss")
     resols, resolsg = [], []
     for ipt,ptmax in enumerate(ptbins):
@@ -120,11 +127,13 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
         if avg >  0.2:
             resolsg.append((ptc,ptd,0.5*rms2,0))
     if ret.GetN() <= 3: return (None,None)
-    tf1 = ROOT.TF1(name+"_f1","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    respformula = "1/x++1"
+    if fitfunc == "linsq": respformula = "1/x++1/sqrt(x)++1"
+    tf1 = ROOT.TF1(name+"_f1", respformula, 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
     #tf1 = ROOT.TF1(name+"_f1","1/x++1++1/(x*x)", ret.GetX()[0]-ret.GetErrorXlow(0), ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
     ret.Fit(tf1, fitopt, "", fitrange[0], fitrange[1])
     ret.fit = tf1
-    tf1g = ROOT.TF1(name+"_f1g","1/x++1", 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
+    tf1g = ROOT.TF1(name+"_f1g",respformula, 0, ret.GetX()[ret.GetN()-1]+ret.GetErrorXhigh(ret.GetN()-1) )
     retg.Fit(tf1g, fitopt, "", fitrange[0], fitrange[1])
     retg.fit = tf1
     ret.gaus = retg
@@ -335,7 +344,8 @@ if __name__ == "__main__":
     parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
     parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
     parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
-    parser.add_option("--no-fit", dest="noFit", default=False, action="store_true", help="skip fits")
+    parser.add_option("--fit", dest="fit", default="lin", type="string", help="fit: lin, linsq, none")
+    parser.add_option("--no-fit", dest="fit", action="store_const", const="none", help="skip fits")
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("--corr-resol", dest="respCorr", default="exact", help="response correction for resolution: exact (compute & apply JECs as function of pt reco, then get resolution), gen (JECs vs pt gen), divide (divide by response), simple (divide by response at infinity)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
@@ -420,14 +430,15 @@ if __name__ == "__main__":
                         cutptdef = cut +" && %s > 0" % expr.replace("$","_n025")
                     if "eta_25" in oname or "eta_30" in oname:
                         if "TK" in expr: continue
-                    if ("Puppi" in name or "TKV" in expr) and "PU0" in odir: continue
+                    if ("Puppi" in name) and "PU0" in odir: continue
+                    if ("TKV" in expr)   and "PU0" in odir: continue
                     if "Gen" in name and  "jet" not in oname: continue
                     if "#times Acc" in name and  "jet" not in oname: continue
                     if ptdef.startswith("pt"):
                         if "pt" in oname:
                             prof, pres = doRespEta(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,maxEntries=options.maxEntries), None
                         else:
-                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries,respCorr=options.respCorr)
+                            prof, pres = doRespPt(oname,tree,name,exprptdef,cutptdef,mcpt=options.mcpt,xpt=options.xpt[0],maxEntries=options.maxEntries,respCorr=options.respCorr,fitfunc=options.fit)
                     else:
                         if "pt" in oname:
                             prof, pres = doEtaProf(oname,tree,name,exprptdef,cutptdef,maxEntries=options.maxEntries), None
@@ -459,11 +470,14 @@ if __name__ == "__main__":
                         if "_pt" in oname and ("resolution" in ptype) and ptdef.startswith("pt"): continue # not implemented
                         print "No ",ptype," plot for ", oname, ptdef 
                         continue
-                    if "pt" in oname: 
-                        minEta = min(min(p.GetX()[i] - p.GetErrorXlow(i)  for i in xrange(p.GetN())) for (n,p) in plots)
-                        maxEta = max(max(p.GetX()[i] + p.GetErrorXhigh(i) for i in xrange(p.GetN())) for (n,p) in plots)
-                        if abs(minEta-0) < 0.05: minEta = 0
-                        if abs(maxEta-5) < 0.05: maxEta = 5
+                    if "pt" in oname:
+                        if not isNeutrino:
+                            minEta = min(min(p.GetX()[i] - p.GetErrorXlow(i)  for i in xrange(p.GetN())) for (n,p) in plots)
+                            maxEta = max(max(p.GetX()[i] + p.GetErrorXhigh(i) for i in xrange(p.GetN())) for (n,p) in plots)
+                            if abs(minEta-0) < 0.05: minEta = 0
+                            if abs(maxEta-5) < 0.05: maxEta = 5
+                        else:
+                            (minEta,maxEta) = plots[0][1].GetXaxis().GetXmin(), plots[0][1].GetXaxis().GetXmax()
                         frame = ROOT.TH1F("stk","stk",100,minEta,maxEta)
                         frame.GetXaxis().SetTitle("|#eta|")
                         ymax = options.yMax
@@ -485,13 +499,16 @@ if __name__ == "__main__":
                         else:
                             frame.GetYaxis().SetTitle("< "+ptdef+" >")
                             frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
+                        hasfitlegend = False
                     else:
                         frame = ROOT.TH1F("stk","stk",100,0.0,ptBins(oname)[-1])
                         if "resolution" in ptype:
+                            hasfitlegend = (options.fit != "none")
                             frame.GetYaxis().SetTitle("#sigma(p_{T}^{corr})/p_{T}^{corr}")
                             ymax = options.yMaxRes if options.yMaxRes else  (1.2 if "PU200" in odir else 0.8) 
                             frame.GetYaxis().SetRangeUser(0.0, ymax)
                         else:
+                            hasfitlegend = (options.fit == "lin")
                             if ptdef.startswith("pt"):
                                 frame.GetYaxis().SetTitle("median p_{T}^{rec}/p_{T}^{gen}")
                                 frame.GetYaxis().SetRangeUser(0, options.yMax)
@@ -500,7 +517,7 @@ if __name__ == "__main__":
                                 frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
                         frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                         legsize = 0.042*(len(plots)+0.5)
-                        if options.noFit: legsize /= 2;
+                        if not hasfitlegend: legsize /= 2;
                         leg = ROOT.TLegend(0.2,0.99,0.95,0.99-legsize)
                         leg.SetTextSize(0.035);
                         leg.SetNColumns(2)
@@ -516,15 +533,15 @@ if __name__ == "__main__":
                         line.DrawLine(3.0,0,3.0,ymax)
                     for n,p in plots: 
                         p.Draw("P SAME" if "TGraph" in p.ClassName() else "SAME")
-                        if hasattr(p,'fit') and not options.noFit: p.fit.Draw("SAME")
+                        if hasattr(p,'fit') and (options.fit != "none"): p.fit.Draw("SAME")
                     for n,p in plots: 
                         leg.AddEntry(p, n.replace("_"," "), "LP")
-                        if hasattr(p,'fit') and not options.noFit: 
+                        if hasfitlegend: 
                             if "resolution" in ptype:
                                 if ("Trk" in n or "TK" in n) and ("jet" not in oname) and ("ele" not in oname):
                                     eq = ("%.1f #times p_{T}^{2} #oplus %.3f #times p_{T} [TeV]" % (p.fit.GetParameter(1), p.fit.GetParameter(0)))
                                 else:
-                                    eq = ("%.2f #timesp_{T} %+.1f" % (p.fit.GetParameter(1), p.fit.GetParameter(0))).replace("+","+ ").replace(" -"," #minus ")
+                                    eq = ("%.3f #timesp_{T} %+.1f" % (p.fit.GetParameter(1), p.fit.GetParameter(0))).replace("+","+ ").replace(" -"," #minus ")
                             else:
                                 eq = ("%.2f #timesp_{T} %+.1f" % (max(0,p.fit.GetParameter(1)), p.fit.GetParameter(0))).replace("+","+ ").replace(" -"," #minus ")
                             leg.AddEntry(p.fit, eq, "L")

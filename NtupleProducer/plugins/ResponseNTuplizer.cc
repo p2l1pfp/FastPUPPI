@@ -252,6 +252,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
             static std::string typecode() { assert(false); }
       };
       std::vector<CopyT<unsigned>> copyUInts_;
+      std::vector<CopyT<float>> copyFloats_;
       float bZ_;
 };
 template<> std::string ResponseNTuplizer::CopyT<unsigned>::typecode() { return "i"; }
@@ -276,7 +277,10 @@ ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
         reco_.emplace_back(::MultiCollection(objs,name,consumesCollector()),RecoVars());
     }
     for (const edm::InputTag &tag : iConfig.getParameter<std::vector<edm::InputTag>>("copyUInts")) {
-        copyUInts_.emplace_back(tag.instance(), consumes<unsigned>(tag));
+        copyUInts_.emplace_back(tag, consumes<unsigned>(tag));
+    }
+    for (const edm::InputTag &tag : iConfig.getParameter<std::vector<edm::InputTag>>("copyFloats")) {
+        copyFloats_.emplace_back(tag, consumes<float>(tag));
     }
 }
 
@@ -291,6 +295,7 @@ ResponseNTuplizer::beginJob()
         pair.second.makeBranches(pair.first.name(), tree_);
     }
     for (auto & c : copyUInts_) c.makeBranches(tree_);
+    for (auto & c : copyFloats_) c.makeBranches(tree_);
 }
 
 
@@ -308,10 +313,14 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     iEvent.getByToken(genparticles_, genparticles);
 
     std::vector<const reco::GenParticle *> prompts, taus;
+    bool justNeutrinos = true;
     for (const reco::GenParticle &gen : *genparticles) {
         if (isParticleGun_) {
             if (gen.statusFlags().isPrompt() == 1) prompts.push_back(&gen);
             continue;
+        }
+        if (std::abs(gen.pdgId()) < 12 || std::abs(gen.pdgId()) > 16 || gen.charge() != 0) {
+            justNeutrinos = false;
         }
         if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && (std::abs(gen.pdgId()) == 11 || std::abs(gen.pdgId()) == 13) && gen.pt() > 5) {
             prompts.push_back(&gen);
@@ -326,7 +335,10 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
         recopair.first.get(iEvent);
     }
     for (auto & c : copyUInts_) c.get(iEvent);
+    for (auto & c : copyFloats_) c.get(iEvent);
     mc_.id = 998; tree_->Fill(); // so that we write only one per event
+
+
     for (const reco::GenJet & j : *genjets) {
         bool ok = true;
         const reco::Candidate * match = nullptr;
@@ -397,7 +409,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
         tree_->Fill();
     }
     // now let's throw a few "random" cones
-    if (doRandom_) {
+    if (justNeutrinos || doRandom_) {
         for (int icone = 0; icone < 7; ++icone) {
             mc_.pt  = 10;
             mc_.eta = random_->Rndm() * 10 - 5;
@@ -405,6 +417,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
             mc_.id = 999;
             mc_.iso02 = 0;
             mc_.iso04 = 0;
+            mc_.iso08 = 0;
             bool badcone = false;
             for (const reco::GenParticle &gen : *genparticles) {
                 if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && gen.pt() > 0.5) {
