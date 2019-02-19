@@ -19,10 +19,12 @@
 <use name="CommonTools/Utils"/>
 <use name="DataFormats/ParticleFlowCandidate"/>
 <use name="DataFormats/Math"/>
-<use name="FastPUPPI/NtupleProducer"/>
 <use name="L1Trigger/L1TCalorimeter"/>
 <use name="DataFormats/L1TrackTrigger"/>
 <use name="DataFormats/L1THGCal"/>
+<use name="DataFormats/Phase2L1ParticleFlow"/>
+<use name="L1Trigger/Phase2L1ParticleFlow"/>
+<use name="DataFormats/L1TVertex"/>
 <use name="CommonTools/UtilAlgos"/>
 <flags CXXFLAGS="-ggdb"/>
 <flags EDM_PLUGIN="1"/>

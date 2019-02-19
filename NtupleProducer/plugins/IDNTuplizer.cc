@@ -23,7 +23,7 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
-#include <FastPUPPI/NtupleProducer/interface/L1TPFUtils.h>
+#include "L1Trigger/Phase2L1ParticleFlow/interface/L1TPFUtils.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "CommonTools/Utils/interface/StringObjectFunction.h"
 
@@ -74,11 +74,9 @@ class IDNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,edm::o
                 id = c.pdgId();
                 pt = c.pt(); 
                 if (propagate && c.charge() != 0) {
-                    math::XYZTLorentzVector momentum(c.px(),c.py(),c.pz(),c.energy());
                     math::XYZTLorentzVector vertex(c.vx(),c.vy(),c.vz(),0.);
-                    std::vector<double> lVars;
-                    l1tpf::propagate(1,lVars,momentum,vertex,c.charge(),bz);
-                    eta = lVars[4]; phi = lVars[5];
+                    auto caloetaphi = l1tpf::propagateToCalo(c.p4(),vertex,c.charge(),bz);
+                    eta = caloetaphi.first; phi = caloetaphi.second;
                 } else {
                     eta = c.eta(); phi = c.phi();
                 }

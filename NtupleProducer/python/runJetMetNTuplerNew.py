@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP", eras.Phase2_trigger)
+process = cms.Process("RESP", eras.Phase2C4_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -10,11 +10,12 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200))
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/NewInputs/080818/TTbar_PU200/inputs_TTbar_PU200_job1.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/hzz/gpetrucc/tmp/prod104X/TTbar_14TeV_TuneCP5_Pythia8_PU0/TTbar_14TeV_TuneCP5_Pythia8_PU0.batch1.job40.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -22,7 +23,7 @@ process.load('RecoMET.Configuration.GenMETParticles_cff')
 process.load('RecoMET.METProducers.genMetTrue_cfi')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
 process.l1ParticleFlow.remove(process.l1EGammaCrystalsProducer)

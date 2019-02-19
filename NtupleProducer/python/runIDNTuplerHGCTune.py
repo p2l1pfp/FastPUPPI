@@ -1,13 +1,13 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("ID", eras.Phase2_trigger)
+process = cms.Process("ID", eras.Phase2C4_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
@@ -15,12 +15,13 @@ process.source = cms.Source("PoolSource",
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
 process.load("L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff")
 process.hgcalConcentratorProducerSTC = process.hgcalConcentratorProducer.clone()
@@ -49,7 +50,7 @@ ntuple = cms.EDAnalyzer("IDNTuplizer",
     propagateToCalo = cms.bool(True),
     drMax = cms.double(0.1),
     minRecoPtOverGenPt = cms.double(0.3),
-    onlyMatched = cms.bool(True),
+    onlyMatched = cms.bool(False),
     variables = cms.PSet(
 	pt = cms.string("pt"),
 	emPt = cms.string("? hOverE >= 0 ? pt/(1+hOverE) : 0"),
@@ -78,8 +79,8 @@ process.ntupleSTC = ntuple.clone( src = cms.InputTag("hgcalBackEndLayer2Producer
   
 modules = [
     # process.hgcalConcentratorProducerSTC, # already in the inputs
-    process.hgcalBackEndLayer1ProducerSTC,
-    process.hgcalBackEndLayer2ProducerSTC,
+    #process.hgcalBackEndLayer1ProducerSTC,
+    #process.hgcalBackEndLayer2ProducerSTC,
     process.ntupleSTC
 ]
 
@@ -130,14 +131,14 @@ def newClustering(postfix,
     modules.append(nt)
 
 
-newClustering("STCdR03", reuseConc="STC", reuseL1="STC", layer2Threshold=20, layer2dR = 0.03)
+#newClustering("STCdR03", reuseConc="STC", reuseL1="STC", layer2Threshold=20, layer2dR = 0.03)
 
 #newClustering("STC070", concentratorAlgo="superTriggerCellSelect", concentratorThreshold=0.7, layer1Threshold=0, layer2Threshold=20, 
 #                    layer2dR = ([0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12))
 #newClustering("STC073",  reuseConc="STC070", layer1Threshold=3, layer2Threshold=20, 
 #                    layer2dR = ([0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12))
-newClustering("TC", reuseConc="", layer1Threshold=0, layer2Threshold=20, layer2dR = ([0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12))
-newClustering("TCdR03", reuseConc="", reuseL1="TC", layer2Threshold=20, layer2dR = 0.03)
+#newClustering("TC", reuseConc="", layer1Threshold=0, layer2Threshold=20, layer2dR = ([0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12))
+#newClustering("TCdR03", reuseConc="", reuseL1="TC", layer2Threshold=20, layer2dR = 0.03)
 
 process.p = cms.Path(sum(modules[1:], modules[0]))
 process.TFileService = cms.Service("TFileService", fileName = cms.string("idTupleNew.root"))

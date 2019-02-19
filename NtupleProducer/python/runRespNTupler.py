@@ -1,25 +1,62 @@
 import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP")
+process = cms.Process("RESP", eras.Phase2C4_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
+process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
-process.MessageLogger.cerr.FwkReport.reportEvery = 1000
+process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/Inputs/270318/TTbar_PU0/inputs_TTbar_job1.root'),
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/101X/Inputs/270318/HadronGun_PU0/inputs_HadronGun_PU0_job1.root'),
+    #fileNames = cms.untracked.vstring('file:inputs.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs93X/110219/SinglePion_PU0/inputs_SinglePion_PU0_job1.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/130219/ParticleGun_PU0/inputs104X_ParticleGun_PU0_job24.root'),
+    duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
+    skipBadFiles = cms.untracked.bool(True)
 )
-process.source.duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 
+process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
+process.load('Configuration.StandardSequences.MagneticField_cff')
+process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
-process.load('FastPUPPI.NtupleProducer.l1tPFHGCalProducerFrom3DTPsEM_cfi')
-process.load('FastPUPPI.NtupleProducer.caloNtupleProducer_cfi')
-process.load('FastPUPPI.NtupleProducer.ntupleProducer_cfi')
-process.CaloInfoOut.outputName = ""; # turn off Ntuples
-process.InfoOut.outputName = ""; # turn off Ntuples
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
+
+process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
+process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_split_cff")
+
+process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
+process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
+process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
+
+process.hgc3DClustersNoNoiseTC = process.hgc3DClustersNoNoise.clone(src = "hgcalBackEndLayer2ProducerTC:HGCalBackendLayer2Processor3DClustering")
+process.pfClustersFromHGC3DClustersRawTC = process.pfClustersFromHGC3DClustersRaw.clone(src = "hgc3DClustersNoNoiseTC")
+process.pfClustersFromHGC3DClustersTC    = process.pfClustersFromHGC3DClustersRawTC.clone(corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_TC.root")
+process.pfClustersFromHGC3DClustersEMRawTC = process.pfClustersFromHGC3DClustersRawTC.clone(emOnly = True, etMin = 0.)
+
+process.pfClustersFromHGC3DClustersOldEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
+
+process.runPF = cms.Sequence( 
+    process.l1ParticleFlow_proper + # excludes the prerequisites (3D clusters and L1EG clusters)
+    process.pfClustersFromL1EGClustersRaw +
+    process.pfClustersFromHGC3DClustersRaw +
+    process.pfClustersFromHGC3DClustersEMRaw
+    + process.hgc3DClustersNoNoiseTC
+    + process.pfClustersFromHGC3DClustersRawTC
+    + process.pfClustersFromHGC3DClustersTC
+    + process.pfClustersFromHGC3DClustersEMRawTC 
+    + process.pfClustersFromHGC3DClustersEM 
+    + process.pfClustersFromHGC3DClustersOldEMRaw
+    + process.pfClustersFromL1EGClusters 
+    + process.pfClustersFromCombinedCalo 
+    + process.l1pfProducer
+)
+
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
@@ -27,41 +64,57 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     isParticleGun = cms.bool(False),
     doRandom = cms.bool(False),
     objects = cms.PSet(
-        # -- offline inputs --
-        #Ecal = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-        #Hcal = cms.VInputTag('l1tPFHcalProducerFromOfflineRechits:towers','l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-        #Calo = cms.VInputTag('l1tPFEcalProducerFromOfflineRechits:towers','l1tPFHGCalEEProducerFromOfflineRechits:towers', 'l1tPFHcalProducerFromOfflineRechits:towers', 'l1tPFHGCalFHProducerFromOfflineRechits:towers', 'l1tPFHGCalBHProducerFromOfflineRechits:towers', 'l1tPFHFProducerFromOfflineRechits:towers'),
-        #TK   = cms.VInputTag('l1tPFTkProducersFromOfflineTracksStrips'),
-        # -- TP inputs --
-        #TPEcal = cms.VInputTag('l1tPFEcalProducerFromTPDigis:towers','l1tPFHGCalProducerFromTriggerCells:towersEE',),
-        TPEcal = cms.VInputTag('l1tPFHGCalProducerFrom3DTPsEM', 'l1tPFEcalProducerFromL1EGCrystalClusters', ),
-        TPHcal = cms.VInputTag('l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH', ),#'l1tPFHGCalBHProducerFromOfflineRechits:towers'),
-        TPCalo = cms.VInputTag('l1tPFHGCalProducerFrom3DTPsEM', 'l1tPFEcalProducerFromL1EGCrystalClusters', 'l1tPFHcalProducerFromTPDigis', 'l1tPFHGCalProducerFromTriggerCells:towersFHBH',), # 'l1tPFHGCalBHProducerFromOfflineRechits:towers'),
-        TPTK   = cms.VInputTag('l1tPFTkProducersFromL1Tracks',),
-        # -- processed --
-        #L1RawEcal = cms.VInputTag(cms.InputTag('CaloInfoOut','emUncalibrated')),
-        #L1RawCalo = cms.VInputTag(cms.InputTag('CaloInfoOut','uncalibrated')),
-        #L1Ecal = cms.VInputTag(cms.InputTag('CaloInfoOut','emCalibrated')),
-        L1RawEcal = cms.VInputTag(cms.InputTag('InfoOut','RawEmCalo')),
-        L1RawCalo = cms.VInputTag(cms.InputTag('InfoOut','RawCalo')),
-        L1Ecal = cms.VInputTag(cms.InputTag('InfoOut','EmCalo')),
-        L1Calo = cms.VInputTag("InfoOut:Calo",),
-        L1TK = cms.VInputTag("InfoOut:TK",),
-        L1TKV = cms.VInputTag("InfoOut:TKVtx",),
-        L1PF = cms.VInputTag("InfoOut:PF",),
-        L1Puppi = cms.VInputTag("InfoOut:Puppi",),
-        #---
-        RefL1TkJets = cms.VInputTag("L1TkJets:Central",),
+        # -- inputs and PF --
+        RawTK  = cms.VInputTag('pfTracksFromL1Tracks',),
+        # for calibrations
+        L1RawBarrelEcal   = cms.VInputTag('pfClustersFromL1EGClustersRaw' ),
+        L1RawBarrelCalo   = cms.VInputTag('pfClustersFromCombinedCaloHCal:uncalibrated'),
+        L1RawBarrelCaloEM = cms.VInputTag('pfClustersFromCombinedCaloHCal:emUncalibrated'),
+        L1RawHGCal   = cms.VInputTag('pfClustersFromHGC3DClustersRaw'),
+        L1RawHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEMRaw'),
+        L1RawHFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:uncalibrated'),
+        L1BarrelEcal = cms.VInputTag('pfClustersFromL1EGClusters' ),
+        L1BarrelCalo = cms.VInputTag('pfClustersFromCombinedCaloHCal:calibrated'),
+        L1HGCal   = cms.VInputTag('pfClustersFromHGC3DClusters'),
+        L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated'),
+        # TC2
+        L1RawHGCalEMTC = cms.VInputTag('pfClustersFromHGC3DClustersEMRawTC'),
+        L1RawHGCalTC = cms.VInputTag('pfClustersFromHGC3DClustersRawTC'),
+        L1HGCalTC    = cms.VInputTag('pfClustersFromHGC3DClustersTC'),
+        # old (non-split)
+        L1OldRawHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersOldEMRaw', ),
+        L1OldHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', ),
+        L1OldRawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated'),
+        L1OldRawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated'),
+        L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw'),
+        L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducer','EmCalo')),
+        L1OldCalo = cms.VInputTag("l1pfProducer:Calo",),
+        # outputs
+        L1Calo = cms.VInputTag("l1pfCandidates:Calo",),
+        L1TK = cms.VInputTag("l1pfCandidates:TK",),
+        L1TKV = cms.VInputTag("l1pfCandidates:TKVtx",),
+        L1PF = cms.VInputTag("l1pfCandidates:PF",),
+        L1Puppi = cms.VInputTag("l1pfCandidates:Puppi",),
+        # old (non-split)
+        L1OldPF = cms.VInputTag("l1pfProducer:PF",),
+        L1OldPuppi = cms.VInputTag("l1pfProducer:Puppi",),
+        L1OldPuppiForMET = cms.VInputTag("l1pfProducer:Puppi",),
+        L1OldPuppiForMET_sel = cms.string("charge != 0 || abs(eta) < 1.5 || (pt > 20 && abs(eta) < 2.5) || (pt > 40 && 2.5 <= abs(eta) <= 2.85) || (pt > 30 && abs(eta) > 3.0)")
     ),
     copyUInts = cms.VInputTag(),
+    copyFloats = cms.VInputTag(),
 )
 for X in "tot","max":
-    for I in "Calo EmCalo TK Mu".split(): process.ntuple.copyUInts.append( "InfoOut:%sNL1%s" % (X,I))
+    for I in "Calo EmCalo TK Mu".split(): 
+        pass
+        #process.ntuple.copyUInts.append( "InfoOut:%sNL1%s" % (X,I))
     for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
-        process.ntuple.copyUInts.append( "InfoOut:%sNL1PF%s" % (X,O))
-        process.ntuple.copyUInts.append( "InfoOut:%sNL1Puppi%s" % (X,O))
-process.p = cms.Path(process.l1tPFHGCalProducerFrom3DTPsEM + process.CaloInfoOut + process.InfoOut + process.ntuple)
-process.TFileService = cms.Service("TFileService", fileName = cms.string("respTuple.root"))
+        pass
+        #process.ntuple.copyUInts.append( "InfoOut:%sNL1PF%s" % (X,O))
+        #process.ntuple.copyUInts.append( "InfoOut:%sNL1Puppi%s" % (X,O))
+
+process.p = cms.Path(process.runPF + process.ntuple)
+process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
 
 # Below for more debugging
 if True:
@@ -85,141 +138,64 @@ if True:
     process.ntuple.objects.ChGenAcc = cms.VInputTag(cms.InputTag("chGenInAcceptance"))
     process.ntuple.objects.PhGenAcc = cms.VInputTag(cms.InputTag("phGenInAcceptance"))
     process.p = cms.Path(process.genInAcceptance + process.chGenInAcceptance + process.phGenInAcceptance + process.p._seq)
-    process.ntuple.objects.L1PFCharged = cms.VInputTag("InfoOut:PF",)
+
+    process.ntuple.objects.L1PFCharged = cms.VInputTag("l1pfCandidates:PF",)
     process.ntuple.objects.L1PFCharged_sel = cms.string("charge != 0")
-    process.ntuple.objects.L1PFPhoton = cms.VInputTag("InfoOut:PF",)
+    process.ntuple.objects.L1PFPhoton = cms.VInputTag("l1pfCandidates:PF",)
     process.ntuple.objects.L1PFPhoton_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.L1PFMuon = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFMuon_sel = cms.string("abs(pdgId) == 13")
+    process.ntuple.objects.L1PFElectron = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFElectron_sel = cms.string("abs(pdgId) == 11")
+    process.ntuple.objects.L1PuppiCharged = cms.VInputTag("l1pfCandidates:Puppi",)
+    process.ntuple.objects.L1PuppiCharged_sel = cms.string("charge != 0")
+    process.ntuple.objects.L1PuppiPhoton = cms.VInputTag("l1pfCandidates:Puppi",)
+    process.ntuple.objects.L1PuppiPhoton_sel = cms.string("pdgId == 22")
+
+
 def goGun():
     process.ntuple.isParticleGun = True
 def goRandom():
     process.ntuple.doRandom = True
-if False:
-    process.ntuple.objects.PFChargedScaled = cms.VInputTag("InfoOut:PF",)
-    process.ntuple.objects.PFChargedScaled_sel = cms.string("charge != 0 && status == 2")
-    process.ntuple.objects.PFDiscTrack = cms.VInputTag("InfoOut:PFDiscarded",)
-    process.ntuple.objects.PFDiscCaloT = cms.VInputTag("InfoOut:PFDiscarded",)
-    process.ntuple.objects.PFDiscCaloG = cms.VInputTag("InfoOut:PFDiscarded",)
-    process.ntuple.objects.PFDiscEm    = cms.VInputTag("InfoOut:PFDiscarded",)
-    process.ntuple.objects.PFDiscTrack_sel = cms.string("charge != 0 && status == 1")
-    process.ntuple.objects.PFDiscCaloT_sel = cms.string("charge == 0 && status == 0")
-    process.ntuple.objects.PFDiscCaloG_sel = cms.string("charge == 0 && status == 1")
-    process.ntuple.objects.PFDiscEm_sel    = cms.string("charge == 0 && status == 2")
-def goRegional(inParallel=False,mode="any"):
-    regions = cms.VPSet(
-            cms.PSet(
-                etaBoundaries = cms.vdouble(-5.5,-4,-3),
-                phiSlices = cms.uint32(4),
-                etaExtra = cms.double(0.25),
-                phiExtra = cms.double(0.25),
-            ),
-            cms.PSet(
-                etaBoundaries = cms.vdouble(-3,-1.5,-0.5,0.5,1.5,3),
-                phiSlices = cms.uint32(6),
-                etaExtra = cms.double(0.25),
-                phiExtra = cms.double(0.25),
-            ),
-            cms.PSet(
-                etaBoundaries = cms.vdouble(3,4,5.5),
-                phiSlices = cms.uint32(4),
-                etaExtra = cms.double(0.25),
-                phiExtra = cms.double(0.25),
-            ),
+def goMT(nthreads=2):
+    process.options.numberOfThreads = cms.untracked.uint32(nthreads)
+    process.options.numberOfStreams = cms.untracked.uint32(0)
+def goVerbose(v=3, point=None, R=0.7):
+    process.l1pfProducer.debug = v
+    if point:
+        process.l1pfProducer.debugEta = cms.untracked.double(point[0])
+        process.l1pfProducer.debugPhi = cms.untracked.double(point[1])
+        process.l1pfProducer.debugR   = cms.untracked.double(R)
+def dumpGen():
+    process.dumpGen = cms.EDAnalyzer("ParticleListDrawer",
+        maxEventsToPrint = cms.untracked.int32(100),
+        printVertex = cms.untracked.bool(False),
+        printOnlyHardInteraction = cms.untracked.bool(False), 
+        src = cms.InputTag("genParticles")
     )
-    if inParallel:
-        process.InfoOutReg = process.InfoOut.clone(regions = regions)
-        process.p = cms.Path(process.CaloInfoOut + process.InfoOut + process.InfoOutReg + process.ntuple)
-        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(False)
-    else:
-        process.InfoOut.regions = regions
-        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-        process.InfoOut.trackRegionMode = cms.string(mode)
-def gbr(neta,nphi,etaex=0.3,phiex=0.2,mode="any"):
-    regions = cms.VPSet(
-            cms.PSet(
-                etaBoundaries = cms.vdouble(*[(-1.5+3*i/neta) for i in xrange(neta+1)]),
-                phiSlices = cms.uint32(nphi),
-                etaExtra = cms.double(etaex),
-                phiExtra = cms.double(phiex),
-            ),
-    )
-    process.InfoOut.regions = regions
-    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-    process.InfoOut.trackRegionMode = cms.string(mode)
-if False:
-    process.InfoOut.fillTrackTree = cms.untracked.int32(1)
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/gpetrucc/l1phase2/Spring17D/200517/inputs_17D_TTbar_PU0_job1.root' ]
-    process.p.remove(process.ntuple)
-    process.TFileService.fileName = cms.string("trackTupleNew.root")
-if False: # run bitwise PF for Vivado
-    goRegional()
-    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-    process.InfoOut.linking.algo = "BitwisePF"
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] 
-if False: # prepare dump file for Vivado (PF IP core)
-    goRegional()
-    process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-    process.InfoOut.regionDumpFileName = cms.untracked.string("regions_TTbar_PU140.dump")
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
-if False: # prepare dump file for Vivado (Regionizer)
-    gbr(1,12,0,0,"atCalo")
-    process.InfoOut.regionDumpFileName = cms.untracked.string("barrel_sectors_1x12_TTbar_PU140.dump")
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] #, 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job2.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job3.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job4.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job5.root', 'file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job6.root', ]
-
-def comp4():
-    process.InfoOutGlobal = process.InfoOut.clone()
-    goRegional(mode="atCalo")
-    process.InfoOutRegional = process.InfoOut.clone()
-    process.InfoOut.linking.ecalPriority = False 
-    process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
-    process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
-    process.InfoOut.linking.trackEmUseAlsoTrackSigma = False 
-    process.InfoOut.linking.emCaloUseAlsoCaloSigma = False
-    process.InfoOutSimpler = process.InfoOut.clone()
-    process.InfoOut.linking.algo = "BitwisePF"
-    process.p.replace(process.InfoOut, process.InfoOutGlobal + process.InfoOutRegional + process.InfoOutSimpler + process.InfoOut)
-    process.ntuple.objects.L1PFGlobal = cms.VInputTag("InfoOutGlobal:PF",)
-    process.ntuple.objects.L1PFRegional = cms.VInputTag("InfoOutRegional:PF",)
-    process.ntuple.objects.L1PFSimpler = cms.VInputTag("InfoOutSimpler:PF",)
-if False:
-    if 1:
-        goRegional(mode="atCalo")
-        process.InfoOut.useRelativeRegionalCoordinates = cms.bool(True)
-        process.InfoOut.linking.ecalPriority = False 
-        process.InfoOut.linking.trackMuMatch = "drBestByPtDiff" 
-        process.InfoOut.linking.trackCaloLinkMetric = "bestByDR2Pt2"
-        process.InfoOut.linking.trackEmUseAlsoTrackSigma = False 
-        process.InfoOut.linking.emCaloUseAlsoCaloSigma = False
-        process.InfoOut.altDebug = cms.untracked.int32(1)
-        #process.CaloInfoOutBackup = process.CaloInfoOut.clone()
-        process.InfoOutBackup = process.InfoOut.clone()
-        #process.p.replace(process.CaloInfoOut, process.CaloInfoOutBackup + process.CaloInfoOut)
-        process.p.replace(process.InfoOut, process.InfoOutBackup + process.InfoOut)
-        process.InfoOut.linking.algo = "BitwisePF"
-        process.InfoOut.bitwiseDebug = cms.untracked.int32(1)
-        process.ntuple.objects.L1PFBackup = cms.VInputTag("InfoOutBackup:PF",)
-    else:
-        comp4();
-    #process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU140/inputs_17D_TTbar_PU140_job1.root'] 
-    process.source.fileNames = ['file:/eos/cms/store/cmst3/user/jngadiub/L1PFInputs/TTbar_PU0/inputs_17D_TTbar_PU0_job51.root'] 
-    process.out = cms.OutputModule("PoolOutputModule",
-            fileName = cms.untracked.string("l1pf_remade.root"),
-    )
-    process.e = cms.EndPath(process.out)
-    #process.source.skipEvents = cms.untracked.uint32(10)
-    process.maxEvents.input = 500
+    process.p.replace(process.ntuple, process.dumpGen+process.ntuple)
+    process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
     process.MessageLogger.cerr.FwkReport.reportEvery = 1
-    #process.InfoOut.debug = cms.untracked.int32(1)
-    process.source.eventsToProcess = cms.untracked.VEventRange("1:505:24891",)
-    if 0:
-        process.InfoOut.altDebug = cms.untracked.int32(1)
-        #process.CaloInfoOut.debug = cms.untracked.int32(1)
-        process.TFileService.fileName = cms.string("respTupleNew_1.root")
-        process.out.fileName = cms.untracked.string("l1pf_remade_1.root")
-        process.source.eventsToProcess = cms.untracked.VEventRange("1:979:48261",)
-    if 1:
-        for X in "InfoOut", "InfoOutBackup",:
-            P = getattr(process,X,None)
-            if P:
-                P.debugEta = cms.untracked.double(+0.58)
-                P.debugPhi = cms.untracked.double(+1.87)
-                P.debugR   = cms.untracked.double(0.6)
+def saveOut():
+    process.out = cms.OutputModule("PoolOutputModule",
+        fileName = cms.untracked.string("debugPF.root"),
+        SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p"))
+    )
+    process.end = cms.EndPath(process.out)
+def hgcAcc(pdgId,pt=10,eta=(1.6,2.6),prompt=False):
+    if type(pdgId) == int: pdgId = [ pdgId ]
+    pdgIdCut = "||".join("abs(pdgId) == %d" % p for p in pdgId)
+    process.acceptance = cms.EDFilter("GenParticleSelector",
+        src = cms.InputTag("genParticles"),
+        cut = cms.string("(%s) && pt > %g && %g < abs(eta) && abs(eta) < %g%s" % (pdgIdCut, pt, eta[0], eta[1], "&& statusFlags.isPrompt" if prompt else "")),
+        filter = cms.bool(True),
+    )
+    process.p.insert(0, process.acceptance)
+
+def goOld():
+    process.pfClustersFromL1EGClusters.corrector  = "L1Trigger/Phase2L1ParticleFlow/data/emcorr_barrel_93X.root"
+    process.pfClustersFromHGC3DClustersEM.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/emcorr_hgc_old3d_93X.root"
+    process.pfClustersFromCombinedCalo.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_93X.root"
+    process.pfClustersFromHGC3DClusters.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_STC_93X.root"
+    process.pfClustersFromCombinedCaloHCal.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_barrel_93X.root"
+    process.pfClustersFromCombinedCaloHF.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hfcorr_93X.root"

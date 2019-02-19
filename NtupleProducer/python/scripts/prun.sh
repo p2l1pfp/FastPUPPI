@@ -1,12 +1,18 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/101X/NewInputs/231018/$1
+MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs93X/110219/$1
 PREFIX="inputs_"
 
-if [[ "$1" == "--3D" ]]; then
+if [[ "$1" == "--104X" ]]; then
     shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/101X/NewInputs/011118/$1
-    PREFIX="reinputs_"
+    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/150219/$1
+    PREFIX="inputs104X_"
 fi;
+if [[ "$1" == "--93X" ]]; then
+    shift;
+    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs93X/150219/$1
+    PREFIX="inputs93X_"
+fi;
+
 
 INPUT=$1; shift
 if [[ "$1" != "" ]]; then

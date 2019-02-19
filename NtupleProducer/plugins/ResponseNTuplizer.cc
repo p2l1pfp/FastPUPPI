@@ -41,9 +41,8 @@
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
-#include <FastPUPPI/NtupleProducer/interface/L1TPFUtils.h>
+#include "L1Trigger/Phase2L1ParticleFlow/interface/L1TPFUtils.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
-//#include "CommonTools/Utils/interface/StringObjectFunction.h"
 
 #include <cstdint>
 #include <TTree.h>
@@ -197,12 +196,9 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
          }
          void fillPropagated(const reco::Candidate &c, float bz) {
              if (c.charge() != 0) {
-                charge = c.charge();
-                math::XYZTLorentzVector momentum(c.px(),c.py(),c.pz(),c.energy());
                 math::XYZTLorentzVector vertex(c.vx(),c.vy(),c.vz(),0.);
-                std::vector<double> lVars;
-                l1tpf::propagate(1,lVars,momentum,vertex,c.charge(),bz);
-                caloeta = lVars[4]; calophi = lVars[5];
+                auto caloetaphi = l1tpf::propagateToCalo(c.p4(),vertex,c.charge(),bz);
+                caloeta = caloetaphi.first; calophi = caloetaphi.second;
             }
          }
 

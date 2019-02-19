@@ -36,12 +36,13 @@ def getHandle(coll):
             ROOT.gInterpreter.ProcessLine("#include <L1Trigger/L1TCalorimeter/interface/CaloTools.h>")
             loadedCaloTools_ = True
     return handles_[coll]
-hipf = getHandle("std::vector<l1tpf::Particle>")
 hopf = getHandle("std::vector<reco::PFCandidate>")
 hpf1 = getHandle("std::vector<l1t::PFCandidate>")
 hpfc = getHandle("std::vector<l1t::PFCluster>")
 hpft = getHandle("std::vector<l1t::PFTrack>")
 hop  = getHandle("edm::OwnVector<reco::Candidate>")
+hhgc = getHandle("BXVector<l1t::HGCalMulticluster>")
+hhgt = getHandle("BXVector<l1t::HGCalTower>")
 
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
@@ -140,11 +141,14 @@ for iev,event in enumerate(events):
             elif a.startswith("pfClu"): h = hpfc
             elif a.startswith("pfTra"): h = hpft
             elif a.startswith("l1pf") : h = hpf1
-            elif "InfoOut" in a: h = hopf
+            elif a.startswith("hgcalBackEndLayer2Producer"): 
+                h = hhgc; alabel += ":HGCalBackendLayer2Processor3DClustering"
+            elif a.startswith("hgcalTowerProducer"): 
+                h = hhgt; alabel += ":HGCalTowerProcessor"
             else: h = hop
             event.getByLabel(alabel, h)
-            print "    %s   --> %s " %(layerlabel,a)
             objs = h.product()
+            print "    %s   --> %s (%d)" %(layerlabel,a,objs.size())
             if ("l1t::CaloTower" in a) or ("l1t::CaloCluster" in a):
                 objs = [ o for o in objs if o.hwPt() > 0 ]
                 p4unpack = ROOT.l1t.CaloTools.p4MP if ":MP" in a else ROOT.l1t.CaloTools.p4Demux

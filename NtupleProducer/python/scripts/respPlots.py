@@ -67,7 +67,7 @@ def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250]
     else:
-        return [2.5,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50] #,55,60,70,80,90,100]
+        return [2.5,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50,55,60,70,80] #,90,100]
 def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     ptbins = ptBins(oname)
     ROOT.gROOT.cd()
@@ -228,16 +228,43 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", relative=F
     return (ret,resol)
 
 whats = [
-    ('debug-em',[
-        ("Raw",  "L1RawEcal$",     ROOT.kAzure+1,  25, 2.0),
-        ("Corr",  "L1Ecal$",       ROOT.kAzure+2,  21, 1.6),
-        ("Towers", "L1RawCaloEM$", ROOT.kViolet+1, 34, 1.5),
+    ('debug-ecal',[
+        ("Raw",  "L1RawBarrelEcal$",     ROOT.kAzure+1,  25, 2.0),
+        ("Corr",  "L1BarrelEcal$",       ROOT.kAzure+2,  21, 1.6),
+        ("Towers", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 34, 1.5),
+    ]),
+    ('debug-hf',[
+        ("Raw",  "L1RawHFCalo$",     ROOT.kAzure+1,  25, 2.0),
+        ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  21, 1.6),
     ]),
     ('debug-hcal',[
         ("Raw",   "L1RawCalo$",   ROOT.kGreen+3,  25, 2.0),
         ("Raw3D", "L1Raw3DCalo$", ROOT.kRed+1, 34, 1.5),
         ("Corr",  "L1Calo$",      ROOT.kGreen+1,  21, 1.5),
         ("RawEM", "L1RawCaloEM$", ROOT.kViolet+1, 34, 1.5),
+    ]),
+    ('debug-hgc',[
+        ("RawSTC",   "L1RawHGCal$",   ROOT.kGreen+3,  25, 2.0),
+        ("RawTC", "L1RawHGCalTC$", ROOT.kRed+1, 34, 1.5),
+        ("CorrSTC",  "L1HGCal$",      ROOT.kGreen+1,  21, 1.5),
+        ("CorrTC", "L1HGCalTC$", ROOT.kViolet+1, 34, 1.5),
+    ]),
+    ('l1old',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Raw Ecal",   "L1OldRawEcal$", ROOT.kGreen+3,  21, 1.7),
+        ("Raw Calo",   "L1OldRawCalo$", ROOT.kViolet-4,  21, 1.7),
+        ("Ecal",       "L1OldEcal$",    ROOT.kGreen+1,  21, 1.7),
+        ("Calo",       "L1OldCalo$",    ROOT.kViolet+2, 34, 1.5),
+        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
+        ("PF",         "L1OldPF$",      ROOT.kOrange+7, 20, 1.2),
+    ]),
+    ('l1oldpu',[
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Calo",       "L1OldCalo$",    ROOT.kViolet+1, 21, 1.5),
+        ("TK #Deltaz", "L1TKV$",     ROOT.kRed+1, 34, 1.2),
+        ("PF",         "L1OldPF$",      ROOT.kOrange+7, 21, 1.4),
+        ("Puppi",      "L1OldPuppi$",   ROOT.kGreen+1, 20, 1.5),
+        ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kGreen+3, 20, 1.1),
     ]),
     ('l1pf',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
@@ -252,7 +279,7 @@ whats = [
     ('l1pf3D',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
-        ("Ecal",       "L1BarrelEcal$",    ROOT.kGreen+1,  21, 1.7),
+        ("Ecal",       "L1BarrelEcal$+L1RawHGCalEM$",    ROOT.kGreen+1,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
@@ -340,6 +367,7 @@ if __name__ == "__main__":
     parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
     parser.add_option("--ptdef", dest="ptdef", default=None, help="Pt definition")
+    parser.add_option("--ptmax", dest="ptmax", nargs=1, default=9999, type="float")
     parser.add_option("--ptminFit", dest="ptminFit", default=0, type="float", help="Pt definition")
     parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
     parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
@@ -363,7 +391,8 @@ if __name__ == "__main__":
             ("pion", "abs(mc_id) == 211", 10, 5),
             ("pizero", "abs(mc_id) == 111", 10, 5),
             ("klong", "abs(mc_id) == 130", 10, 5),
-            ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 10, 5),
+            ("pimix", "(abs(mc_id) == 211 || abs(mc_id) == 111)", 10, 5),
+            ("mixmix", "(abs(mc_id) == 211 || abs(mc_id) == 22)", 10, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -415,7 +444,7 @@ if __name__ == "__main__":
             elif isNeutrino:
                 ptdefs = [ "pthighest", "pt", "ptbest", "pt02" ]
             else:
-                ptdefs = [ "pt02", "pthighest" ]   
+                ptdefs = [ "pt02", "pthighest", "ptbest" ]   
             if options.more:
                 ptdefs += [ "ptbest", "mindr025", "n025", "n010" ]
             if options.ptdef: ptdefs = [ options.ptdef ]
@@ -430,6 +459,7 @@ if __name__ == "__main__":
                         cutptdef = cut +" && %s > 0" % expr.replace("$","_n025")
                     if "eta_25" in oname or "eta_30" in oname:
                         if "TK" in expr: continue
+                    if "photon" in oname and "TK" in expr: continue
                     if ("Puppi" in name) and "PU0" in odir: continue
                     if ("TKV" in expr)   and "PU0" in odir: continue
                     if "Gen" in name and  "jet" not in oname: continue
@@ -453,6 +483,9 @@ if __name__ == "__main__":
                     if prof: allplots.append( (getattr(prof,'corr',None), cresps) )
                     for (p,ps) in allplots:
                         if not p: continue
+                        if p.GetN() == 0: 
+                            print "no points in non-null plot "+p.GetName()
+                            continue
                         if getattr(p,'fit',None):
                             p.fit.SetLineWidth(2); p.fit.SetLineColor(col)
                             p.fit.SetRange(options.ptminFit, p.fit.GetXmax())
@@ -501,7 +534,7 @@ if __name__ == "__main__":
                             frame.GetYaxis().SetRangeUser(0,2*max(h.GetMaximum() for (k,h) in plots))
                         hasfitlegend = False
                     else:
-                        frame = ROOT.TH1F("stk","stk",100,0.0,ptBins(oname)[-1])
+                        frame = ROOT.TH1F("stk","stk",100,0.0,min(ptBins(oname)[-1],options.ptmax))
                         if "resolution" in ptype:
                             hasfitlegend = (options.fit != "none")
                             frame.GetYaxis().SetTitle("#sigma(p_{T}^{corr})/p_{T}^{corr}")

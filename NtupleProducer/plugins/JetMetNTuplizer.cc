@@ -25,12 +25,6 @@
 #include "DataFormats/Common/interface/View.h"
 
 #include "DataFormats/Candidate/interface/Candidate.h"
-#include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
-#include "DataFormats/JetReco/interface/PFJet.h"
-#include "DataFormats/METReco/interface/CaloMET.h"
-#include "DataFormats/METReco/interface/PFMET.h"
-#include "DataFormats/METReco/interface/GenMET.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 
@@ -42,7 +36,7 @@
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "CommonTools/Utils/interface/StringObjectFunction.h"
-#include "FastPUPPI/NtupleProducer/interface/SimpleCalibrations.h"
+#include "L1Trigger/Phase2L1ParticleFlow/interface/SimpleCalibrations.h"
 
 #include <cstdint>
 #include <TTree.h>
@@ -58,19 +52,19 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
 
       struct JetInput {
          std::string name;
-         edm::EDGetTokenT<edm::View<reco::LeafCandidate>> token;
+         edm::EDGetTokenT<edm::View<reco::Candidate>> token;
          l1tpf::SimpleCorrEm jec;
          JetInput() {}
-         JetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::LeafCandidate>> &t, const l1tpf::SimpleCorrEm & c) : name(n), token(t), jec(c) {}
+         JetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::Candidate>> &t, const l1tpf::SimpleCorrEm & c) : name(n), token(t), jec(c) {}
       };
       std::vector<JetInput> jets_;
-      std::vector<std::pair<std::string,StringCutObjectSelector<reco::LeafCandidate>>> jetSels_;
+      std::vector<std::pair<std::string,StringCutObjectSelector<reco::Candidate>>> jetSels_;
 
       struct MetInput {
          std::string name;
-         edm::EDGetTokenT<edm::View<reco::LeafCandidate>> token;
+         edm::EDGetTokenT<edm::View<reco::Candidate>> token;
          MetInput() {}
-         MetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::LeafCandidate>> &t) : name(n), token(t) {}
+         MetInput(const std::string &n, const edm::EDGetTokenT<edm::View<reco::Candidate>> &t) : name(n), token(t) {}
       };
       std::vector<MetInput> mets_;
 
@@ -91,15 +85,16 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
             tree->Branch((name+"_j_raw").c_str(),   &j_raw,   (name+"_j_raw[6]/F").c_str());
             tree->Branch((name+"_j_corr").c_str(),   &j_corr,   (name+"_j_corr[6]/F").c_str());
         }
-        void fill(const edm::View<reco::LeafCandidate> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::LeafCandidate> & sel) {  
+        void fill(const edm::View<reco::Candidate> & jets, const  l1tpf::SimpleCorrEm & corr, const StringCutObjectSelector<reco::Candidate> & sel) {  
             count_raw = 0; ht_raw = 0;
             count_corr = 0; ht_corr = 0;
             reco::Particle::LorentzVector sum_raw, sum_corr;
             std::vector<float> pt_raw, pt_corr;
-            for (reco::LeafCandidate jet : jets) {
+            for (const reco::Candidate & jet : jets) {
                 if (sel(jet)) { count_raw++; ht_raw += std::min(jet.pt(),500.); sum_raw += jet.p4(); pt_raw.push_back(-jet.pt()); }
-                jet.setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
-                if (sel(jet)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); pt_corr.push_back(-jet.pt()); }
+                std::unique_ptr<reco::Candidate> jetcopy(jet.clone());
+                jetcopy->setP4(reco::Particle::PolarLorentzVector(corr(jet.pt(), std::abs(jet.eta())), jet.eta(), jet.phi(), jet.mass()));
+                if (sel(*jetcopy)) { count_corr++; ht_corr += std::min(jet.pt(),500.); sum_corr += jet.p4(); pt_corr.push_back(-jet.pt()); }
             }
             std::sort(pt_raw.begin(), pt_raw.end());
             std::sort(pt_corr.begin(), pt_corr.end());
@@ -123,9 +118,9 @@ class JetMetNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources>  
          tree->Branch((name).c_str(),   &met,   (name+"/F").c_str());
          tree->Branch((name+"_phi").c_str(), &met_phi, (name+"_phi/F").c_str());
        }
-       void fill(const edm::View<reco::LeafCandidate> & recoMets) {  
+       void fill(const edm::View<reco::Candidate> & recoMets) {  
          met = 0; met_phi = 0;
-         for (reco::LeafCandidate recoMet : recoMets) { met = recoMet.et(); met_phi = recoMet.phi(); }
+         for (const reco::Candidate & recoMet : recoMets) { met = recoMet.pt(); met_phi = recoMet.phi(); }
        }
       };
       std::vector<MetBranch> metbranches_;
@@ -167,11 +162,11 @@ JetMetNTuplizer::JetMetNTuplizer(const edm::ParameterSet& iConfig)
     edm::ParameterSet jets = iConfig.getParameter<edm::ParameterSet>("jets");
     edm::ParameterSet jecs = iConfig.getParameter<edm::ParameterSet>("jecs");
     for (const std::string & name : jets.getParameterNamesForType<edm::InputTag>()) {
-        jets_.emplace_back(name, consumes<edm::View<reco::LeafCandidate>>(jets.getParameter<edm::InputTag>(name)), l1tpf::SimpleCorrEm(jecs, name));
+        jets_.emplace_back(name, consumes<edm::View<reco::Candidate>>(jets.getParameter<edm::InputTag>(name)), l1tpf::SimpleCorrEm(jecs, name));
     }
     edm::ParameterSet sels = iConfig.getParameter<edm::ParameterSet>("sels");
     for (const std::string & name : sels.getParameterNamesForType<std::string>()) {
-        jetSels_.emplace_back(name, StringCutObjectSelector<reco::LeafCandidate>(sels.getParameter<std::string>(name)));
+        jetSels_.emplace_back(name, StringCutObjectSelector<reco::Candidate>(sels.getParameter<std::string>(name)));
     }
     jetbranches_.reserve(jets_.size() * jetSels_.size());
     for (const auto & j : jets_) {
@@ -184,7 +179,7 @@ JetMetNTuplizer::JetMetNTuplizer(const edm::ParameterSet& iConfig)
     //met branches
     edm::ParameterSet mets = iConfig.getParameter<edm::ParameterSet>("mets");
     for (const std::string & name : mets.getParameterNamesForType<edm::InputTag>()) {
-        mets_.emplace_back(name, consumes<edm::View<reco::LeafCandidate> >(mets.getParameter<edm::InputTag>(name)));
+        mets_.emplace_back(name, consumes<edm::View<reco::Candidate> >(mets.getParameter<edm::InputTag>(name)));
     }
     metbranches_.reserve(mets_.size());
     for (const auto & m : mets_) metbranches_.emplace_back(m.name);
@@ -213,7 +208,7 @@ JetMetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
     
     int ibranch = 0;
     for (const auto & j : jets_) {
-        edm::Handle<edm::View<reco::LeafCandidate>> jets;
+        edm::Handle<edm::View<reco::Candidate>> jets;
         iEvent.getByToken(j.token, jets);
         for (const auto & s : jetSels_) {
             jetbranches_[ibranch++].fill(*jets, j.jec, s.second);
@@ -222,7 +217,7 @@ JetMetNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup
 
     ibranch = 0;
     for (const auto & m : mets_) {
-        edm::Handle<edm::View<reco::LeafCandidate>> mets;
+        edm::Handle<edm::View<reco::Candidate>> mets;
         iEvent.getByToken(m.token, mets);
         metbranches_[ibranch++].fill(*mets);
     }

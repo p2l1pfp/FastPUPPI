@@ -9,14 +9,13 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 
 ##### EXAMPLE USAGE:
 # 1) ECAL Corrections from Pi0
-#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/em-barrel -p pizero -w L1RawEcal_pt02 -e L1RawEcal_pt02 --fitrange 20 50 -E 3.0 --ptmax 50 --root ecorr.root
+#    EB-only
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/em-barrel -p pizero -w L1RawBarrelEcal_pt02 -e L1RawBarrelEcal_pt02 --fitrange 20 50 --barrel-eta --ptmax 50 --root emcorr_barrel_93X.root
+#    HGC-only (old 3D clusters) 
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/em-hgc  -p pizero -w L1OldRawHGCalEM_pt02 -e L1OldRawHGCalEM_pt02 --fitrange 20 50 --hgcal-eta  --ptmax 50 --root emcorr_hgc_old3d_93X.root
 #
-#    Check closure, after re-running Pi0 with Ecal calibration applied
-#       python scripts/respCorrSimple.py respTupleNew_SinglePion0_NoPU_C.root plots/corr/em/closure -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02 -E 3.0
-#       
-#       
 # 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
-#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch -w L1RawCalo_pt02 -e L1RawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1RawCaloEM_pt02/L1RawCalo_pt02 0.125,0.50,0.875,1.0  --ptmax 50
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch  -w L1OldRawCalo_pt02 -e L1OldRawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1OldRawCaloEM_pt02/L1OldRawCalo_pt02 0.125,0.50,0.875,1.0  --ptmax 50
 #
 #    Check closure, after re-running Pi with Ecal + Had calibration applied 
 #  
@@ -31,12 +30,30 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1TK_pthighest -e L1TK_pthighest   -r --ptmin 5 --ptmax 50
 #
 # ================================
-#  FOR HGCal 3D-cluster based PF with a single collection of clusters, there is one single run of calibration (still based on EMF)
+#  Split PF: 
 #
-#  1) python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root  plots/corr -p pimix -w L1RawHGCal_pt02 -e L1RawHGCal_pt02 --fitrange 15 50 --root hadcorr_HGCal3D.root --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmax 50 --hgcal-eta
+#  === Barrel-only ===
 #
-#  2) resolutions can then extracted as before but with pimix
-#     python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0..root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  -r --ptmin 5 --ptmax 50 --hgcal-eta
+#  0) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p emmix -w L1RawBarrelEcal_pt02 -e L1RawBarrelEcal_pt02 --fitrange 15 50 --root emcorr_barrel.root  --barrel-eta --ptmin 5  --ptmax 80
+#
+#  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pion -w L1RawBarrelCalo_pt02 -e L1RawBarrelCalo_pt02 --fitrange 15 50 --root hadcorr_barrel.root --emf-slices L1RawBarrelCaloEM_pt02/L1RawBarrelCalo_pt02 0.125,0.50,0.875,1.125  --ptmin 5 --ptmax 80 --barrel-eta
+#
+#  3) python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --hgcal-eta
+#  === HGCal ===
+#
+#  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p mix -w L1RawHGCal_pt02 -e L1RawHGCal_pt02 --fitrange 15 50 --root hadcorr_HGCal3D.root --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmin 5 --ptmax 50 --hgcal-eta
+#
+#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --hgcal-eta
+#
+#  === HF-only ===
+#
+#  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pimix -w L1RawHFCalo_pt02 -e L1RawHFCalo_pt02 --fitrange 15 50 --root hfcorr.root  --ptmin 5 --ptmax 80 --hf-eta
+#
+#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pimix -w L1RawHFCalo_pt02 -e L1RawHFCalo_pt02 --fitrange 15 50 --root hfcorr.root  --ptmin 5 --ptmax 80 --hf-eta
+#
+#
+
+
 
 if __name__ == "__main__":
     from optparse import OptionParser
@@ -50,7 +67,9 @@ if __name__ == "__main__":
     parser.add_option("--xpt", "--xpt", dest="xpt",  default=("mc_pt","p_{T}^{gen}"), nargs=2)
     parser.add_option("--coarse-eta", dest="coarseEta", default=False, action="store_true")
     parser.add_option("--semicoarse-eta", dest="semiCoarseEta", default=False, action="store_true")
+    parser.add_option("--barrel-eta", dest="barrelEta", default=False, action="store_true")
     parser.add_option("--hgcal-eta", dest="hgcalEta", default=False, action="store_true")
+    parser.add_option("--hf-eta", dest="hfEta", default=False, action="store_true")
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
@@ -82,8 +101,10 @@ if __name__ == "__main__":
             ("pion", "abs(mc_id) == 211", 2, 2),
             ("pizero", "abs(mc_id) == 111", 2, 5),
             ("klong", "mc_id == 130", 2, 5),
-            ("pimix", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1))", 2, 5),
-            ("piswitch", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && (event % 2) == 1 && abs(mc_eta) > 2.5))", 2, 5),
+            ("pimix", "(abs(mc_id) == 211 || abs(mc_id) == 111)", 2, 5),
+            ("piswitch", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && abs(mc_eta) > 2.5))", 2, 5),
+            ("mix", "(abs(mc_id) == 211 || abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 130)", 2, 5),
+            ("emmix", "(abs(mc_id) == 111 || abs(mc_id) == 22)", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -99,9 +120,15 @@ if __name__ == "__main__":
         elif options.semiCoarseEta:
 	    etas = [1.5, 3.0, 3.2, 3.5, 4.0, 4.5, 5.0]
             etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+        elif options.barrelEta:
+	    etas = [ 0.7, 1.2, 1.6 ]
+            etas = [ (etas[i-1] if i else 0.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.hgcalEta:
-	    etas = [ 1.9, 2.2, 2.5, 2.8, 3.0 ]
-            etas = [ (etas[i-1] if i else 1.6, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+	    etas = [ 1.9, 2.2, 2.5, 2.8, 2.95 ]
+            etas = [ (etas[i-1] if i else 1.55, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+        elif options.hfEta:
+	    etas = [ 3.5, 4.0, 4.5, 5.0 ]
+            etas = [ (etas[i-1] if i else 3.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
@@ -136,6 +163,12 @@ if __name__ == "__main__":
                 emfbins.append(1.1)
         if options.rootfile:
             etaedges = [e[0] for e in oldetas] + [ oldetas[-1][1] ]
+            if options.barrelEta:
+                etaedges[-1] = 1.6
+            elif options.hgcalEta: 
+                etaedges[0] = 1.4; etaedges[-1] = 3.1
+            elif options.hfEta:
+                etaedges[0] = 2.8; etaedges[-1] = 5.5
             emfedges = [0] + [ e[0] for e in emfs ];
             tfout.index = ROOT.TH2F("INDEX","",len(etaedges)-1,array('f',etaedges),len(emfedges)-1,array('f',emfedges));
             tfout.WriteTObject(tfout.index)
@@ -183,6 +216,7 @@ if __name__ == "__main__":
             if not prof or not getattr(prof,'fit',None):
                 offsets.append(0.)
                 scales.append(1.)
+                print " ---> Not found or not fitted"
                 continue
             else:
                 offsets.append(prof.fit.GetParameter(0))
@@ -259,6 +293,7 @@ if __name__ == "__main__":
                         pclone.SetPoint(i, recopt, genpt)
                     pclone.Sort()
                     tfout.WriteTObject(pclone)
+                    print " -> saved "+pclone.GetName()
                     presp = pclone.Clone()
                     for i in xrange(presp.GetN()):
                         presp.SetPoint(i, presp.GetX()[i], min(presp.GetY()[i]/presp.GetX()[i] if presp.GetX()[i] > 0 else 1.0, 4));

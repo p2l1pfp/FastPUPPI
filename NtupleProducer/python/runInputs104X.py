@@ -1,14 +1,15 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2_trigger)
+process = cms.Process("IN", eras.Phase2C4_trigger)
 process.load('Configuration.StandardSequences.Services_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D17Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '100X_upgrade2023_realistic_v1', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
@@ -19,8 +20,8 @@ process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "
 process.load('L1Trigger.Phase2L1ParticleFlow.hgc3dClustersForPF_cff')
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/93X/HadronGun/GEN-SIM-DIGI-RAW/HadronGun_job1_sub1.GEN-SIM-DIGI-RAW.root'),
-    duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/hzz/gpetrucc/tmp/prod104X/ParticleGun_PU0/ParticleGun_PU0.batch1.job0.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/hzz/gpetrucc/tmp/prod104X/ParticleGun_PU200/ParticleGun_PU200.batch1.job0.root'),
     inputCommands = cms.untracked.vstring("keep *", 
         "drop l1tHGCalTowerMapBXVector_hgcalTriggerPrimitiveDigiProducer_towerMap_HLT",
         "drop *_hgcalTriggerPrimitiveDigiProducer_*_*",
@@ -31,9 +32,8 @@ process.source = cms.Source("PoolSource",
         "drop l1tEMTFTrack2016s_simEmtfDigis__HLT")
 
 )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(500))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(25))
 process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-  
 
 process.p = cms.Path(
     process.L1TrackletTracks +
@@ -43,7 +43,7 @@ process.p = cms.Path(
 )
 
 process.out = cms.OutputModule("PoolOutputModule",
-        fileName = cms.untracked.string("inputs.root"),
+        fileName = cms.untracked.string("inputs104X.root"),
         outputCommands = cms.untracked.vstring("drop *",
             # --- GEN
             "keep *_genParticles_*_*",
@@ -57,7 +57,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             # HGC
             #"keep *_hgcalVFEProducer_*_IN", # uncomment to be able to re-run the concentrator
             "keep *_hgcalConcentratorProducer*_*_IN",
-            "keep *_hgcalBackEndLayer1Producer*_*_IN",
+            #"keep *_hgcalBackEndLayer1Producer*_*_IN",
             "keep *_hgcalBackEndLayer2Producer*_*_IN",
             "keep *_hgcalTowerMapProducer_*_IN",
             "keep *_hgcalTowerProducer_*_IN",
@@ -99,3 +99,6 @@ process.out = cms.OutputModule("PoolOutputModule",
 process.e = cms.EndPath(process.out)
 
 process.schedule = cms.Schedule([process.p,process.e])
+
+def goSlim():
+    process.out.outputCommands += [ "drop *_hgcalConcentratorProducer*_*_*", "drop *_hgcalTowerMapProducer_*_*", ]
