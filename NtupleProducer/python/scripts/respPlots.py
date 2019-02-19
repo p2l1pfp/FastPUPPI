@@ -238,10 +238,9 @@ whats = [
         ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  21, 1.6),
     ]),
     ('debug-hcal',[
-        ("Raw",   "L1RawCalo$",   ROOT.kGreen+3,  25, 2.0),
-        ("Raw3D", "L1Raw3DCalo$", ROOT.kRed+1, 34, 1.5),
-        ("Corr",  "L1Calo$",      ROOT.kGreen+1,  21, 1.5),
-        ("RawEM", "L1RawCaloEM$", ROOT.kViolet+1, 34, 1.5),
+        ("Raw",   "L1RawBarrelCalo$",   ROOT.kGreen+3,  25, 2.0),
+        ("Corr",  "L1BarrelCalo$",      ROOT.kGreen+1,  21, 1.5),
+        ("RawEM", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 34, 1.5),
     ]),
     ('debug-hgc',[
         ("RawSTC",   "L1RawHGCal$",   ROOT.kGreen+3,  25, 2.0),
@@ -249,7 +248,7 @@ whats = [
         ("CorrSTC",  "L1HGCal$",      ROOT.kGreen+1,  21, 1.5),
         ("CorrTC", "L1HGCalTC$", ROOT.kViolet+1, 34, 1.5),
     ]),
-    ('l1old',[
+    ('l1pfold',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Raw Ecal",   "L1OldRawEcal$", ROOT.kGreen+3,  21, 1.7),
         ("Raw Calo",   "L1OldRawCalo$", ROOT.kViolet-4,  21, 1.7),
@@ -258,7 +257,7 @@ whats = [
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("PF",         "L1OldPF$",      ROOT.kOrange+7, 20, 1.2),
     ]),
-    ('l1oldpu',[
+    ('l1pfoldpu',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Calo",       "L1OldCalo$",    ROOT.kViolet+1, 21, 1.5),
         ("TK #Deltaz", "L1TKV$",     ROOT.kRed+1, 34, 1.2),
@@ -266,17 +265,7 @@ whats = [
         ("Puppi",      "L1OldPuppi$",   ROOT.kGreen+1, 20, 1.5),
         ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kGreen+3, 20, 1.1),
     ]),
-    ('l1pf',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
-        ("Raw Calo",   "L1RawCalo$", ROOT.kViolet-4,  21, 1.7),
-        ("Ecal",       "L1Ecal$",    ROOT.kGreen+1,  21, 1.7),
-        ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
-        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
-        ("TK #Deltaz", "L1TKV$",     ROOT.kRed+2, 20, 1.2),
-        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
-    ]),
-    ('l1pf3D',[
+    ('l1pfnew',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
         ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
         ("Ecal",       "L1BarrelEcal$+L1RawHGCalEM$",    ROOT.kGreen+1,  21, 1.7),
@@ -286,29 +275,6 @@ whats = [
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
     ]),
-    ('stage2',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
-        ("Towers",     "Stage2CaloTowers$",    ROOT.kGreen+1,  21, 1.7),
-        ("Clusters",   "Stage2CaloClusters$", ROOT.kViolet-4,  21, 1.7),
-        ("Jets",       "Stage2CaloJets$",    ROOT.kRed+2, 34, 1.5),
-    ]),
-    ('comp',[
-        ("Stage2",     "Stage2CaloJets$", ROOT.kGreen+2, 21, 1.4),
-        ("Calo",       "L1Calo$",    ROOT.kViolet+1, 21, 1.3),
-        #("L1TkJets",   "RefL1TkJets$",    ROOT.kGreen+1, 34, 1.5),
-        ("TK",         "L1TK$",      ROOT.kAzure+1, 20, 1.2),
-        #("Tight TK",   "L1TightTK$",  ROOT.kViolet+1, 21, 1.2),
-        ("TK #Deltaz", "L1TKV$",     ROOT.kAzure+2, 20, 1.2),
-        #("Tight TK #Deltaz", "L1TightTKV$", ROOT.kViolet+2, 21, 1.2),
-        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kRed+1, 20, 1.2),
-        ]),
-    ('tcomp',[
-        ("TK",         "L1TK$",      ROOT.kAzure+1, 20, 1.2),
-        ("Tight TK",   "L1TightTK$",  ROOT.kViolet+1, 21, 1.2),
-        ("TK #Deltaz", "L1TKV$",     ROOT.kAzure+2, 20, 1.2),
-        ("Tight TK #Deltaz", "L1TightTKV$", ROOT.kViolet+2, 21, 1.2),
-        ]),
     ('pfdebug',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
         ("PF",         "L1PF$",                 ROOT.kBlack,    20, 1.0),

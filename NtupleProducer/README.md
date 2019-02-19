@@ -1,20 +1,19 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_1_7
-cd CMSSW_10_1_7/src
+cmsrel CMSSW_10_5_0_pre1
+cd CMSSW_10_5_0_pre1/src
 cmsenv
 git cms-init
-git remote add cms-l1t-offline git@github.com:cms-l1t-offline/cmssw.git
-git fetch cms-l1t-offline phase2-l1t-integration-CMSSW_10_1_7
-git cms-merge-topic -u cms-l1t-offline:l1t-phase2-v2.16.32
+git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X
 
-# Get L1PF_CMSSW
-git remote add p2l1pfp git@github.com:p2l1pfp/cmssw.git
-git fetch p2l1pfp L1PF_CMSSW
-git merge p2l1pfp/L1PF_CMSSW
+# calibrations
+( cd L1Trigger/Phase2L1ParticleFlow/data && \
+  rm *.root && \
+  git clone git@github.com:p2l1pfp/l1pf-calibrations.git . -b 105X && \
+  git checkout 105X_v1 )
 
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 10X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X
 
 scram b -j8
 ```
@@ -22,44 +21,32 @@ scram b -j8
 The first step is to produce the inputs:
 ```
 cd FastPUPPI/NtupleProducer/python/
-cmsRun runNewInputs.py
+cmsRun runInputs104X.py # or runInputs93X.py depending on the version of the input files
 ```
-
-Example how to submit jobs to the lxbatch:
-```
-cd FastPUPPI/NtupleProducer/python
-./scripts/cmsSplit.pl --dataset /RelValTTbar_14TeV/CMSSW_9_3_7-93X_upgrade2023_realistic_v5_2023D17noPU-v2/GEN-SIM-DIGI-RAW --jobs 1 --events-per-job 10 --label test runNewInputs.py --lsf 1nh --eosoutdir /eos/cms/store/cmst3/user/jngadiub/L1PFInputs/
-./runInputs_test_bsub.sh
-```
-For more options for job splitting:
-```
-./scripts/cmsSplit.pl --help
-```
-The job outputs are copied to the eos directory --eosoutdir
-
-When jobs are finished you can clean up your local dir
-```
-./runInputs_test_cleanup.sh
-```
+By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
+This however takes up a substantial disk space especially at PU 200. 
+You can change this by dropping `*_hgcalConcentratorProducer*_*_IN` and `*_hgcalTowerMapProducer_*_IN` in the output commands, or adding a call to `goSlim()` at the bottom of the cfg to do it.
 
 The second step runs the algorithm and creates ntuples which can be used to do analysis:
 
 1) Ntuple for single particle and jets response plots and calibrations:
 
 ```
-cmsRun python/runRespNTuplerNew.py
+cmsRun python/runRespNTupler.py
 ```
 
-NB: For single particle add "goGun()" at the end of the script, remove it for jets.
+NB: 
+   * For single particle add `goGun()` at the end of the script, remove it for jets.
+   * For 93X samples, add a `goOld()` at the end of the script to select 93X calibrations
 
 To run the ntuplizer over many files do for instance:
-
 ```
-source python/scripts/prun.sh python/runRespNTuplerNew.py TTbar_PU0 TTbar_PU0
-source python/scripts/prun.sh python/runRespNTuplerNew.py SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
+source python/scripts/prun.sh python/runRespNTupler.py --104X TTbar_PU0 TTbar_PU0
+source python/scripts/prun.sh python/runRespNTupler.py --104X SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
 ```
+Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
-2) Ntuple for jet HT and MET studies
+2) Ntuple for jet HT and MET studies (BEING REDEFINED, DOCUMENTATION WILL BE UPDATED SOON)
 
 ```
 cmsRun python/runJetMetNTupler.py

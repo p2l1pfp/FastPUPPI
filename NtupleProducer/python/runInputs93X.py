@@ -101,3 +101,6 @@ process.out = cms.OutputModule("PoolOutputModule",
 process.e = cms.EndPath(process.out)
 
 process.schedule = cms.Schedule([process.p,process.e])
+
+def goSlim():
+    process.out.outputCommands += [ "drop *_hgcalConcentratorProducer*_*_*", "drop *_hgcalTowerMapProducer_*_*", ]
