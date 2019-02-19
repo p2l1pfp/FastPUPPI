@@ -8,7 +8,6 @@
 
 #include "DataFormats/Candidate/interface/Candidate.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
-#include "DataFormats/JetReco/interface/GenJet.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
 

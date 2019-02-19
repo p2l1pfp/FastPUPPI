@@ -17,7 +17,9 @@ echo "## Starting at $(date)" >> $LOG
 cp -s $HOMEDIR/* .
 cmsRun $* >> $LOG 2>&1
 for f in *.root; do
-    if test -f $f; then
+    if test -h $f; then
+        echo "$f is a symlink, will not copy"     2>&1 | tee -a $LOG
+    elif test -f $f; then
         xrdcp -f $f root://eoscms/$EOSDIR/$f      2>&1 | tee -a $LOG
         if $eos ls $EOSDIR/$f; then
             echo "Successfully copied to $EOSDIR" 2>&1 | tee -a $LOG
