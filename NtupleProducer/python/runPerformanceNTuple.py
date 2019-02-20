@@ -27,12 +27,12 @@ process.load('RecoMET.METProducers.genMetTrue_cfi')
 
 from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 from RecoMET.METProducers.PFMET_cfi import pfMet
-pfMet.calculateSignificance = False
 
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_split_cff")
+process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
 
 process.extraPFStuff = cms.Task()
 
@@ -63,14 +63,14 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             setattr(process.ntuple.objects, label+"Photon",  cms.VInputTag(cms.InputTag(tag)))
             setattr(process.ntuple.objects, label+"Photon_sel", cms.string("pdgId == 22"))
     if makeJets:
-        _add('ak4'+label, ak4PFJets.clone(src = tag))
+        _add('ak4'+label, ak4PFJets.clone(src = tag, doAreaFastjet = False))
         setattr(process.l1pfjetTable.jets, label, cms.InputTag('ak4'+label))
     if makeMET:
-        _add('met'+label, pfMet.clone(src = tag))
+        _add('met'+label, pfMet.clone(src = tag, calculateSignificance = False))
         setattr(process.l1pfmetTable.mets, label, cms.InputTag('met'+label))
         if makeCentralMET:
             _add('central'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 2.4")))
-            _add('met'+label+'Central', pfMet.clone(src = 'central'+label))
+            _add('met'+label+'Central', pfMet.clone(src = 'central'+label, calculateSignificance = False))
             setattr(process.l1pfmetTable.mets, label+'Central', cms.InputTag('met'+label+'Central'))
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
@@ -114,15 +114,11 @@ monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False)
 monitorPerf("L1PF", "l1pfCandidates:PF")
 monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
 if True:
-    process.l1PuppiForMET = cms.EDFilter("L1TPFCandSelector", 
-            src = cms.InputTag("l1pfCandidates:Puppi"), 
-            cut = cms.string("charge != 0 || abs(eta) < 1.5 || (pt > 20 && abs(eta) < 2.5) || (pt > 40 && 2.5 <= abs(eta) <= 2.85) || (pt > 30 && abs(eta) > 3.0)"))
-    process.extraPFStuff.add(process.l1PuppiForMET)
-    monitorPerf("L1PuppiForMET", "l1PuppiForMET")
+    process.l1newPuppiForMET = process.l1PuppiForMET.clone(src = cms.InputTag("l1pfCandidates:Puppi"))
+    process.extraPFStuff.add(process.l1newPuppiForMET)
+    monitorPerf("L1PuppiForMET", "l1newPuppiForMET")
 
 if True:
-    process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
-    process.pfClustersFromHGC3DClustersEM.src = "hgcalBackEndLayer2ProducerSTC:HGCalBackendLayer2Processor3DClustering"
     process.extraPFStuff.add(
         process.pfClustersFromHGC3DClustersEM, 
         process.pfClustersFromCombinedCalo, 
@@ -132,11 +128,8 @@ if True:
     monitorPerf("L1OldPF", "l1pfProducer:PF")
     monitorPerf("L1OldPuppi", "l1pfProducer:Puppi")
     if True:
-        process.l1OldPuppiForMET = cms.EDFilter("L1TPFCandSelector", 
-                src = cms.InputTag("l1pfProducer:Puppi"), 
-                cut = cms.string("charge != 0 || abs(eta) < 1.5 || (pt > 20 && abs(eta) < 2.5) || (pt > 40 && 2.5 <= abs(eta) <= 2.85) || (pt > 30 && abs(eta) > 3.0)"))
-        process.extraPFStuff.add(process.l1OldPuppiForMET)
-        monitorPerf("L1OldPuppiForMET", "l1OldPuppiForMET")
+        process.extraPFStuff.add(process.l1PuppiForMET)
+        monitorPerf("L1OldPuppiForMET", "l1PuppiForMET")
 
 if True: # track quantities with different quality cuts
     process.l1tkv5Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5"))
