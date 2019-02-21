@@ -8,11 +8,9 @@ git cms-init
 git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X
 
 # calibrations
-( cd L1Trigger/Phase2L1ParticleFlow/data && \
-  rm *.root && \
-  git clone git@github.com:p2l1pfp/l1pf-calibrations.git . -b 105X && \
-  git checkout 105X_v1 )
+git clone git@github.com:p2l1pfp/l1pf-calibrations.git L1Trigger/Phase2L1ParticleFlow/data -b 105X
 
+# scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X
 
 scram b -j8
