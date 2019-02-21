@@ -275,6 +275,18 @@ whats = [
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
         ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
     ]),
+    ('l1pfcomp',[
+        ("OldCalo",   "L1OldCalo$", ROOT.kViolet+1, 25, 1.6),
+        ("NewCalo",   "L1Calo$",    ROOT.kViolet+2, 21, 1.3),
+        ("OldPF",     "L1OldPF$",   ROOT.kOrange-3, 24, 1.4),
+        ("NewPF",     "L1PF$",      ROOT.kRed+1,    20, 1.1),
+    ]),
+    ('l1pfcomppu',[
+        ("OldPuppi",       "L1Puppi$",          ROOT.kGreen+0,  24, 1.4),
+        ("NewPuppi",       "L1OldPuppi$",       ROOT.kGreen+2,  20, 1.1),
+        ("OldPuppiForMET", "L1PuppiForMET$",    ROOT.kAzure+10, 24, 1.4),
+        ("NewPuppiForMET", "L1OldPuppiForMET$", ROOT.kAzure+2,  20, 1.1),
+    ]),
     ('pfdebug',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
         ("PF",         "L1PF$",                 ROOT.kBlack,    20, 1.0),
