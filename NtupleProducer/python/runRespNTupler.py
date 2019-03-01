@@ -34,27 +34,17 @@ process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.cl
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
 
-process.hgc3DClustersNoNoiseTC = process.hgc3DClustersNoNoise.clone(src = "hgcalBackEndLayer2ProducerTC:HGCalBackendLayer2Processor3DClustering")
-process.pfClustersFromHGC3DClustersRawTC = process.pfClustersFromHGC3DClustersRaw.clone(src = "hgc3DClustersNoNoiseTC")
-process.pfClustersFromHGC3DClustersTC    = process.pfClustersFromHGC3DClustersRawTC.clone(corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_TC.root")
-process.pfClustersFromHGC3DClustersEMRawTC = process.pfClustersFromHGC3DClustersRawTC.clone(emOnly = True, etMin = 0.)
-
-process.pfClustersFromHGC3DClustersOldEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
-
 process.runPF = cms.Sequence( 
     process.l1ParticleFlow_proper + # excludes the prerequisites (3D clusters and L1EG clusters)
     process.pfClustersFromL1EGClustersRaw +
     process.pfClustersFromHGC3DClustersRaw +
     process.pfClustersFromHGC3DClustersEMRaw
-    + process.hgc3DClustersNoNoiseTC
-    + process.pfClustersFromHGC3DClustersRawTC
-    + process.pfClustersFromHGC3DClustersTC
-    + process.pfClustersFromHGC3DClustersEMRawTC 
     + process.pfClustersFromHGC3DClustersEM 
-    + process.pfClustersFromHGC3DClustersOldEMRaw
     + process.pfClustersFromL1EGClusters 
     + process.pfClustersFromCombinedCalo 
+    + process.pfTracksFromL1Tracks
     + process.l1pfProducer
+    + process.l1PuppiForMET
 )
 
 
@@ -76,14 +66,9 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1BarrelEcal = cms.VInputTag('pfClustersFromL1EGClusters' ),
         L1BarrelCalo = cms.VInputTag('pfClustersFromCombinedCaloHCal:calibrated'),
         L1HGCal   = cms.VInputTag('pfClustersFromHGC3DClusters'),
+        L1HGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', ),
         L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated'),
-        # TC2
-        L1RawHGCalEMTC = cms.VInputTag('pfClustersFromHGC3DClustersEMRawTC'),
-        L1RawHGCalTC = cms.VInputTag('pfClustersFromHGC3DClustersRawTC'),
-        L1HGCalTC    = cms.VInputTag('pfClustersFromHGC3DClustersTC'),
         # old (non-split)
-        L1OldRawHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersOldEMRaw', ),
-        L1OldHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', ),
         L1OldRawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated'),
         L1OldRawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated'),
         L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw'),
@@ -93,13 +78,15 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1Calo = cms.VInputTag("l1pfCandidates:Calo",),
         L1TK = cms.VInputTag("l1pfCandidates:TK",),
         L1TKV = cms.VInputTag("l1pfCandidates:TKVtx",),
+        L1TKV5 = cms.VInputTag("l1pfCandidates:TKVtx",),
+        L1TKV5_sel = cms.string("pfTrack.nStubs >= 5"),
         L1PF = cms.VInputTag("l1pfCandidates:PF",),
         L1Puppi = cms.VInputTag("l1pfCandidates:Puppi",),
+        L1PuppiForMET = cms.VInputTag("l1PuppiCandidatesForMET",),
         # old (non-split)
         L1OldPF = cms.VInputTag("l1pfProducer:PF",),
         L1OldPuppi = cms.VInputTag("l1pfProducer:Puppi",),
-        L1OldPuppiForMET = cms.VInputTag("l1pfProducer:Puppi",),
-        L1OldPuppiForMET_sel = cms.string("charge != 0 || abs(eta) < 1.5 || (pt > 20 && abs(eta) < 2.5) || (pt > 40 && 2.5 <= abs(eta) <= 2.85) || (pt > 30 && abs(eta) > 3.0)")
+        L1OldPuppiForMET = cms.VInputTag("l1PuppiForMET",),
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),

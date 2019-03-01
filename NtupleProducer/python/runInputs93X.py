@@ -18,7 +18,6 @@ process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackFindingTracklet.L1TrackletTracks_cff')
 process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "Level1TTTracks")
 
-process.load('L1Trigger.Phase2L1ParticleFlow.hgc3dClustersForPF_cff')
 
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/SinglePion_FlatPt-2to100_L1TPU200_44DB43E7-4445-E811-9BCC-EC0D9A82237E.root'),
@@ -39,9 +38,7 @@ process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 
 process.p = cms.Path(
     process.L1TrackletTracks +
-    process.SimL1Emulator +
-    process.hgc3dClustersForPF_STC +
-    process.hgc3dClustersForPF_TC
+    process.SimL1Emulator
 )
 
 process.out = cms.OutputModule("PoolOutputModule",
@@ -85,6 +82,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_VertexProducer_*_*",
             "keep *_l1KBmtfStubMatchedMuons_*_*",
             "keep *_l1EGammaEEProducer_*_*",
+            "keep *_L1CaloJetProducer_*_*",
             # --- PF OUT
             "keep l1tPFClusters_*_*_*",
             "keep l1tPFTracks_*_*_*",
