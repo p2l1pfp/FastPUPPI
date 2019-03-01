@@ -74,7 +74,9 @@ def makeGenArray(tree, what, ptCut, etaCut, _cache={}):
     progress.done("done, %d entries" % len(ret))
     return ret
 def makeGenMETArray(tree, what, etaCut):
-    post = "CentralMet_pt" if etaCut <= 2.4 else "Met_pt"
+    if   etaCut <= 1.5: post = "MetBarrel_pt" 
+    elif etaCut <= 2.4: post = "MetCentral_pt"
+    else:               post = "Met_pt"
     progress = _progress("Reading gen"+post+" ...")
     tree.SetBranchStatus("*",0);
     tree.SetBranchStatus("gen"+post,1);
@@ -119,7 +121,9 @@ def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
     progress.done("done, %d entries" % len(ret))
     return ret
 def makeRecoMETArray(tree, what, obj, etaCut):
-    post = "CentralMet_pt" if etaCut <= 2.4 else "Met_pt"
+    if   etaCut <= 1.5: post = "MetBarrel_pt" 
+    elif etaCut <= 2.4: post = "MetCentral_pt"
+    else:               post = "Met_pt"
     if not tree.GetBranch(obj+post): 
         return None
     progress = _progress("Reading "+obj+post+" ...")
@@ -264,8 +268,10 @@ elif options.var.startswith("met"):
     if options.genht    is None: options.genht    = 150
     if options.xmax     is None: options.xmax     = 500
     what = "met"
-    qualif = "|#eta| < 2.4" if "Central" in options.var else ""
-    options.eta = 2.4 if "Central" in options.var else 5.0
+    options.eta = 5.0 
+    if "Central" in options.var:  options.eta = 2.4 
+    elif "Barrel" in options.var: options.eta = 1.5
+    qualif = "|#eta| < %.1f" % options.eta
 else:
     raise RuntimeError("Unknown variable "+options.var)
 

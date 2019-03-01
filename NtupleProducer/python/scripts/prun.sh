@@ -1,10 +1,10 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs93X/110219/$1
-PREFIX="inputs_"
+MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/250219/$1
+PREFIX="inputs104X_"
 
-if [[ "$1" == "--104X" ]]; then
+if [[ "$1" == "--104X" ]]; then # this is the default but we keep anyway
     shift;
-    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/150219/$1
+    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/250219/$1
     PREFIX="inputs104X_"
 fi;
 if [[ "$1" == "--93X" ]]; then

@@ -15,7 +15,7 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/em-hgc  -p pizero -w L1OldRawHGCalEM_pt02 -e L1OldRawHGCalEM_pt02 --fitrange 20 50 --hgcal-eta  --ptmax 50 --root emcorr_hgc_old3d_93X.root
 #
 # 2) Hadron Corrections, after re-running the pions with the Ecal corrections applied
-#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch  -w L1OldRawCalo_pt02 -e L1OldRawCalo_pt02 --fitrange 15 50 --root hadcorr.root --emf-slices L1OldRawCaloEM_pt02/L1OldRawCalo_pt02 0.125,0.50,0.875,1.0  --ptmax 50
+#       python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/had -p piswitch  -w L1OldRawCalo_pt -e L1OldRawCalo_pt --fitrange 15 50 --root hadcorr.root --emf-slices L1OldRawCaloEM_pt/L1OldRawCalo_pt 0.125,0.50,0.875,1.0  --ptmax 50
 #
 #    Check closure, after re-running Pi with Ecal + Had calibration applied 
 #  
@@ -23,7 +23,7 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #    
 # 3) Resolutions, after all the corrections
 #    Hadrons, calo
-#        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1Calo_pthighest -e L1Calo_pthighest  -r --ptmin 5 --ptmax 50
+#        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pion -w L1OldCalo_pt02 -e L1OldCalo_pt02  -r --ptmin 5 --ptmax 50
 #    EM, calo
 #        python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root plots/corr/resol -p pizero -w L1Ecal_pt02 -e L1Ecal_pt02  -r --ptmin 5 --ptmax 50
 #    Hadrons, track
@@ -36,20 +36,21 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 #
 #  0) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p emmix -w L1RawBarrelEcal_pt02 -e L1RawBarrelEcal_pt02 --fitrange 15 50 --root emcorr_barrel.root  --barrel-eta --ptmin 5  --ptmax 80
 #
-#  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pion -w L1RawBarrelCalo_pt02 -e L1RawBarrelCalo_pt02 --fitrange 15 50 --root hadcorr_barrel.root --emf-slices L1RawBarrelCaloEM_pt02/L1RawBarrelCalo_pt02 0.125,0.50,0.875,1.125  --ptmin 5 --ptmax 80 --barrel-eta
+#  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pion -w L1RawBarrelCalo_pt -e L1RawBarrelCalo_pt --fitrange 15 50 --root hadcorr_barrel.root --emf-slices L1RawBarrelCaloEM_pt/L1RawBarrelCalo_pt 0.125,0.50,0.875,1.125  --ptmin 5 --ptmax 80 --barrel-eta
 #
-#  3) python scripts/respCorrSimple.py respTupleNew_HadronGun_PU0.root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --hgcal-eta
+#  3) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/resol -p pion -w L1BarrelCalo_pt02 -e L1BarrelCalo_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --barrel-eta
+
 #  === HGCal ===
 #
 #  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p mix -w L1RawHGCal_pt02 -e L1RawHGCal_pt02 --fitrange 15 50 --root hadcorr_HGCal3D.root --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmin 5 --ptmax 50 --hgcal-eta
 #
-#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/resol -p pimix -w L1HGCal_pt02 -e L1Calo_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --hgcal-eta
+#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/resol -p pion -w L1HGCal_pt02 -e L1HGCal_pt02  --fitrange 15 50 -r --ptmin 5 --ptmax 80 --hgcal-eta
 #
 #  === HF-only ===
 #
 #  1) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pimix -w L1RawHFCalo_pt02 -e L1RawHFCalo_pt02 --fitrange 15 50 --root hfcorr.root  --ptmin 5 --ptmax 80 --hf-eta
 #
-#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pimix -w L1RawHFCalo_pt02 -e L1RawHFCalo_pt02 --fitrange 15 50 --root hfcorr.root  --ptmin 5 --ptmax 80 --hf-eta
+#  2) python scripts/respCorrSimple.py respTupleNew_ParticleGun_PU0.root  plots/corr -p pimix -w L1RawHFCalo_pt02 -e L1RawHFCalo_pt02 --fitrange 15 50 -r  --ptmin 5 --ptmax 80 --hf-eta
 #
 #
 

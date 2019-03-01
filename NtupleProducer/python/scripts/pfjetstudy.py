@@ -40,6 +40,7 @@ hopf = getHandle("std::vector<reco::PFCandidate>")
 hpf1 = getHandle("std::vector<l1t::PFCandidate>")
 hpfc = getHandle("std::vector<l1t::PFCluster>")
 hpft = getHandle("std::vector<l1t::PFTrack>")
+htmu = getHandle("BXVector<l1t::Muon>")
 hop  = getHandle("edm::OwnVector<reco::Candidate>")
 hhgc = getHandle("BXVector<l1t::HGCalMulticluster>")
 hhgt = getHandle("BXVector<l1t::HGCalTower>")
@@ -145,6 +146,7 @@ for iev,event in enumerate(events):
                 h = hhgc; alabel += ":HGCalBackendLayer2Processor3DClustering"
             elif a.startswith("hgcalTowerProducer"): 
                 h = hhgt; alabel += ":HGCalTowerProcessor"
+            elif a.startswith("simGmt"): h = htmu
             else: h = hop
             event.getByLabel(alabel, h)
             objs = h.product()
@@ -199,6 +201,8 @@ for iev,event in enumerate(events):
                 if d.dr < 0.4: ptsum += d.pt()
                 print "  %s%02d   cand  pt %7.2f eta %+5.2f phi %+5.2f dr %.2f   id % +5d  ptsum %7.2f" % (layerlabel,im, d.pt(), d.eta(), d.phi(), d.dr, d.pdgId(), ptsum),
                 layers[layerlabel].append(("%s%02d"%(layerlabel,im), d, (d.caloEta(), d.caloPhi()) if "pfTrack" in a else (d.eta(), d.phi())))
+                if a.startswith("pfCl"):
+                    print "  emEt %7.2f isEM %1d  " % (d.emEt(), d.isEM()),
                 if "Track" in a or "TK" in a:
                     if "pfTrack" in a:
                         print "  calo eta %+5.2f phi %+5.2f " % (d.caloEta(), d.caloPhi()),
@@ -228,6 +232,13 @@ for iev,event in enumerate(events):
                             print " --> match with  pt %7.2f from %2d particles: " % (sum(g.pt() for g in incone),len(incone)),
                             for g in incone:
                                 print "%+d[pt %.1f, dr %.2f]" % (g.pdgId(), g.pt(), deltaR(g,d)),
+                elif "simGmt" in a:
+                    print "  charge %s  quality %d "% (("%+d" % d.hwCharge()) if d.hwChargeValid() else "n/a", d.hwQual()),
+                    g, dr2 = bestMatch(d, [c for c in c_tomatch if abs(c.pdgId()) == 13])
+                    if (dr2 < .1): 
+                        print " --> match with  pt %7.2f eta %+5.2f phi %+5.2f dr %.3f   id % +5d " % (g.pt(), g.eta(), g.phi(), sqrt(dr2), g.pdgId()),
+                    else:           
+                        print " --> unmatched",
                 print ""
             if len(matches) > 1: print "   total pt within 0.4: %7.2f" %ptsum
             if "PF" in a or "Puppi" in a:

@@ -185,6 +185,10 @@ if hasattr(process,"TFileService") and type($THEPROCESS.TFileService) == cms.Ser
 
 cmsSplit_output_file.close()
 EOF
+if ($inlinecustomize) {
+    $queryPythonFile = "## Inline customize begin\n$inlinecustomize\n## Inline customize end\n" . $queryPythonFile;
+}
+
 my @pythonCrap = qx{ echo '$queryPythonFile'  | $runme 2>&1 };
 open PYTHONFILEINFO, "$py_out_file" or die "Python inspection didn't produce output.\nIt shouted ".join('',@pythonCrap)."\n";
 my @pythonFileInfo = <PYTHONFILEINFO>;
@@ -614,7 +618,7 @@ foreach my $j (1 .. $jobs) {
         $postamble .= "   if X != 'saveFileName': getattr(process.RandomNumberGeneratorService,X).initialSeed = rnd.randint(1,99999999)\n";
     }
     if ($inlinecustomize) {
-        $postamble .= "## Inline customize begin\n$inlinecustomize\n## Inline customize end\n";
+        $postamble = "## Inline customize begin\n$inlinecustomize\n## Inline customize end\n" . $postamble;
     }
     print " and will append postamble\n$postamble\n" if $verbose > 1;
     my $text = $src . "\n### ADDED BY cmsSplit.pl ###\n" . $postamble;
