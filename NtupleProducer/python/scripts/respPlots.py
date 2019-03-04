@@ -67,7 +67,7 @@ def ptBins(oname):
     if "jet" in oname: 
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250,300]
     else:
-        return [2.5,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50,55,60,70,80] #,90,100]
+        return [1,2,3,4,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50,55,60,70,80,90,100,120,150,175,200,250]
 def doPtProf(oname, tree, name, expr, cut, maxEntries=999999999):
     ptbins = ptBins(oname)
     ROOT.gROOT.cd()
@@ -242,24 +242,31 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
 
 whats = [
     ('debug-ecal',[
-        ("Raw",  "L1RawBarrelEcal$",     ROOT.kAzure+1,  25, 2.0),
-        ("Corr",  "L1BarrelEcal$",       ROOT.kAzure+2,  21, 1.6),
-        ("Towers", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 34, 1.5),
+        ("RawOld",  "L1RawBarrelEcalOldL1EG$", ROOT.kGreen+2,  25, 2.0),
+        ("Raw",  "L1RawBarrelEcal$",           ROOT.kGreen+2,  21, 1.6),
+        ("CorrOld",  "L1BarrelEcalOldL1EG$",   ROOT.kAzure+2,  24, 1.3),
+        ("Corr",  "L1BarrelEcal$",             ROOT.kAzure+2,  20, 1.0),
     ]),
     ('debug-hf',[
+        ("Cells",  "L1RawHFCells$",  ROOT.kGreen+2,  20, 1.1),
         ("Raw",  "L1RawHFCalo$",     ROOT.kAzure+1,  25, 2.0),
         ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  21, 1.6),
     ]),
     ('debug-hcal',[
-        ("Raw",   "L1RawBarrelCalo$",   ROOT.kGreen+3,  25, 2.0),
-        ("Corr",  "L1BarrelCalo$",      ROOT.kGreen+1,  21, 1.5),
-        ("RawEM", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 34, 1.5),
+        ("Raw_OldTow",   "L1RawBarrelCaloOldTowers$",        ROOT.kGreen+1,  25, 2.0),
+        ("Raw_NewTow",   "L1RawBarrelCalo$",   ROOT.kAzure+2,  21, 1.6),
+        ("Raw_UncOnly",   "L1RawBarrelCaloUnclust$",   ROOT.kRed-7,    21, 1.4),
+        ("Corr_Old",  "L1BarrelCaloOldTowers$",           ROOT.kGreen+1,  24, 1.3),
+        ("Corr_New",  "L1BarrelCalo$",      ROOT.kAzure+2,  20, 1.0),
+        ("RawEM_Old", "L1RawBarrelCaloEMOldTowers$",      ROOT.kGreen+3,  20, 0.9),
+        ("RawEM_New", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 20, 0.9),
+        ("RawEM_Unc", "L1RawBarrelCaloEMUnclust$", ROOT.kRed+2,    20, 0.9),
     ]),
     ('debug-hgc',[
-        ("RawSTC",   "L1RawHGCal$",   ROOT.kGreen+3,  25, 2.0),
-        ("RawTC", "L1RawHGCalTC$", ROOT.kRed+1, 34, 1.5),
-        ("CorrSTC",  "L1HGCal$",      ROOT.kGreen+1,  21, 1.5),
-        ("CorrTC", "L1HGCalTC$", ROOT.kViolet+1, 34, 1.5),
+        ("Raw",     "L1RawHGCal$",   ROOT.kGreen+2,   25, 2.0),
+        ("RawEM",   "L1RawHGCalEM$", ROOT.kRed+1,     21, 1.5),
+        ("Corr",    "L1HGCal$",      ROOT.kAzure+1,   20, 1.3),
+        ("CorrEM",  "L1HGCalEM$",    ROOT.kViolet+1,  20, 0.9),
     ]),
     ('l1pfold',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
@@ -361,6 +368,7 @@ if __name__ == "__main__":
     parser.add_option("--ptmax", dest="ptmax", nargs=1, default=9999, type="float")
     parser.add_option("--ptminFit", dest="ptminFit", default=0, type="float", help="Pt definition")
     parser.add_option("--cut", dest="extracut", default=None, help="Extra cut", nargs=2)
+    parser.add_option("--label", dest="extralabel", default=None, help="Extra label")
     parser.add_option("-m","--more", dest="more", default=False, action="store_true", help="make more plots (multiplicity, distance)")
     parser.add_option("-g","--gauss", dest="gauss", default=False, action="store_true", help="make also gaussian estimates")
     parser.add_option("-G","--gauss-only", dest="gaussOnly", default=False, action="store_true", help="make only gaussian estimates")
@@ -389,6 +397,7 @@ if __name__ == "__main__":
             ("klong", "abs(mc_id) == 130", 10, 5),
             ("pimix", "(abs(mc_id) == 211 || abs(mc_id) == 111)", 10, 5),
             ("mixmix", "(abs(mc_id) == 211 || abs(mc_id) == 22)", 10, 5),
+            ("mix", "(abs(mc_id) == 211 || abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 130)", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -401,6 +410,8 @@ if __name__ == "__main__":
         if options.extracut:
             particle += "_"+options.extracut[0]
             pdgIdCut += " && ("+options.extracut[1]+")"
+        if options.extralabel:
+            particle += "_"+options.extralabel
         if not options.noEtaPlot:
             sels.append(("%s_pt_%02d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
@@ -427,7 +438,7 @@ if __name__ == "__main__":
         print "Plotting ",oname
         isNeutrino = oname.startswith("null")
         if isNeutrino and options.mcpt == "mc_pt": options.mcpt = "1"
-        if "electron" in oname or "muon" in oname or "pi" in oname:
+        if "jet" not in oname:
             cut = cut + " && abs(mc_iso04) < 0.05" # isolated
         for kind,things in whats:
             if options.what and (kind not in options.what.split(",")): 
@@ -441,7 +452,7 @@ if __name__ == "__main__":
             elif isNeutrino:
                 ptdefs = [ "pthighest", "pt", "ptbest", "pt02" ]
             else:
-                ptdefs = [ "pt02", "pthighest", "ptbest" ]   
+                ptdefs = [ "pt02", "ptbest" ]   
             if options.more:
                 ptdefs += [ "ptbest", "mindr025", "n025", "n010" ]
             if options.ptdef: ptdefs = options.ptdef.split(",")
@@ -572,11 +583,14 @@ if __name__ == "__main__":
                     line = ROOT.TLine()
                     line.SetLineStyle(7)
                     if "resolution" not in ptype and ptdef.startswith("pt") and options.mcpt != "1":
-                        line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),1)
+                        if "pt" in oname: 
+                            line.DrawLine(minEta,1,maxEta,1)
+                        else:
+                            line.DrawLine(0.0,1,frame.GetXaxis().GetXmax(),1)
                     if "pt" in oname: 
-                        line.DrawLine(1.5,0,1.5,ymax)
-                        line.DrawLine(2.5,0,2.5,ymax)
-                        line.DrawLine(3.0,0,3.0,ymax)
+                        for etaLine in 1.5, 2.5, 3.0:
+                            if minEta < etaLine and etaLine < maxEta: 
+                                line.DrawLine(etaLine,0,etaLine,ymax)
                     for n,p in plots: 
                         p.Draw("P SAME" if "TGraph" in p.ClassName() else "SAME")
                         if hasattr(p,'fit') and (options.fit != "none"): p.fit.Draw("SAME")

@@ -71,6 +71,7 @@ if __name__ == "__main__":
     parser.add_option("--barrel-eta", dest="barrelEta", default=False, action="store_true")
     parser.add_option("--hgcal-eta", dest="hgcalEta", default=False, action="store_true")
     parser.add_option("--hf-eta", dest="hfEta", default=False, action="store_true")
+    parser.add_option("--no-fit-hf", dest="noFitHF", default=False, action="store_true")
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
     parser.add_option("--ptmin", dest="ptmin", nargs=1, default=0, type="float")
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     for iptbin,(ptmin,ptmax) in enumerate(ptbins):
       for ipoint,(oname,cut) in enumerate(sels):
         print "Plotting ",oname
-        if "electron" in oname or "muon" in oname or "pi" in oname:
+        if "jet" not in oname:
             cut += " && abs(mc_iso04) < 0.05" # isolated
         prof, pres = doRespPt(oname,tree,options.what,options.expr,cut,mcpt=options.mcpt,xpt=options.xpt[0],fitopt="WNQ0C EX0",fitrange=(ptmin,ptmax))
         profg = getattr(prof,'gaus',None) if prof and options.gauss else None
@@ -280,11 +281,13 @@ if __name__ == "__main__":
                    ### fancy inversion
                     pclone = ROOT.TGraph(); pclone.SetName(pname)
                     points = []
+                    fitstart = options.fitrange[0]
+                    if options.noFitHF and etaval > 3: fitstart = 999
                     for i in xrange(150,0,-1):
                         genpt = i+ 1.5
-                        if genpt > options.fitrange[0]: corr = plot.fit.Eval(genpt)
-                        elif genpt > plot.GetX()[0]:    corr = plot.Eval(genpt)
-                        else:                           corr = plot.GetY()[0]
+                        if genpt > fitstart:         corr = plot.fit.Eval(genpt)
+                        elif genpt > plot.GetX()[0]: corr = plot.Eval(genpt)
+                        else:                        corr = plot.GetY()[0]
                         recopt = genpt * max(0.25, corr)
                         if len(points) and recopt > points[-1][0]: 
                             continue # avoid going backwards

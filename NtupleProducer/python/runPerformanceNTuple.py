@@ -12,7 +12,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/150219/TTbar_PU0/inputs104X_TTbar_PU0_job15.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/TTbar_PU200/inputs104X_TTbar_PU200_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     skipBadFiles = cms.untracked.bool(True)
 )

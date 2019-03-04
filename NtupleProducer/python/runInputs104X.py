@@ -60,8 +60,10 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_hgcalTowerProducer_*_IN",
             # muons
             "keep *_simGmtStage2Digis__*",
-            # hcal
+            # hcal (old)
             "keep *_simHcalTriggerPrimitiveDigis__*",
+            # new ecal and hcal
+            "keep *_L1EGammaClusterEmuProducer_*_*",
             # --- Stage2 ---
             "keep *_simCaloStage2Digis_*_*",
             # --- TK IN
