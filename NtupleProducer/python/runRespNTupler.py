@@ -33,25 +33,14 @@ process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.cl
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
 
-process.pfClustersFromL1EGClustersOldL1EG    = process.pfClustersFromL1EGClusters.clone(src = "l1EGammaCrystalsProducer:L1EGXtalClusterNoCuts", corrector = "L1Trigger/Phase2L1ParticleFlow/data/emcorr_barrel_old.root")
-process.pfClustersFromL1EGClustersOldL1EGRaw = process.pfClustersFromL1EGClustersRaw.clone(src = "l1EGammaCrystalsProducer:L1EGXtalClusterNoCuts")
-
-process.pfClustersFromCombinedCaloHCalOldTowers = process.pfClustersFromCombinedCaloHCal.clone(
-    hcalDigis = [ 'simHcalTriggerPrimitiveDigis'], hcalDigisBarrel = True, 
-    phase2barrelCaloTowers = [],
-    hadCorrector = "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_barrel_old.root", 
-)
 process.pfClustersFromCombinedCaloHCalUnclust = process.pfClustersFromCombinedCaloHCal.clone(
     ecalCandidates = []
 )
 process.runPF = cms.Sequence( 
     process.l1ParticleFlow_proper + # excludes the prerequisites (3D clusters and L1EG clusters)
     process.pfClustersFromL1EGClustersRaw +
-    process.pfClustersFromL1EGClustersOldL1EG +
-    process.pfClustersFromL1EGClustersOldL1EGRaw +
     process.pfClustersFromHGC3DClustersRaw +
     process.pfClustersFromHGC3DClustersEMRaw
-    + process.pfClustersFromCombinedCaloHCalOldTowers
     + process.pfClustersFromCombinedCaloHCalUnclust
     + process.pfClustersFromHGC3DClustersEM 
     + process.pfClustersFromL1EGClusters 
@@ -89,13 +78,6 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw'),
         L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducer','EmCalo')),
         L1OldCalo = cms.VInputTag("l1pfProducer:Calo",),
-        # old (towers from hcal digis in the barrel)
-        L1RawBarrelCaloOldTowers   = cms.VInputTag('pfClustersFromCombinedCaloHCalOldTowers:uncalibrated'),
-        L1RawBarrelCaloEMOldTowers = cms.VInputTag('pfClustersFromCombinedCaloHCalOldTowers:emUncalibrated'),
-        L1BarrelCaloOldTowers = cms.VInputTag('pfClustersFromCombinedCaloHCalOldTowers:calibrated'),
-        # old (l1EG from old, non-emulator code)
-        L1BarrelEcalOldL1EG = cms.VInputTag('pfClustersFromL1EGClustersOldL1EG' ),
-        L1RawBarrelEcalOldL1EG = cms.VInputTag('pfClustersFromL1EGClustersOldL1EGRaw' ),
         # alternate: don't use L1EG clusters when making hadrons
         L1RawBarrelCaloUnclust   = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:uncalibrated'),
         L1RawBarrelCaloEMUnclust = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:emUncalibrated'),

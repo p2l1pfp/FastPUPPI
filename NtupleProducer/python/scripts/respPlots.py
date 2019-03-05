@@ -242,9 +242,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
 
 whats = [
     ('debug-ecal',[
-        ("RawOld",  "L1RawBarrelEcalOldL1EG$", ROOT.kGreen+2,  25, 2.0),
         ("Raw",  "L1RawBarrelEcal$",           ROOT.kGreen+2,  21, 1.6),
-        ("CorrOld",  "L1BarrelEcalOldL1EG$",   ROOT.kAzure+2,  24, 1.3),
         ("Corr",  "L1BarrelEcal$",             ROOT.kAzure+2,  20, 1.0),
     ]),
     ('debug-hf',[
@@ -253,14 +251,11 @@ whats = [
         ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  21, 1.6),
     ]),
     ('debug-hcal',[
-        ("Raw_OldTow",   "L1RawBarrelCaloOldTowers$",        ROOT.kGreen+1,  25, 2.0),
-        ("Raw_NewTow",   "L1RawBarrelCalo$",   ROOT.kAzure+2,  21, 1.6),
-        ("Raw_UncOnly",   "L1RawBarrelCaloUnclust$",   ROOT.kRed-7,    21, 1.4),
-        ("Corr_Old",  "L1BarrelCaloOldTowers$",           ROOT.kGreen+1,  24, 1.3),
-        ("Corr_New",  "L1BarrelCalo$",      ROOT.kAzure+2,  20, 1.0),
-        ("RawEM_Old", "L1RawBarrelCaloEMOldTowers$",      ROOT.kGreen+3,  20, 0.9),
-        ("RawEM_New", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 20, 0.9),
-        ("RawEM_Unc", "L1RawBarrelCaloEMUnclust$", ROOT.kRed+2,    20, 0.9),
+        ("Raw",   "L1RawBarrelCalo$",   ROOT.kAzure+2,  21, 1.6),
+        ("UncOnly",   "L1RawBarrelCaloUnclust$",   ROOT.kRed-7,    21, 1.4),
+        ("Corr",  "L1BarrelCalo$",      ROOT.kAzure+2,  20, 1.0),
+        ("RawEM", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 20, 0.9),
+        ("EM_UncOnly", "L1RawBarrelCaloEMUnclust$", ROOT.kRed+2,    20, 0.9),
     ]),
     ('debug-hgc',[
         ("Raw",     "L1RawHGCal$",   ROOT.kGreen+2,   25, 2.0),
