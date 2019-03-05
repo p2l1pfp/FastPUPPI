@@ -5,13 +5,10 @@ cmsrel CMSSW_10_5_0_pre1
 cd CMSSW_10_5_0_pre1/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X
-
-# calibrations
-git clone git@github.com:p2l1pfp/l1pf-calibrations.git L1Trigger/Phase2L1ParticleFlow/data -b 105X
+git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X_v3
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X_v3
 
 scram b -j8
 ```
@@ -37,12 +34,12 @@ cmsRun runRespNTupler.py
 
 NB: 
    * For single particle add `goGun()` at the end of the script, remove it for jets.
-   * For 93X samples, add a `goOld()` at the end of the script to select 93X calibrations
+   * For 93X samples, add a `goOld()` at the end of the script to select 93X calibrations (note that these are not updated at the moment)
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runRespNTupler.py --104X TTbar_PU0 TTbar_PU0
-./scripts/prun.sh runRespNTupler.py --104X SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
+./scripts/prun.sh runRespNTupler.py --v3 TTbar_PU0 TTbar_PU0
+./scripts/prun.sh runRespNTupler.py --v3 SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
