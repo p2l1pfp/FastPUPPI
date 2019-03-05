@@ -156,6 +156,10 @@ if True:
     process.ntuple.objects.L1PFCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.L1PFPhoton = cms.VInputTag("l1pfCandidates:PF",)
     process.ntuple.objects.L1PFPhoton_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.L1PFNeutral = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFNeutral_sel = cms.string("charge == 0")
+    process.ntuple.objects.L1PFNeutral = cms.VInputTag("l1pfCandidates:PF",)
+    process.ntuple.objects.L1PFNeutral_sel = cms.string("charge == 0 && pdgId != 22")
     process.ntuple.objects.L1PFMuon = cms.VInputTag("l1pfCandidates:PF",)
     process.ntuple.objects.L1PFMuon_sel = cms.string("abs(pdgId) == 13")
     process.ntuple.objects.L1PFElectron = cms.VInputTag("l1pfCandidates:PF",)
@@ -164,6 +168,10 @@ if True:
     process.ntuple.objects.L1PuppiCharged_sel = cms.string("charge != 0")
     process.ntuple.objects.L1PuppiPhoton = cms.VInputTag("l1pfCandidates:Puppi",)
     process.ntuple.objects.L1PuppiPhoton_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.L1PuppiNeutral = cms.VInputTag("l1pfCandidates:Puppi",)
+    process.ntuple.objects.L1PuppiNeutral_sel = cms.string("charge == 0")
+    process.ntuple.objects.L1PuppiNeutralHad = cms.VInputTag("l1pfCandidates:Puppi",)
+    process.ntuple.objects.L1PuppiNeutralHad_sel = cms.string("charge == 0 && pdgId != 22")
 
 
 def goGun():

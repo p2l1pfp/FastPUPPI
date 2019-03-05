@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
-from math import exp
+from math import sqrt
 
 process = cms.Process("RESP", eras.Phase2C4_trigger)
 
@@ -66,6 +66,10 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             setattr(process.ntuple.objects, label+"Charged_sel", cms.string("charge != 0"))
             setattr(process.ntuple.objects, label+"Photon",  cms.VInputTag(cms.InputTag(tag)))
             setattr(process.ntuple.objects, label+"Photon_sel", cms.string("pdgId == 22"))
+            setattr(process.ntuple.objects, label+"Neutral",  cms.VInputTag(cms.InputTag(tag)))
+            setattr(process.ntuple.objects, label+"Neutral_sel", cms.string("charge == 0"))
+            setattr(process.ntuple.objects, label+"NeutralHad",  cms.VInputTag(cms.InputTag(tag)))
+            setattr(process.ntuple.objects, label+"NeutralHad_sel", cms.string("charge == 0 && pdgId != 22"))
     if makeJets:
         _add('ak4'+label, ak4PFJets.clone(src = tag, doAreaFastjet = False))
         setattr(process.l1pfjetTable.jets, label, cms.InputTag('ak4'+label))
@@ -169,6 +173,15 @@ def respOnly():
     process.p.remove(process.l1pfmetCentralTable)
     process.p.remove(process.l1pfmetBarrelTable)
     process.end.remove(process.outnano)
+def addCHS():
+    process.l1PuppiCharged = cms.EDFilter("L1TPFCandSelector",
+        src = cms.InputTag("l1pfCandidates:Puppi"),
+        cut = cms.string("charge != 0"))
+    process.l1PFNeutral = cms.EDFilter("L1TPFCandSelector",
+        src = cms.InputTag("l1pfCandidates:PF"),
+        cut = cms.string("charge == 0"))
+    process.extraPFStuff.add(process.l1PuppiCharged, process.l1PFNeutral)
+    monitorPerf("L1CHS", [ "l1PuppiCharged", "l1PFNeutral" ], makeRespSplit = False)
 def addOld():
     process.extraPFStuff.add(
         process.pfClustersFromHGC3DClustersEM, 
