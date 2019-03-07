@@ -19,8 +19,8 @@ process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "
 
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/hzz/gpetrucc/tmp/prod104X/ParticleGun_PU0/ParticleGun_PU0.batch1.job0.root'),
-    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/hzz/gpetrucc/tmp/prod104X/ParticleGun_PU200/ParticleGun_PU200.batch1.job0.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/104X/FEVT/ParticleGun_PU0/ParticleGun_PU0.batch1.job0.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/104X/FEVT/ParticleGun_PU200/ParticleGun_PU200.batch1.job0.root'),
     inputCommands = cms.untracked.vstring("keep *", 
         "drop l1tHGCalTowerMapBXVector_hgcalTriggerPrimitiveDigiProducer_towerMap_HLT",
         "drop *_hgcalTriggerPrimitiveDigiProducer_*_*",

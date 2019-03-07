@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, re
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
@@ -264,51 +264,78 @@ whats = [
         ("CorrEM",  "L1HGCalEM$",    ROOT.kViolet+1,  20, 0.9),
     ]),
     ('l1pfold',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Raw Ecal",   "L1OldRawEcal$", ROOT.kGreen+3,  21, 1.7),
         ("Raw Calo",   "L1OldRawCalo$", ROOT.kViolet-4,  21, 1.7),
         ("Ecal",       "L1OldEcal$",    ROOT.kGreen+1,  21, 1.7),
         ("Calo",       "L1OldCalo$",    ROOT.kViolet+2, 34, 1.5),
-        ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
+        ("TK",         "L1TK$",         ROOT.kRed+0, 20, 1.2),
         ("PF",         "L1OldPF$",      ROOT.kOrange+7, 20, 1.2),
     ]),
     ('l1pfoldpu',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Calo",       "L1OldCalo$",    ROOT.kViolet+1, 21, 1.5),
-        ("TK #Deltaz", "L1TKV5$",       ROOT.kRed+1, 34, 1.2),
+        ("TK #Deltaz", "L1TKV5$",       ROOT.kOrange-7, 34, 1.2),
         ("PF",         "L1OldPF$",      ROOT.kOrange+7, 21, 1.4),
-        ("Puppi",      "L1OldPuppi$",   ROOT.kGreen+1, 20, 1.5),
-        ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kGreen+3, 20, 1.1),
+        ("Puppi",      "L1OldPuppi$",   ROOT.kAzure+1, 20, 1.5),
+        ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kAzure+2, 20, 1.1),
     ]),
     ('l1pfnew',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
         ("Ecal",       "L1BarrelEcal$+L1RawHGCalEM$",    ROOT.kGreen+1,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kGray+2, 20, 1.2),
     ]),
     ('l1pfnewpu',[
-        ("Gen #times Acc",        "GenAcc$",    ROOT.kAzure+1,  20, 1.2),
-        ("Calo",       "L1Calo$",    ROOT.kViolet+1, 34, 1.5),
-        ("TK #Deltaz", "L1TKV5$",    ROOT.kRed+1, 20, 1.2),
-        ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
-        ("Puppi",      "L1Puppi$",   ROOT.kGreen+1, 20, 1.5),
-        ("Puppi4MET",  "L1PuppiForMET$",   ROOT.kGreen+3, 20, 1.1),
+        ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
+        ("Calo",       "L1Calo$",     ROOT.kViolet+1, 21, 1.5),
+        ("TK #Deltaz", "L1TKV5$",     ROOT.kOrange-7, 34, 1.2),
+        ("PF",         "L1PF$",       ROOT.kOrange+7, 21, 1.5),
+        ("PFCHS",      "L1CHS$",      ROOT.kMagenta-6, 21, 1.2),
+        ("PuppiOld",   "L1PuppiOld$", ROOT.kGreen+2, 20, 1.5),
+        ("Puppi",      "L1Puppi$",    ROOT.kRed+1, 20, 1.1),
     ]),
     ('l1pfcomp',[
-        ("Ecal",      "L1BarrelEcal$+L1HGCalEM$", ROOT.kGreen+1,  21, 1.7),
         ("OldCalo",   "L1OldCalo$", ROOT.kViolet+1, 25, 1.6),
         ("NewCalo",   "L1Calo$",    ROOT.kViolet+2, 21, 1.1),
         ("OldPF",     "L1OldPF$",   ROOT.kOrange-3, 24, 1.5),
         ("NewPF",     "L1PF$",      ROOT.kRed+1,    20, 1.0),
     ]),
     ('l1pfcomppu',[
-        ("OldPuppi",       "L1OldPuppi$",       ROOT.kGreen+0,  24, 1.4),
-        ("NewPuppi",       "L1Puppi$",          ROOT.kGreen+2,  20, 1.1),
-        ("OldPuppiForMET", "L1OldPuppiForMET$", ROOT.kAzure+10, 24, 1.4),
-        ("NewPuppiForMET", "L1PuppiForMET$",    ROOT.kAzure+2,  20, 1.1),
+        ("OldPF_Puppi",    "L1OldPuppi$",       ROOT.kAzure+1,  24, 1.4),
+        ("OldPF_PupMET",   "L1OldPuppiForMET$", ROOT.kAzure+2, 24, 1.4),
+        ("NewPF_OldPuppi", "L1PuppiOld$",       ROOT.kGreen+2,  20, 1.1),
+        ("NewPF_LinPuppi", "L1Puppi$",          ROOT.kRed+1,    20, 1.1),
+    ]),
+    ('puppisplit-charged',[
+        ("PF",          "L1PF$",            ROOT.kGray+1,   25, 1.4),
+        ("Puppi",       "L1Puppi$",         ROOT.kBlack+2,  20, 0.8),
+        ("Gen_Charged", "ChGenAcc$",        ROOT.kGreen+2,  25, 1.5),
+        ("PF_Charged",  "L1PFCharged$",     ROOT.kRed+1,    24, 1.2),
+        ("Pup_Charged", "L1PuppiCharged$",  ROOT.kAzure+2,  20, 0.8),
+    ]),
+    ('puppisplit-neutral',[
+        ("PF",            "L1PF$",                ROOT.kGray+1,   25, 1.4),
+        ("Puppi",         "L1Puppi$",               ROOT.kBlack+2,  20, 0.8),
+        ("Gen_Neutral",   "GenAcc$-ChGenAcc$",    ROOT.kGreen+2,  25, 1.5),
+        ("PF_Neutral",    "L1PFNeutral$",  ROOT.kRed+1,    24, 1.2),
+        ("Puppi_Neutral", "L1PuppiNeutral$", ROOT.kAzure+2,  20, 0.8),
+    ]),
+    ('puppisplit-neutralhad',[
+        ("PF",           "L1PF$",                ROOT.kGray+1,   25, 1.4),
+        ("Puppi",        "L1Puppi$",               ROOT.kBlack+2,  20, 0.8),
+        ("Gen_NeuHad",   "GenAcc$-ChGenAcc$-PhGenAcc$",      ROOT.kGreen+2,  25, 1.5),
+        ("PF_NeuHad",    "L1PFNeutralHad$",   ROOT.kRed+1,    24, 1.2),
+        ("Puppi_NeuHad", "L1PuppiNeutralHad$", ROOT.kAzure+2,  20, 0.8),
+    ]),
+    ('puppisplit-photons',[
+        ("PF",           "L1PF$",                ROOT.kGray+1,   25, 1.4),
+        ("Puppi",        "L1Puppi$",               ROOT.kBlack+2,  20, 0.8),
+        ("Gen_Photon",   "PhGenAcc$",            ROOT.kGreen+2,  25, 1.5),
+        ("PF_Photon",    "L1PFPhoton$",          ROOT.kRed+1,    24, 1.2),
+        ("Puppi_Photon", "L1PuppiPhoton$",         ROOT.kAzure+2,  20, 0.8),
     ]),
     ('pfdebug',[
         ("Gen #times Acc", "GenAcc$",           ROOT.kGray+1,  21, 1.2),
@@ -374,6 +401,7 @@ if __name__ == "__main__":
     from optparse import OptionParser
     parser = OptionParser("%(prog) infile [ src [ dst ] ]")
     parser.add_option("-w", dest="what",     default=None, help="Choose set (inputs, l1pf, ...)")
+    parser.add_option("-W", dest="what_reg",     default=None, help="Choose set (inputs, l1pf, ...)")
     parser.add_option("-p", dest="particle", default=None, help="Choose particle (electron, ...)")
     parser.add_option("--ptdef", dest="ptdef", default=None, help="Pt definition")
     parser.add_option("--ptmax", dest="ptmax", nargs=1, default=9999, type="float")
@@ -454,6 +482,9 @@ if __name__ == "__main__":
         for kind,things in whats:
             if options.what and (kind not in options.what.split(",")): 
                 continue
+            if options.what_reg:
+                if not any(re.match(p+"$",kind) for p in options.what_reg.split(",")): 
+                    continue
             if "tau" in oname:
                 ptdefs = [ "pt", "pt02" ]
             elif "jet" in oname:

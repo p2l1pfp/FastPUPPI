@@ -31,13 +31,13 @@ from RecoMET.METProducers.PFMET_cfi import pfMet
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_split_cff")
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
+process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_old_cff")
 
 process.extraPFStuff = cms.Task()
 
 process.runPF = cms.Sequence( 
-    process.l1ParticleFlow_proper # excludes the prerequisites (3D clusters and L1EG clusters)
+    process.l1ParticleFlow 
 )
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
@@ -126,7 +126,6 @@ monitorPerf("L1TK", "l1pfCandidates:TK", makeRespSplit = False, makeJets=False, 
 monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False, makeJets=False, makeMET=False)
 monitorPerf("L1PF", "l1pfCandidates:PF")
 monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
-monitorPerf("L1PuppiForMET", "l1PuppiCandidatesForMET")
 
 process.runPF.associate(process.extraPFStuff)
 process.p = cms.Path(
@@ -186,13 +185,34 @@ def addOld():
     process.extraPFStuff.add(
         process.pfClustersFromHGC3DClustersEM, 
         process.pfClustersFromCombinedCalo, 
-        process.l1pfProducer,
-        process.l1PuppiForMET
+        process.l1pfProducerOld,
+        process.l1OldPuppiForMET
     )
-    monitorPerf("L1OldCalo", "l1pfProducer:Calo", makeRespSplit = False)
-    monitorPerf("L1OldPF", "l1pfProducer:PF")
-    monitorPerf("L1OldPuppi", "l1pfProducer:Puppi")
-    monitorPerf("L1OldPuppiForMET", "l1PuppiForMET")
+    monitorPerf("L1OldCalo", "l1pfProducerOld:Calo", makeRespSplit = False)
+    monitorPerf("L1OldPF", "l1pfProducerOld:PF")
+    monitorPerf("L1OldPuppi", "l1pfProducerOld:Puppi")
+    monitorPerf("L1OldPuppiForMET", "l1OldPuppiForMET")
+def addPuppiOld():
+    process.l1pfProducerBarrelPuppiOld = process.l1pfProducerBarrel.clone(puAlgo = "Puppi")
+    process.l1pfProducerBarrelPuppiOld.puppiEtaCuts       = cms.vdouble(1.5) 
+    process.l1pfProducerBarrelPuppiOld.puppiPtCuts        = cms.vdouble(0.0)
+    process.l1pfProducerBarrelPuppiOld.puppiPtCutsPhotons = cms.vdouble(0.0)
+    #
+    process.l1pfProducerHGCalPuppiOld = process.l1pfProducerHGCal.clone(puAlgo = "Puppi")
+    process.l1pfProducerHGCalPuppiOld.puppiEtaCuts       = cms.vdouble(2.5, 2.85,  3.0) 
+    process.l1pfProducerHGCalPuppiOld.puppiPtCuts        = cms.vdouble( 20,  40,  9999)
+    process.l1pfProducerHGCalPuppiOld.puppiPtCutsPhotons = cms.vdouble( 20,  40,  9999)
+    #
+    process.l1pfProducerHFPuppiOld = process.l1pfProducerHF.clone(puAlgo = "Puppi")
+    process.l1pfProducerHFPuppiOld.puppiEtaCuts       = cms.vdouble(5.5) 
+    process.l1pfProducerHFPuppiOld.puppiPtCuts        = cms.vdouble( 30)
+    process.l1pfProducerHFPuppiOld.puppiPtCutsPhotons = cms.vdouble( 30)
+    #
+    process.l1pfCandidatesPuppiOld = process.l1pfCandidates.clone(
+            pfProducers = ["l1pfProducerBarrelPuppiOld", "l1pfProducerHGCalPuppiOld", "l1pfProducerHFPuppiOld"], 
+            labelsToMerge = [ "Puppi" ])
+    process.extraPFStuff.add(process.l1pfProducerBarrelPuppiOld, process.l1pfProducerHGCalPuppiOld, process.l1pfProducerHFPuppiOld, process.l1pfCandidatesPuppiOld)
+    monitorPerf("L1PuppiOld", "l1pfCandidatesPuppiOld:Puppi")
 def addTKs():
     process.l1tkv5Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5"))
     process.l1tkv6Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 6"))
@@ -224,7 +244,7 @@ def addCalib():
         process.ntuple.objects.L1OldRawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated')
         process.ntuple.objects.L1OldRawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated')
         process.ntuple.objects.L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw')
-        process.ntuple.objects.L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducer','EmCalo'))
+        process.ntuple.objects.L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducerOld','EmCalo'))
 
 def goGun(calib=1):
     process.ntuple.isParticleGun = True

@@ -4,11 +4,16 @@ V="v3"
 PLOTDIR="plots/105X/from104X/${V}/corr"
 SAMPLES="--v3";
 
+PU=PU0
+if [[ "$1" == "--pu200" ]]; then 
+    PU=PU200; shift;
+fi;
+
 if [[ "$1" == "--backup" ]]; then
-    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_PU0.${V}.0.root);
+    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.0.root);
     shift;
 else
-    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_PU0.${V}.root);
+    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.root);
 fi;
 
 W=$1; shift;
@@ -70,37 +75,43 @@ case $W in
     rerun)
          python runRespNTupler.py || exit 1;
          for f in $NTUPLES; do test -f $f && mv -v $f ${f/$V/$V.0}; done
-         for X in Particle{Gun,GunPt0p5To5,GunPt80To300}_PU0; do 
+         for X in Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}; do 
              ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun()'; 
              grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && break;
          done
          ;;
     plot-ecal)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p electron,photon,pizero --gauss -w debug-ecal --eta 0 1.3 --no-eta --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p electron,photon,pizero --gauss -w debug-ecal --eta 0 1.3 --no-eta --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
          ;;
     plot-hcal)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p photon,pizero,pion,klong --gauss -w debug-hcal --eta 0 1.3 --no-eta --ymax 2.1 --ymaxRes 1.2 --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,pizero,pion,klong --gauss -w debug-hcal --eta 0 1.3 --no-eta --ymax 2.1 --ymaxRes 1.2 --ptmax 150 --ptdef pt02,ptbest
          ;;
     plot-hgc)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p photon,pizero,electron --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p photon,pizero,electron --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p pion,klong             --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p pion,klong             --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
-         #python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p mix             --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
-         #python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p mix             --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,pizero,electron --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,pizero,electron --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,klong             --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,klong             --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
+         #python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p mix             --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
+         #python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p mix             --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 150 --ptdef pt02,ptbest
          ;;
     plot-hf)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -p pizero,pion,pimix --gauss -w debug-hf --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --ptmax 150 --no-fit --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pizero,pion,pimix --gauss -w debug-hf --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --ptmax 150 --no-fit --ptdef pt02,ptbest
          ;;
     plots-pfnew)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfnew -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfnew -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfnew -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+         if [[ "$PU" == "PU0" ]]; then
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+         else
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,klong,pimix       -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,pizero,pimix      -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
+         fi;
          ;;
     plots-pfold)
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfold -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfold -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_PU0 -w l1pfold -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfold -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfold -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfold -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
          ;;
 
 esac;

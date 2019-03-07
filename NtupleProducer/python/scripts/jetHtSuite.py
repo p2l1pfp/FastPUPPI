@@ -55,6 +55,12 @@ def makeCalc(what):
 def makeGenArray(tree, what, ptCut, etaCut, _cache={}):
     _key = (id(tree),what,int(ptCut*100),int(etaCut*1000))
     if _key in _cache: return _cache[_key]
+    if what == "metmht":
+        met = makeGenArray(tree, "met",     0,    5.0, _cache=_cache)
+        mht = makeGenArray(tree, "mht", ptCut, etaCut, _cache=_cache)
+        ret = map(min, zip(met,mht))
+        _cache[_key] = ret
+        return ret
     if "met" in what:
         ret = makeGenMETArray(tree, what, etaCut)
         _cache[_key] = ret
@@ -89,6 +95,12 @@ def makeGenMETArray(tree, what, etaCut):
 def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
     _key = (id(tree),what,obj,int(ptCorrCut*100),int(etaCut*1000))
     if _key in _cache: return _cache[_key]
+    if what == "metmht":
+        met = makeCorrArray(tree, "met", obj, ptCorrCut,    5.0, corr, _cache=_cache)
+        mht = makeCorrArray(tree, "mht", obj, ptCorrCut, etaCut, corr, _cache=_cache)
+        ret = map(min, zip(met,mht))
+        _cache[_key] = ret
+        return ret
     if "met" in what:
         ret = makeRecoMETArray(tree, what, obj, etaCut)
         _cache[_key] = ret
@@ -203,6 +215,7 @@ whats = WHATS + [
 from optparse import OptionParser
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-w", dest="what", default=None, help="Choose set (il1pf, l1pf, ...)")
+parser.add_option("-W", dest="what_reg",     default=None, help="Choose set (inputs, l1pf, ...)")
 parser.add_option("-P","--plots", dest="plots", default="rate,isorate,roc,effc", help="Choose plot or comma-separated list of plots")
 parser.add_option("-j","--jecs", dest="jecs", default="jecs.root", help="Choose JEC file")
 parser.add_option("--jm","--jec-method", dest="jecMethod", default="", help="Choose JEC method")
@@ -238,6 +251,12 @@ if options.var == "ht":
     what = options.var
 elif options.var == "mht":
     if options.varlabel is None: options.varlabel = "H_{T}^{miss}"
+    if options.genht    is None: options.genht    = 150
+    if options.xmax     is None: options.xmax     = 500
+    qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
+    what = options.var
+elif options.var == "metmht":
+    if options.varlabel is None: options.varlabel = "E_{T}^{miss} - H_{T}^{miss}"
     if options.genht    is None: options.genht    = 150
     if options.xmax     is None: options.xmax     = 500
     qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
@@ -287,6 +306,9 @@ for plotkind in options.plots.split(","):
   for targetrate in rates:
       for objset,things in whats:
           if options.what and (objset not in options.what.split(",")): continue
+          if options.what_reg:
+              if not any(re.match(p+"$",objset) for p in options.what_reg.split(",")): 
+                  continue
           plots = []
           for name,obj,col,msty,msiz in things:
               if "GenAcc$" in obj: continue
@@ -319,6 +341,7 @@ for plotkind in options.plots.split(","):
                           cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                           break
                   recoArrayS = makeCorrArray(signal, what, obj, options.pt, options.eta, jecs)
+                  if not recoArrayS: continue
                   plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
                   label = "%s(%s) > %.0f" % (options.varlabel, name,cut)
               elif plotkind == "roc":

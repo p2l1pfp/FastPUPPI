@@ -27,7 +27,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_split_cff")
+process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_old_cff")
 
 process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
@@ -46,8 +46,8 @@ process.runPF = cms.Sequence(
     + process.pfClustersFromL1EGClusters 
     + process.pfClustersFromCombinedCalo 
     + process.pfTracksFromL1Tracks
-    + process.l1pfProducer
-    + process.l1PuppiForMET
+    + process.l1pfProducerOld
+    + process.l1OldPuppiForMET
 )
 
 
@@ -76,8 +76,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1OldRawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated'),
         L1OldRawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated'),
         L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw'),
-        L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducer','EmCalo')),
-        L1OldCalo = cms.VInputTag("l1pfProducer:Calo",),
+        L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducerOld','EmCalo')),
+        L1OldCalo = cms.VInputTag("l1pfProducerOld:Calo",),
         # alternate: don't use L1EG clusters when making hadrons
         L1RawBarrelCaloUnclust   = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:uncalibrated'),
         L1RawBarrelCaloEMUnclust = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:emUncalibrated'),
@@ -90,11 +90,10 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1TKV5_sel = cms.string("pfTrack.nStubs >= 5"),
         L1PF = cms.VInputTag("l1pfCandidates:PF",),
         L1Puppi = cms.VInputTag("l1pfCandidates:Puppi",),
-        L1PuppiForMET = cms.VInputTag("l1PuppiCandidatesForMET",),
         # old (non-split)
-        L1OldPF = cms.VInputTag("l1pfProducer:PF",),
-        L1OldPuppi = cms.VInputTag("l1pfProducer:Puppi",),
-        L1OldPuppiForMET = cms.VInputTag("l1PuppiForMET",),
+        L1OldPF = cms.VInputTag("l1pfProducerOld:PF",),
+        L1OldPuppi = cms.VInputTag("l1pfProducerOld:Puppi",),
+        L1OldPuppiForMET = cms.VInputTag("l1OldPuppiForMET",),
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
