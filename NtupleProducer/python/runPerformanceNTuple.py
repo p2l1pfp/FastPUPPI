@@ -98,6 +98,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
 )
+process.extraPFStuff.add(process.pfTracksFromL1Tracks)
 
 process.l1pfjetTable = cms.EDProducer("L1PFJetTableProducer",
     gen = cms.InputTag("ak4GenJetsNoNu"),
