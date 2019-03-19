@@ -235,8 +235,8 @@ tfiles = [ROOT.TFile.Open(f) for f in args[:2]]
 
 odir = args[2] 
 os.system("mkdir -p "+odir)
-os.system("cp %s/php/index.php %s/" % (os.environ['HOME'], odir));
-ROOT.gROOT.ProcessLine(".x %s/cpp/tdrstyle.cc" % os.environ['HOME']);
+os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));
+ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE']);
 ROOT.gStyle.SetOptStat(0)
 c1 = ROOT.TCanvas("c1","c1")
 

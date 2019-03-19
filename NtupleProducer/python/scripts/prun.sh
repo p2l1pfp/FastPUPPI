@@ -1,22 +1,11 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/250219/$1
+MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/$1
 PREFIX="inputs104X_"
 
-if [[ "$1" == "--104X" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/250219/$1
-    PREFIX="inputs104X_"
-fi;
 if [[ "$1" == "--v3" ]]; then # this is the default but we keep anyway
     shift;
     MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/$1
     PREFIX="inputs104X_"
-fi;
-
-if [[ "$1" == "--93X" ]]; then
-    shift;
-    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs93X/150219/$1
-    PREFIX="inputs93X_"
 fi;
 
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then
