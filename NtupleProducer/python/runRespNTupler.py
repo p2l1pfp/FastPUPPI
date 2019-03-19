@@ -14,7 +14,11 @@ process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('file:inputs.root'),
     fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/ParticleGun_PU0/inputs104X_ParticleGun_PU0_job1.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
-    skipBadFiles = cms.untracked.bool(True)
+    skipBadFiles = cms.untracked.bool(True),
+    inputCommands = cms.untracked.vstring("keep *", 
+            "drop l1tPFClusters_*_*_*",
+            "drop l1tPFTracks_*_*_*",
+            "drop l1tPFCandidates_*_*_*")
 )
 
 process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
