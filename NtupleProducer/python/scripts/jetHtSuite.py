@@ -2,7 +2,6 @@ import os, re
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
-ROOT.gROOT.ProcessLine(".x %s/cpp/tdrstyle.cc" % os.environ['HOME']);
 ROOT.gStyle.SetOptStat(False)
 ROOT.gStyle.SetErrorX(0.5)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
@@ -151,7 +150,7 @@ def makeRecoMETArray(tree, what, obj, etaCut):
 
 def genCutCorrArray(corrArray, genArray, genThr):
     if len(genArray) != len(corrArray): raise RuntimeError("Mismatch")
-    return [ r for (r,g) in zip(genArray,corrArray) if g > genThr ]
+    return [ r for (g,r) in zip(genArray,corrArray) if g > genThr ]
 
 def makeCumulativeHTEff(name, corrArray, xmax, norm=2760.0*11246/1000):
     if len(corrArray) == 0: return None
