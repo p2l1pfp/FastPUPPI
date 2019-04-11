@@ -102,6 +102,15 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
 )
+
+for X in ["tot","max"]:
+    for D in ['l1pfProducerBarrel', 'l1pfProducerHF', 'l1pfProducerHGCal']:
+        for I in "Calo EmCalo TK Mu".split(): 
+            process.ntuple.copyUInts.append( "%s:%sNL1%s" % (D,X,I))
+        for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
+            process.ntuple.copyUInts.append( "%s:%sNL1PF%s" % (D,X,O))
+            process.ntuple.copyUInts.append( "%s:%sNL1Puppi%s" % (D,X,O))
+
 process.extraPFStuff.add(process.pfTracksFromL1Tracks)
 
 
@@ -134,9 +143,10 @@ monitorPerf("L1PF", "l1pfCandidates:PF")
 monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
 
 process.runPF.associate(process.extraPFStuff)
+#process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.p = cms.Path(
         process.runPF + 
-        process.ntuple + 
+        process.ntuple + #process.content +
         process.l1pfjetTable + 
         process.l1pfmetTable + process.l1pfmetCentralTable + process.l1pfmetBarrelTable
         )
