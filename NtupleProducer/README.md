@@ -5,10 +5,10 @@ cmsrel CMSSW_10_5_0_pre1
 cd CMSSW_10_5_0_pre1/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X_v3
+git cms-checkout-topic -u jmduarte:L1PF_10_5_X_v3
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X_v3
+git clone git@github.com:jmduarte/FastPUPPI.git -b 105X_v3
 
 scram b -j8
 ```
@@ -76,4 +76,11 @@ then you can use `jetHtSuite.py` to make the plots
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v ht
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v met
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v jet4
+```
+
+3) For object multiplicitly studies:
+```
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerBarrel --cl 0.95
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHF --cl 0.95
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHGCal --cl 0.95
 ```
