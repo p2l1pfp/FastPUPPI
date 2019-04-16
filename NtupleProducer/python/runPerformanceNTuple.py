@@ -8,7 +8,7 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
@@ -101,15 +101,23 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
+    copyVecUInts = cms.VInputTag(),
 )
 
 for X in ["tot","max"]:
-    for D in ['l1pfProducerBarrel', 'l1pfProducerHF', 'l1pfProducerHGCal']:
+    for D in ['l1pfProducerBarrel', 'l1pfProducerHF', 'l1pfProducerHGCal', 'l1pfProducerHGCalNoTK']:
         for I in "Calo EmCalo TK Mu".split(): 
             process.ntuple.copyUInts.append( "%s:%sNL1%s" % (D,X,I))
         for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
             process.ntuple.copyUInts.append( "%s:%sNL1PF%s" % (D,X,O))
             process.ntuple.copyUInts.append( "%s:%sNL1Puppi%s" % (D,X,O))
+
+for D in ['l1pfProducerBarrel', 'l1pfProducerHF', 'l1pfProducerHGCal', 'l1pfProducerHGCalNoTK']:
+    for I in "Calo EmCalo TK Mu".split(): 
+        process.ntuple.copyVecUInts.append( "%s:vecNL1%s" % (D,I))
+    for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
+        process.ntuple.copyVecUInts.append( "%s:vecNL1PF%s" % (D,O))
+        process.ntuple.copyVecUInts.append( "%s:vecNL1Puppi%s" % (D,O))
 
 process.extraPFStuff.add(process.pfTracksFromL1Tracks)
 
@@ -141,6 +149,61 @@ monitorPerf("L1TK", "l1pfCandidates:TK", makeRespSplit = False, makeJets=False, 
 monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False, makeJets=False, makeMET=False)
 monitorPerf("L1PF", "l1pfCandidates:PF")
 monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
+
+# define regions
+def goRegional():
+    process.l1pfProducerBarrel.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-1.5, -1, -0.5, 0, 0.5, 1, 1.5),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        )
+    )
+    process.l1pfProducerHGCalNoTK.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-3, -2.5),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(2.5, 3),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        )
+    )
+    process.l1pfProducerHGCal.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-2.5, -2, -1.5),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(1.5, 2, 2.5),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        )
+    )
+    process.l1pfProducerHF.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-5, -4.5, -4, -3.5, -3),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(3, 3.5, 4, 4.5, 5),
+            etaExtra = cms.double(0.3),
+            phiExtra = cms.double(0.3),
+            phiSlices = cms.uint32(10)
+        )
+    )
+
+goRegional()
 
 process.runPF.associate(process.extraPFStuff)
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")

@@ -13,7 +13,7 @@ from optparse import OptionParser
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("--cl", type=float, dest="cl", default=0, help="Compute number to avoid truncations at this CL")
 parser.add_option("-p", type="string", dest="particles", action="append", default=[], help="objects to count")
-parser.add_option("-d", dest="detector", choices=["l1pfProducerBarrel","l1pfProducerHF","l1pfProducerHGCal"], default="l1pfProducerBarrel", help="choice of detector")
+parser.add_option("-d", dest="detector", choices=["l1pfProducerBarrel","l1pfProducerHF","l1pfProducerHGCal","l1pfProducerHGCalNoTK"], default="l1pfProducerBarrel", help="choice of detector: l1pfProducerBarrel, l1pfProducerHGCal, l1pfProducerHGCalNoTK, l1pfProducerHF")
 options, args = parser.parse_args()
 if options.cl == 0:
     odir = args[1] # "plots/910pre2/test"
@@ -25,6 +25,7 @@ elif options.cl >= 1:
 c1 = ROOT.TCanvas("c1","c1")
 particles = [ "Calo", "EmCalo", "Mu", "TK" ]
 detector = options.detector
+detectorLabel = options.detector.replace('l1pfProducer','')
 for Algo in "PF", "Puppi":
     particles.append(Algo)
     for Type in "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
@@ -48,7 +49,24 @@ for particle in particles:
         for x in "tot","max":
             print "%s%sNL1%s" % (detector, x, particle)
             n = tree.Draw("%s%sNL1%s" % (detector, x, particle), "mc_id == 998", "")
+            h = ROOT.gROOT.FindObject("htemp")
+            if x=='tot':
+                h.GetXaxis().SetTitle("Total %s in %s"%(particle, detectorLabel))
+            else:
+                h.GetXaxis().SetTitle("Max %s per %s region"%(particle, detectorLabel))
+            h.GetYaxis().SetTitle("Events")
+            h.Draw()
             if not n: continue
-            out = odir+'/'+particle+"_"+detector+"_"+x+".png"
+            out = odir+'/'+particle+"_"+detector+"_"+x+".pdf"
             c1.Print(out)
-
+        print "%svecNL1%s" % (detector, particle)
+        n = tree.Draw("%svecNL1%s" % (detector, particle), "mc_id == 998", "")
+        h = ROOT.gROOT.FindObject("htemp")
+        h.GetXaxis().SetTitle("%s in %s region"%(particle, detectorLabel))
+        h.GetYaxis().SetTitle("Regions")
+        h.Draw()
+        c1.SetLogy()
+        if not n: continue
+        out = odir+'/'+particle+"_"+detector+"_vec.pdf"
+        c1.Print(out)
+            
