@@ -247,8 +247,27 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
             }
             static std::string typecode() { assert(false); }
       };
+      template<typename T> struct 
+      CopyVecT {
+            std::string name;
+            edm::EDGetTokenT<T> token;
+            T buffer;
+            CopyVecT(const edm::InputTag &tag, edm::EDGetTokenT<T> tok) :
+                name(tag.label()+tag.instance()),
+                token(tok),
+                buffer() {}
+            void get(const edm::Event &iEv) {
+                edm::Handle<T> handle;
+                iEv.getByToken(token, handle);
+                buffer = *handle;
+            }
+            void makeBranches(TTree *tree) {
+	      tree->Branch((name).c_str(), &buffer);
+            }
+      };
       std::vector<CopyT<unsigned>> copyUInts_;
       std::vector<CopyT<float>> copyFloats_;
+      std::vector<CopyVecT<std::vector<unsigned>>> copyVecUInts_;
       float bZ_;
 };
 template<> std::string ResponseNTuplizer::CopyT<unsigned>::typecode() { return "i"; }
@@ -278,6 +297,9 @@ ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     for (const edm::InputTag &tag : iConfig.getParameter<std::vector<edm::InputTag>>("copyFloats")) {
         copyFloats_.emplace_back(tag, consumes<float>(tag));
     }
+    for (const edm::InputTag &tag : iConfig.getParameter<std::vector<edm::InputTag>>("copyVecUInts")) {
+        copyVecUInts_.emplace_back(tag, consumes<std::vector<unsigned>>(tag));
+    }
 }
 
 ResponseNTuplizer::~ResponseNTuplizer() { }
@@ -292,6 +314,7 @@ ResponseNTuplizer::beginJob()
     }
     for (auto & c : copyUInts_) c.makeBranches(tree_);
     for (auto & c : copyFloats_) c.makeBranches(tree_);
+    for (auto & c : copyVecUInts_) c.makeBranches(tree_);
 }
 
 
@@ -332,6 +355,7 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     }
     for (auto & c : copyUInts_) c.get(iEvent);
     for (auto & c : copyFloats_) c.get(iEvent);
+    for (auto & c : copyVecUInts_) c.get(iEvent);
     mc_.id = 998; tree_->Fill(); // so that we write only one per event
 
 
