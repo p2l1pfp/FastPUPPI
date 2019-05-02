@@ -160,6 +160,8 @@ if True:
     process.ntuple.objects.ChGenAcc_sel = cms.string("(abs(eta) < 2.5 && pt > 2 && charge != 0)")
     process.ntuple.objects.PhGenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
     process.ntuple.objects.PhGenAcc_sel = cms.string("pdgId == 22")
+    process.ntuple.objects.MuGenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
+    process.ntuple.objects.MuGenAcc_sel = cms.string("abs(pdgId) == 13")
     process.extraPFStuff.add(process.genInAcceptance)
 if False: # test also PF leptons
     process.ntuple.objects.L1PFMuon = cms.VInputTag("l1pfCandidates:PF",)
@@ -192,6 +194,44 @@ def addOld():
     monitorPerf("L1OldPF", "l1pfProducerOld:PF")
     monitorPerf("L1OldPuppi", "l1pfProducerOld:Puppi")
     monitorPerf("L1OldPuppiForMET", "l1OldPuppiForMET")
+def addPFnoMu():
+    process.l1pfProducerBarrelPFnoMu = process.l1pfProducerBarrel.clone()
+    process.l1pfProducerBarrelPFnoMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerBarrelPFnoMu.useTrackerMuons          = cms.bool(False)
+    #
+    process.l1pfProducerHGCalPFnoMu = process.l1pfProducerHGCal.clone()
+    process.l1pfProducerHGCalPFnoMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerHGCalPFnoMu.useTrackerMuons          = cms.bool(False)
+    #
+    process.l1pfProducerHFPFnoMu = process.l1pfProducerHF.clone()
+    process.l1pfProducerHFPFnoMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerHFPFnoMu.useTrackerMuons          = cms.bool(False)
+    #
+    process.l1pfCandidatesPFnoMu = process.l1pfCandidates.clone(
+            pfProducers = ["l1pfProducerBarrelPFnoMu", "l1pfProducerHGCalPFnoMu", "l1pfProducerHFPFnoMu"], 
+            labelsToMerge = [ "Puppi", "PF" ])
+    process.extraPFStuff.add(process.l1pfProducerBarrelPFnoMu, process.l1pfProducerHGCalPFnoMu, process.l1pfProducerHFPFnoMu, process.l1pfCandidatesPFnoMu)
+    monitorPerf("L1PuppinoMu", "l1pfCandidatesPFnoMu:Puppi")
+    monitorPerf("L1PFnoMu", "l1pfCandidatesPFnoMu:PF")
+def addPFtkMu():
+    process.l1pfProducerBarrelPFtkMu = process.l1pfProducerBarrel.clone()
+    process.l1pfProducerBarrelPFtkMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerBarrelPFtkMu.useTrackerMuons          = cms.bool(True)
+    #
+    process.l1pfProducerHGCalPFtkMu = process.l1pfProducerHGCal.clone()
+    process.l1pfProducerHGCalPFtkMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerHGCalPFtkMu.useTrackerMuons          = cms.bool(True)
+    #
+    process.l1pfProducerHFPFtkMu = process.l1pfProducerHF.clone()
+    process.l1pfProducerHFPFtkMu.useStandaloneMuons       = cms.bool(False) 
+    process.l1pfProducerHFPFtkMu.useTrackerMuons          = cms.bool(True)
+    #
+    process.l1pfCandidatesPFtkMu = process.l1pfCandidates.clone(
+            pfProducers = ["l1pfProducerBarrelPFtkMu", "l1pfProducerHGCalPFtkMu", "l1pfProducerHFPFtkMu"], 
+            labelsToMerge = [ "Puppi", "PF" ])
+    process.extraPFStuff.add(process.l1pfProducerBarrelPFtkMu, process.l1pfProducerHGCalPFtkMu, process.l1pfProducerHFPFtkMu, process.l1pfCandidatesPFtkMu)
+    monitorPerf("L1PuppitkMu", "l1pfCandidatesPFtkMu:Puppi")
+    monitorPerf("L1PFtkMu", "l1pfCandidatesPFtkMu:PF")
 def addPuppiOld():
     process.l1pfProducerBarrelPuppiOld = process.l1pfProducerBarrel.clone(puAlgo = "Puppi")
     process.l1pfProducerBarrelPuppiOld.puppiEtaCuts       = cms.vdouble(1.5) 
@@ -261,4 +301,5 @@ def goOld():
     process.pfClustersFromHGC3DClusters.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_STC_93X.root"
     process.pfClustersFromCombinedCaloHCal.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_barrel_93X.root"
     process.pfClustersFromCombinedCaloHF.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hfcorr_93X.root"
+
 
