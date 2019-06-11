@@ -1,14 +1,14 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_5_0_pre1
-cd CMSSW_10_5_0_pre1/src
+cmsrel CMSSW_10_6_0_prer4
+cd CMSSW_10_6_pre4/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X_v3
+git cms-checkout-topic -u p2l1pfp:L1PF_10_6_X
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X_v3
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 106X
 
 scram b -j8
 ```
@@ -16,7 +16,7 @@ scram b -j8
 The first step is to produce the inputs:
 ```
 cd FastPUPPI/NtupleProducer/python/
-cmsRun runInputs104X.py # or runInputs93X.py depending on the version of the input files
+cmsRun runInputs104X.py # or runInputs106X.py or runInputs93X.py depending on the version of the input files
 ```
 
 By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
