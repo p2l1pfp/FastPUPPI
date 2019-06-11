@@ -1,10 +1,10 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2C4_trigger)
+process = cms.Process("IN", eras.Phase2C8_trigger)
 process.load('Configuration.StandardSequences.Services_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D41Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2023D41_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
@@ -19,8 +19,8 @@ process.VertexProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTracklet", "
 
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/104X/FEVT/ParticleGun_PU0/ParticleGun_PU0.batch1.job0.root'),
-    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/gpetrucc/104X/FEVT/ParticleGun_PU200/ParticleGun_PU200.batch1.job0.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/mc/PhaseIITDRSpring19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/NoPU_106X_upgrade2023_realistic_v3-v1/230000/47DE7390-EC0F-624B-9440-0791A85D1F97.root'),
+    #fileNames = cms.untracked.vstring('/store/mc/PhaseIITDRSpring19DR/TTbar_14TeV_TuneCP5_Pythia8/GEN-SIM-DIGI-RAW/NoPU_106X_upgrade2023_realistic_v3-v1/230000/47DE7390-EC0F-624B-9440-0791A85D1F97.root'),
     inputCommands = cms.untracked.vstring("keep *", 
         "drop l1tHGCalTowerMapBXVector_hgcalTriggerPrimitiveDigiProducer_towerMap_HLT",
         "drop *_hgcalTriggerPrimitiveDigiProducer_*_*",
@@ -40,7 +40,7 @@ process.p = cms.Path(
 )
 
 process.out = cms.OutputModule("PoolOutputModule",
-        fileName = cms.untracked.string("inputs104X.root"),
+        fileName = cms.untracked.string("inputs106X.root"),
         outputCommands = cms.untracked.vstring("drop *",
             # --- GEN
             "keep *_genParticles_*_*",
@@ -68,7 +68,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_L1EGammaClusterEmuProducer_*_*",
             # --- Stage2 ---
             "keep *_simCaloStage2Digis_*_*",
-           # --- VERTEXING ---
+            # --- VERTEXING ---
             "keep *_VertexProducer_*_*",
             "keep *_L1TkPrimaryVertex_*_*",
             # --- OTHERS FOR COMPARISONS
