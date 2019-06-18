@@ -5,10 +5,10 @@ cmsrel CMSSW_10_5_0_pre1
 cd CMSSW_10_5_0_pre1/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u jmduarte:L1PF_10_5_X_v3
+git cms-checkout-topic -u p2l1pfp:L1PF_10_5_X_v3
 
 # scripts
-git clone git@github.com:jmduarte/FastPUPPI.git -b 105X_v3
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 105X_v3
 
 scram b -j8
 ```
