@@ -280,7 +280,7 @@ whats = [
         ("Puppi",      "L1OldPuppi$",   ROOT.kAzure+1, 20, 1.5),
         ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kAzure+2, 20, 1.1),
     ]),
-    ('l1pfnew',[
+    ('l1pf',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
         ("Ecal",       "L1BarrelEcal$+L1RawHGCalEM$",    ROOT.kGreen+1,  21, 1.7),
@@ -288,13 +288,13 @@ whats = [
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
     ]),
-    ('l1pfnewpu',[
+    ('l1pfpu',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Calo",       "L1Calo$",     ROOT.kViolet+1, 21, 1.5),
         ("TK #Deltaz", "L1TKV5$",     ROOT.kOrange-7, 34, 1.2),
         ("PF",         "L1PF$",       ROOT.kOrange+7, 21, 1.5),
         ("PFCHS",      "L1CHS$",      ROOT.kMagenta-6, 21, 1.2),
-        ("PuppiOld",   "L1PuppiOld$", ROOT.kGreen+2, 20, 1.5),
+        #("PuppiOld",   "L1PuppiOld$", ROOT.kGreen+2, 20, 1.5),
         ("Puppi",      "L1Puppi$",    ROOT.kRed+1, 20, 1.1),
     ]),
     ('l1pfcomp',[

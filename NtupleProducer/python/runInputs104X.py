@@ -56,7 +56,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_hgcalConcentratorProducer*_*_IN",
             #"keep *_hgcalBackEndLayer1Producer*_*_IN",
             "keep *_hgcalBackEndLayer2Producer*_*_IN",
-            "keep *_hgcalTowerMapProducer_*_IN",
+            #"keep *_hgcalTowerMapProducer_*_IN",
             "keep *_hgcalTowerProducer_*_IN",
             # muons
             "keep *_simGmtStage2Digis__*",

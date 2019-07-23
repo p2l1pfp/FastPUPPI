@@ -1,19 +1,24 @@
 #!/bin/bash
 
-V="v3"
-PLOTDIR="plots/105X/from104X/${V}/corr"
-SAMPLES="--v3";
+V="v1"
+PLOTDIR="plots/106X/from104X/${V}/corr"
+SAMPLES="--104X";
 
 PU=PU0
 if [[ "$1" == "--pu200" ]]; then 
     PU=PU200; shift;
 fi;
 
+TUPLE="respTupleNew";
+if [[ "$1" == "--perf" ]]; then
+    TUPLE="perfTuple"; shift;
+fi
+
 if [[ "$1" == "--backup" ]]; then
-    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.0.root);
+    NTUPLES=$(ls ${TUPLE}_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.0.root);
     shift;
 else
-    NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.root);
+    NTUPLES=$(ls ${TUPLE}_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.root);
 fi;
 
 W=$1; shift;
@@ -51,7 +56,7 @@ case $W in
          ;;
     res-had-barrel)
          python scripts/respCorrSimple.py $NTUPLES $PLOTDIR/$W -p pion -w L1BarrelCalo_pt -e L1BarrelCalo_pt --fitrange 15 80  --barrel-eta -r && \
-         echo "Put this into l1ParticleFlow_split_cff.py under pfClustersFromCombinedCaloHCal" 
+         echo "Put this into l1ParticleFlow_cff.py under pfClustersFromCombinedCaloHCal" 
          ;;
     res-had-oldstyle)
          python scripts/respCorrSimple.py $NTUPLES $PLOTDIR/$W -p pion -w L1OldCalo_pt -e L1OldCalo_pt --fitrange 15 80  -r && \
@@ -97,15 +102,28 @@ case $W in
     plot-hf)
          python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pizero,pion,pimix --gauss -w debug-hf --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --ptmax 150 --no-fit --ptdef pt02,ptbest
          ;;
-    plots-pfnew)
+    plots-pf)
          if [[ "$PU" == "PU0" ]]; then
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
          else
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,klong,pimix       -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfnew -p pion,pizero,pimix      -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,klong,pimix       -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,pizero,pimix      -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
+         fi;
+         ;;
+    plots-pfcomp)
+         if [[ "$PU" == "PU0" ]]; then
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 50 -E 3.0 --label lowpt
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 50 -E 3.0 --label lowpt
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+         else
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p pion,klong,pimix       -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pfcomp -p pion,pizero,pimix      -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
          fi;
          ;;
     plots-pfold)
