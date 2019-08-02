@@ -650,5 +650,11 @@ if __name__ == "__main__":
                     leg.Draw()
                     out = odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".png"
                     c1.Print(out)
+                    fout = ROOT.TFile.Open(odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".root", "RECREATE")
+                    fout.WriteTObject(frame,"frame")
+                    for n,p in plots: 
+                        p.SetTitle(n)
+                        fout.WriteTObject(p)
+                    fout.Close()
                     del frame
 

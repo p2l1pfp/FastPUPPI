@@ -1,13 +1,21 @@
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/$1
+MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719.done/$1
 PREFIX="inputs104X_"
 
-if [[ "$1" == "--v3" ]]; then # this is the default but we keep anyway
+if [[ "$1" == "--v1" ]]; then # this is the default but we keep anyway
     shift;
-    MAIN=/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/$1
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719.done/$1
+    PREFIX="inputs104X_"
+elif [[ "$1" == "--v1_fat" ]]; then # this is the default but we keep anyway
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_fat.done/$1
+    PREFIX="inputs104X_"
+elif [[ "$1" == "--v0" ]]; then # this is the default but we keep anyway
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_oldhgc.done/$1
     PREFIX="inputs104X_"
 fi;
-
+ 
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then
     L1TPF_LOCAL_MAIN=$L1TPF_LOCAL_INPUT_DIR/$(basename $(dirname $MAIN))/$(basename $MAIN)
     if test -d $L1TPF_LOCAL_MAIN; then
