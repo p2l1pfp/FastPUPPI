@@ -1,7 +1,7 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_6_0_prer4
+cmsrel CMSSW_10_6_0_pre4
 cd CMSSW_10_6_pre4/src
 cmsenv
 git cms-init
