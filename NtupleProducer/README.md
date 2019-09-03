@@ -2,7 +2,7 @@ Basic Instructions
 
 ```
 cmsrel CMSSW_10_6_0_pre4
-cd CMSSW_10_6_pre4/src
+cd CMSSW_10_6_0_pre4/src
 cmsenv
 git cms-init
 git cms-checkout-topic -u p2l1pfp:L1PF_10_6_X
