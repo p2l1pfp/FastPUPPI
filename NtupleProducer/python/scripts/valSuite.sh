@@ -67,9 +67,9 @@ case $W in
          ;;
     run-jets)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do
+         for X in {TTbar,VBF_HToInvisible}_PU200; do
              ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()';
-             break 
+             #break 
          done
          ;;
     plot-jets)
@@ -85,12 +85,6 @@ case $W in
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do
              ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()';
-         done
-         ;;
-    run-rates-v1)
-         python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();gov1()';
          done
          ;;
     plot-rates)
@@ -125,8 +119,18 @@ case $W in
              python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff  v0=$v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
          done
          X=VBF_HToInvisible_PU200; 
-         #python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet2       --eta 4.7
-         #python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ptj-mjj620 --eta 4.7
+         ;;
+    run-mult)
+         python runPerformanceNTuple.py || exit 1;
+         X=TTbar_PU200; 
+         ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()';
+         ;;
+    plot-mult)
+         python runPerformanceNTuple.py || exit 1;
+         X=TTbar_PU200; 
+         for D in Barrel HGCal HGCalNoTK HF; do
+             python scripts/objMultiplicityPlot.py perfTuple_${X}.${V}_regional.root  $PLOTDIR/multiplicities/${X} -d $D
+         done;
          ;;
 
 esac;

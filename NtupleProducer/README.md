@@ -52,7 +52,7 @@ This produces both a response ntuple like the one for the runRespNTupler.py, but
 To run the ntuplizer over many files do for instance:
 
 ```
-./scripts/prun.sh runPerformanceNTuple.py --v0  TTbar_PU200 TTbar_PU200.v0
+./scripts/prun.sh runPerformanceNTuple.py --v0  TTbar_PU200 TTbar_PU200.v0 --inline-customize 'addCHS();addTKs()';
 ```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
@@ -78,8 +78,15 @@ python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_P
 ```
 
 3) For object multiplicitly studies:
+
+Plot the number of elements in a given detector (`Barrel`, `HGCal`, `HGCalNoTK`, `HF`): 
 ```
-python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerBarrel --cl 0.95
-python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHF --cl 0.95
-python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHGCal --cl 0.95
+python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root -d Barrel plotdir 
+```
+ * note: you should add `goRegional()` to the options in `runPerformanceNTuple.py` if you want to get meaningful numbers per region and not just overall
+
+
+Print out the multiplicities needed to avoid truncation at a given confidence level
+```
+python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root -d HF --cl 0.95
 ```

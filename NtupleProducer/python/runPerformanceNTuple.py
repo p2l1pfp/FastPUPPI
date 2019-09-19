@@ -219,8 +219,6 @@ def goRegional():
         )
     )
 
-goRegional()
-
 process.runPF.associate(process.extraPFStuff)
 # to check available tags:
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")
@@ -397,12 +395,3 @@ def goGun(calib=1):
 def goMT(nthreads=2):
     process.options.numberOfThreads = cms.untracked.uint32(nthreads)
     process.options.numberOfStreams = cms.untracked.uint32(0)
-def goOld():
-    process.pfClustersFromL1EGClusters.corrector  = "L1Trigger/Phase2L1ParticleFlow/data/emcorr_barrel_93X.root"
-    process.pfClustersFromHGC3DClustersEM.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/emcorr_hgc_old3d_93X.root"
-    process.pfClustersFromCombinedCalo.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_93X.root"
-    process.pfClustersFromHGC3DClusters.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_STC_93X.root"
-    process.pfClustersFromCombinedCaloHCal.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_barrel_93X.root"
-    process.pfClustersFromCombinedCaloHF.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hfcorr_93X.root"
-
-
