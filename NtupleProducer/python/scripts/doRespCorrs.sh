@@ -1,8 +1,8 @@
 #!/bin/bash
 
-V="v1"
+V="v0"
 PLOTDIR="plots/106X/from104X/${V}/corr"
-SAMPLES="--104X";
+SAMPLES="--v0";
 
 PU=PU0
 if [[ "$1" == "--pu200" ]]; then 

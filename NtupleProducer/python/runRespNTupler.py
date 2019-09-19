@@ -101,15 +101,8 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
+    copyVecUInts = cms.VInputTag(),
 )
-for X in "tot","max":
-    for I in "Calo EmCalo TK Mu".split(): 
-        pass
-        #process.ntuple.copyUInts.append( "InfoOut:%sNL1%s" % (X,I))
-    for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
-        pass
-        #process.ntuple.copyUInts.append( "InfoOut:%sNL1PF%s" % (X,O))
-        #process.ntuple.copyUInts.append( "InfoOut:%sNL1Puppi%s" % (X,O))
 
 process.p = cms.Path(process.runPF + process.ntuple)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("respTupleNew.root"))
