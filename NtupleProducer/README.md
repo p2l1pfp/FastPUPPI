@@ -76,3 +76,10 @@ python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_P
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v met
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v jet4
 ```
+
+3) For object multiplicitly studies:
+```
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerBarrel --cl 0.95
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHF --cl 0.95
+python objMultiplicityPlot.py ../perfTuple.root objplots -d l1pfProducerHGCal --cl 0.95
+```

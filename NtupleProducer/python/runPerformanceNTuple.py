@@ -8,11 +8,13 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/TTbar_PU200/inputs104X_TTbar_PU200_job1.root'),
+                            fileNames = cms.untracked.vstring(
+                                'file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/TTbar_PU200/inputs104X_TTbar_PU200_job1.root',
+                            ),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
     skipBadFiles = cms.untracked.bool(True),
     inputCommands = cms.untracked.vstring("keep *", 
@@ -56,7 +58,8 @@ process.extraPFStuff.add(
     process.genMetBarrelTrue
 )
 
-def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True, makeBarrelMET=True):
+def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True, makeBarrelMET=True,
+                makeInputMultiplicities=False, makeOutputMultiplicities=False):
     def _add(name, what):
         setattr(process, name, what)
         process.extraPFStuff.add(what)
@@ -88,6 +91,19 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             _add('barrel'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 1.5")))
             _add('met'+label+'Barrel', pfMet.clone(src = 'barrel'+label, calculateSignificance = False))
             setattr(process.l1pfmetBarrelTable.mets, label, cms.InputTag('met'+label+'Barrel'))
+    if makeInputMultiplicities:
+        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
+        I = tag.split(":")[1] # Calo, EmCalo, TK, or Mu, usually
+        for X in ["tot","max"]:
+            process.ntuple.copyUInts.append( "%s:%sNL1%s" % (D,X,I))
+        process.ntuple.copyVecUInts.append( "%s:vecNL1%s" % (D,I))
+    if makeOutputMultiplicities:
+        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
+        P = tag.split(":")[1] # PF or Puppi, usually
+        for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
+            for X in ["tot","max"]:
+                process.ntuple.copyUInts.append( "%s:%sNL1%s%s" % (D,X,P,O))
+            process.ntuple.copyVecUInts.append( "%s:vecNL1%s%s" % (D,P,O))
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
@@ -101,7 +117,9 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
+    copyVecUInts = cms.VInputTag(),
 )
+
 process.extraPFStuff.add(process.pfTracksFromL1Tracks)
 
 
@@ -133,14 +151,93 @@ monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False, makeJets=Fal
 monitorPerf("L1PF", "l1pfCandidates:PF")
 monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
 
+for D in ['Barrel','HF','HGCal','HGCalNoTK']:
+    monitorPerf("L1%sCalo"%D,"l1pfProducer%s:Calo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
+    monitorPerf("L1%sEmCalo"%D,"l1pfProducer%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
+    monitorPerf("L1%sTK"%D,"l1pfProducer%s:TK"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
+    monitorPerf("L1%sMu"%D,"l1pfProducer%s:Mu"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
+
+    monitorPerf("L1%sPF"%D,"l1pfProducer%s:PF"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities=True)
+    monitorPerf("L1%sPuppi"%D,"l1pfProducer%s:Puppi"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
+               makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities=True)
+
+# define regions
+def goRegional():
+    process.l1pfProducerBarrel.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-1.5, -0.75, 0, 0.75, 1.5),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        )
+    )
+    process.l1pfProducerHGCalNoTK.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-3, -2.5),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(2.5, 3),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        )
+    )
+    process.l1pfProducerHGCal.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-2.5, -1.5),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(1.5, 2.5),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        )
+    )
+    process.l1pfProducerHF.regions = cms.VPSet(
+        cms.PSet(
+            etaBoundaries = cms.vdouble(-5, -4.5, -4, -3.5, -3),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        ),
+        cms.PSet(
+            etaBoundaries = cms.vdouble(3, 3.5, 4, 4.5, 5),
+            etaExtra = cms.double(0.25),
+            phiExtra = cms.double(0.25),
+            phiSlices = cms.uint32(9)
+        )
+    )
+
+goRegional()
+
 process.runPF.associate(process.extraPFStuff)
+# to check available tags:
+#process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.p = cms.Path(
         process.runPF + 
-        process.ntuple + 
+        process.ntuple + #process.content +
         process.l1pfjetTable + 
         process.l1pfmetTable + process.l1pfmetCentralTable + process.l1pfmetBarrelTable
         )
 process.TFileService = cms.Service("TFileService", fileName = cms.string("perfTuple.root"))
+
+# for full debug:
+#process.out = cms.OutputModule("PoolOutputModule",
+#                               fileName = cms.untracked.string("debugPF.root"),
+#                               SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p"))
+#                           )
+#process.end = cms.EndPath(process.out)
 
 process.outnano = cms.OutputModule("NanoAODOutputModule",
     fileName = cms.untracked.string("perfNano.root"),
