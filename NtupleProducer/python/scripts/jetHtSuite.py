@@ -408,6 +408,12 @@ for plotkind in options.plots.split(","):
           leg.Draw()
           
           c1.Print('%s/%s%s.png' % (odir, plotname, ("_"+options.label) if options.label else ""))
+          fout = ROOT.TFile.Open('%s/%s%s.root' % (odir, plotname, ("_"+options.label) if options.label else ""), "RECREATE")
+          fout.WriteTObject(frame,"frame")
+          for n,p in plots: 
+              p.SetTitle(n)
+              fout.WriteTObject(p)
+          fout.Close()
           del frame
 
 

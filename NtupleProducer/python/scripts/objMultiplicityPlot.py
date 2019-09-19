@@ -13,16 +13,20 @@ from optparse import OptionParser
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("--cl", type=float, dest="cl", default=0, help="Compute number to avoid truncations at this CL")
 parser.add_option("-p", type="string", dest="particles", action="append", default=[], help="objects to count")
+parser.add_option("-d", dest="detector", choices=["Barrel","HF","HGCal","HGCalNoTK"], default="Barrel", help="choice of detector: Barrel, HGCal, HGCalNoTK, HF")
 options, args = parser.parse_args()
 if options.cl == 0:
-    odir = args[1] # "plots/910pre2/test"
+    odir = args[1] 
     os.system("mkdir -p "+odir)
     os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));
     ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE']);
 elif options.cl >= 1:
     raise RuntimeError("--cl must take an argument stricly between 0 and 1")
+
 c1 = ROOT.TCanvas("c1","c1")
 particles = [ "Calo", "EmCalo", "Mu", "TK" ]
+detectorLabel = options.detector
+detectorFull = 'l1pfProducer' + options.detector
 for Algo in "PF", "Puppi":
     particles.append(Algo)
     for Type in "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
@@ -33,7 +37,7 @@ ROOT.gStyle.SetOptStat("omr")
 for particle in particles:
     if options.particles and (particle not in options.particles): continue
     if options.cl > 0:
-        n = tree.Draw("min(maxNL1%s,199)>>htemp(200,-0.5,199.5)" % (particle), "mc_id == 998", "")
+        n = tree.Draw("min(%smaxNL1%s,199)>>htemp(200,-0.5,199.5)" % (detectorFull,particle), "mc_id == 998", "")
         if not n: continue
         h = ROOT.gROOT.FindObject("htemp")
         acc = 0
@@ -44,9 +48,28 @@ for particle in particles:
                 break
     else:
         for x in "tot","max":
-            print "%sNL1%s" % (x, particle)
-            n = tree.Draw("%sNL1%s" % (x, particle), "mc_id == 998", "")
+            print "plotting %s%sNL1%s" % (detectorFull, x, particle)
+            n = tree.Draw("%s%sNL1%s" % (detectorFull, x, particle), "mc_id == 998", "")
+            h = ROOT.gROOT.FindObject("htemp")
+            if x=='tot':
+                h.GetXaxis().SetTitle("Total %s in %s"%(particle, detectorLabel))
+            else:
+                h.GetXaxis().SetTitle("Max %s per %s region"%(particle, detectorLabel))
+            h.GetYaxis().SetTitle("Events")
+            h.Draw()
             if not n: continue
-            out = odir+'/'+particle+"_"+x+".png"
+            for ext in "pdf","png":
+                out = odir+'/'+particle+"_"+detectorLabel+"_"+x+"."+ext
+                c1.Print(out)
+        print "plotting %svecNL1%s" % (detectorFull, particle)
+        n = tree.Draw("%svecNL1%s" % (detectorFull, particle), "mc_id == 998", "")
+        h = ROOT.gROOT.FindObject("htemp")
+        h.GetXaxis().SetTitle("%s in %s region"%(particle, detectorLabel))
+        h.GetYaxis().SetTitle("Regions")
+        h.Draw()
+        c1.SetLogy()
+        if not n: continue
+        for ext in "pdf","png":
+            out = odir+'/'+particle+"_"+detectorLabel+"_vec."+ext
             c1.Print(out)
-
+            

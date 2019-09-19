@@ -246,16 +246,16 @@ whats = [
         ("Corr",  "L1BarrelEcal$",             ROOT.kAzure+2,  20, 1.0),
     ]),
     ('debug-hf',[
-        ("Cells",  "L1RawHFCells$",  ROOT.kGreen+2,  20, 1.1),
-        ("Raw",  "L1RawHFCalo$",     ROOT.kAzure+1,  25, 2.0),
-        ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  21, 1.6),
+        #("Cells",  "L1RawHFCells$",  ROOT.kGreen+2,  20, 1.1),
+        ("Raw",  "L1RawHFCalo$",     ROOT.kRed+1,    21, 1.6),
+        ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  20, 1.0),
     ]),
     ('debug-hcal',[
-        ("Raw",   "L1RawBarrelCalo$",   ROOT.kAzure+2,  21, 1.6),
-        ("UncOnly",   "L1RawBarrelCaloUnclust$",   ROOT.kRed-7,    21, 1.4),
+        ("Raw",   "L1RawBarrelCalo$",   ROOT.kRed+1,  21, 1.6),
+        #("UncOnly",   "L1RawBarrelCaloUnclust$",   ROOT.kRed-7,    21, 1.4),
         ("Corr",  "L1BarrelCalo$",      ROOT.kAzure+2,  20, 1.0),
         ("RawEM", "L1RawBarrelCaloEM$", ROOT.kViolet+1, 20, 0.9),
-        ("EM_UncOnly", "L1RawBarrelCaloEMUnclust$", ROOT.kRed+2,    20, 0.9),
+        #("EM_UncOnly", "L1RawBarrelCaloEMUnclust$", ROOT.kRed+2,    20, 0.9),
     ]),
     ('debug-hgc',[
         ("Raw",     "L1RawHGCal$",   ROOT.kGreen+2,   25, 2.0),
@@ -280,21 +280,21 @@ whats = [
         ("Puppi",      "L1OldPuppi$",   ROOT.kAzure+1, 20, 1.5),
         ("Puppi4MET",  "L1OldPuppiForMET$",   ROOT.kAzure+2, 20, 1.1),
     ]),
-    ('l1pfnew',[
+    ('l1pf',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
-        ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$", ROOT.kViolet-4,  21, 1.7),
+        ("Raw Calo",   "L1RawBarrelCalo$+L1RawHGCal$+L1RawHFCalo$", ROOT.kViolet-4,  21, 1.7),
         ("Ecal",       "L1BarrelEcal$+L1RawHGCalEM$",    ROOT.kGreen+1,  21, 1.7),
         ("Calo",       "L1Calo$",    ROOT.kViolet+2, 34, 1.5),
         ("TK",         "L1TK$",      ROOT.kRed+0, 20, 1.2),
         ("PF",         "L1PF$",      ROOT.kOrange+7, 20, 1.2),
     ]),
-    ('l1pfnewpu',[
+    ('l1pfpu',[
         ("Gen #times Acc",        "GenAcc$",    ROOT.kGray+1,  20, 1.2),
         ("Calo",       "L1Calo$",     ROOT.kViolet+1, 21, 1.5),
         ("TK #Deltaz", "L1TKV5$",     ROOT.kOrange-7, 34, 1.2),
         ("PF",         "L1PF$",       ROOT.kOrange+7, 21, 1.5),
         ("PFCHS",      "L1CHS$",      ROOT.kMagenta-6, 21, 1.2),
-        ("PuppiOld",   "L1PuppiOld$", ROOT.kGreen+2, 20, 1.5),
+        #("PuppiOld",   "L1PuppiOld$", ROOT.kGreen+2, 20, 1.5),
         ("Puppi",      "L1Puppi$",    ROOT.kRed+1, 20, 1.1),
     ]),
     ('l1pfcomp',[
@@ -650,5 +650,11 @@ if __name__ == "__main__":
                     leg.Draw()
                     out = odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".png"
                     c1.Print(out)
+                    fout = ROOT.TFile.Open(odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".root", "RECREATE")
+                    fout.WriteTObject(frame,"frame")
+                    for n,p in plots: 
+                        p.SetTitle(n)
+                        fout.WriteTObject(p)
+                    fout.Close()
                     del frame
 
