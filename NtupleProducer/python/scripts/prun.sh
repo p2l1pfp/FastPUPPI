@@ -1,27 +1,15 @@
+#!/bin/bash
 CODE=${1/.py/}; shift
-MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719.done/$1
-PREFIX="inputs104X_"
-N=8
 
+if [[ "$CODE" == "" || "$CODE" == "--help" || "$CODE" == "-h" || "$CODE" == "-?" ]]; then
+    echo "scripts/prun.sh config.py [-j <N>] --<version>  <Sample> <OutputName> [ --noclean ] [ --inline-customize \"<options>\" ]"
+    exit 0;
+fi
+
+N=8
 if [[ "$1" == "-j" ]]; then N=$2; shift; shift; fi;
 
-if [[ "$1" == "--v1" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719.done/$1
-    PREFIX="inputs104X_"
-elif [[ "$1" == "--v1_fat" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_fat.done/$1
-    PREFIX="inputs104X_"
-elif [[ "$1" == "--v2_fat" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_newhgc_try2_fat.done/$1
-    PREFIX="inputs104X_"
-elif [[ "$1" == "--v3_fat" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/300819_hgcv3_fat.done/$1
-    PREFIX="inputs104X_"
-elif [[ "$1" == "--v0" ]]; then # this is the default but we keep anyway
+if [[ "$1" == "--v0" ]]; then # this is the default but we keep anyway
     shift;
     MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_oldhgc.done/$1
     PREFIX="inputs104X_"
@@ -36,6 +24,16 @@ elif [[ "$1" == "--106X_v0" ]]; then # this is the default but we keep anyway
         sed -e 's+Phase2C4+Phase2C8+g' -e 's+GeometryExtended2023D35+GeometryExtended2023D41+' ${CODE}.py > ${CODE/_104X/}_106X.py;
         CODE=${CODE/_104X/}_106X
     fi
+elif [[ "$1" == "--v3_fat" ]]; then # this is the default but we keep anyway
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/300819_hgcv3_fat.done/$1
+    PREFIX="inputs104X_"
+else 
+    echo "You mush specify the version of the input samples to run on "
+    echo "   --v0      : 104X MDT MC inputs, with default 106X HGCal TPs "
+    echo "   --106X_v0 : 106X L1T MC inputs, with default 106X HGCal TPs "
+    echo "   --v3_fat  : 104X MDT MC inputs, with experimental HGCal TPs, and inputs for re-running HGCal 3D clustering"
+
 fi;
  
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then

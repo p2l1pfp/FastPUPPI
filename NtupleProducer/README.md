@@ -1,11 +1,11 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_6_0_prer4
-cd CMSSW_10_6_pre4/src
+cmsrel CMSSW_10_6_1_patch2
+cd CMSSW_10_6_1_patch2/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_10_6_X
+git cms-checkout-topic -u p2l1pfp:L1PF_10_6_1p2_X
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 106X
@@ -34,12 +34,11 @@ cmsRun runRespNTupler.py
 
 NB: 
    * For single particle add `goGun()` at the end of the script, remove it for jets.
-   * For 93X samples, add a `goOld()` at the end of the script to select 93X calibrations (note that these are not updated at the moment)
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runRespNTupler.py --v3 TTbar_PU0 TTbar_PU0
-./scripts/prun.sh runRespNTupler.py --v3 SinglePion_PU0 SinglePion_PU0  --inline-customize 'goGun()'
+./scripts/prun.sh runRespNTupler.py --v0 TTbar_PU0 TTbar_PU0.v0
+./scripts/prun.sh runRespNTupler.py --v0 ParticleGun_PU0 ParticleGun_PU0.v0  --inline-customize 'goGun()'
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
@@ -53,7 +52,7 @@ This produces both a response ntuple like the one for the runRespNTupler.py, but
 To run the ntuplizer over many files do for instance:
 
 ```
-./scripts/prun.sh runPerformanceNTuple.py TTbar_PU200 TTbar_PU200
+./scripts/prun.sh runPerformanceNTuple.py --v0  TTbar_PU200 TTbar_PU200.v0
 ```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
@@ -62,18 +61,18 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 1) For single particle or jet response:
 
 ```
-python scripts/respPlots.py respTupleNew_SinglePion_PU0.root plots_dir -w l1pfnew -p pion
-python scripts/respPlots.py respTupleNew_TTbar_PU200.root plots_dir -w l1pfnew -p jet
+python scripts/respPlots.py respTupleNew_SinglePion_PU0.v0.root plots_dir -w l1pfw -p pion
+python scripts/respPlots.py respTupleNew_TTbar_PU200.v0.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet, MET and HT plots, the first step is to produce JECs
 ```
-python scripts/makeJecs.py perfNano_TTbar_PU200.root -A -o jecs.root
+python scripts/makeJecs.py perfNano_TTbar_PU200.v0.root -A -o jecs.root
 ```
 then you can use `jetHtSuite.py` to make the plots
 
 ```
-python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v ht
-python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v met
-python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w oldcomp,newcomp -v jet4
+python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v ht
+python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v met
+python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v jet4
 ```
