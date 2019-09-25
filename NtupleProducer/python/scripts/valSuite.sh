@@ -7,11 +7,12 @@ SAMPLES="--$V";
 [[ "$V" == "v3" ]] && SAMPLES="--v3_fat"
 
 W=$1; shift;
-case $W in
+while [[ "$W" != "" ]]; do
+  case $W in
     run-pgun)
          [[ "$V" == "v1" ]] && SAMPLES="--v1_fat"
          python runRespNTupler.py || exit 1;
-         for PU in PU200; do #PU0
+         for PU in PU0 PU200; do 
              for X in Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}; do 
                  ./scripts/prun.sh  runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun()'; 
                  grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && exit 2;
@@ -19,7 +20,7 @@ case $W in
          done
          ;;
     plot-pgun)
-         for PU in PU200; do
+         for PU in PU0 PU200; do
              NTUPLES=$(ls respTupleNew_Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}.${V}.root);
              if [[ "$PU" == "PU0" ]]; then
                  python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
@@ -32,12 +33,23 @@ case $W in
              fi;
          done
          ;;
-    diff-pgun-nopu)
+    stack-pgun-nopu)
          X=ParticleGun_PU0
          f104v0=plots/106X/from104X/v0/val/${X}; 
          me=$PLOTDIR/${X}; 
          for X in pion photon; do for PT in ptbest pt02; do 
-            for W in PF Calo; do for G in _gauss; do for R in "" _res; do for E in 13_17 25_30; do #  17_25
+            for W in PF Calo; do for G in _gauss; do for R in "" _res; do for E in 13_17 17_25 25_30; do #  
+                plot=${X}_eta_${E}${R}${G}-l1pf_${PT}
+                python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}${G}${R} v0=$f104v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
+            done; done; done; done;
+         done; done
+         ;;
+    stack-pgun)
+         X=ParticleGun_PU200
+         f104v0=plots/106X/from104X/v0/val/${X}; 
+         me=$PLOTDIR/${X}; 
+         for X in pion photon; do for PT in ptbest pt02; do 
+            for W in PF Calo; do for G in _gauss; do for R in "" _res; do for E in 13_17 17_25 25_30; do #  
                 plot=${X}_eta_${E}${R}${G}-l1pf_${PT}
                 python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}${G}${R} v0=$f104v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
             done; done; done; done;
@@ -52,14 +64,15 @@ case $W in
     plot-jets-nopu)
          for X in TTbar_PU0; do
             python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g
-            #python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g --eta 3.5 4.5 --ptmax 100
+            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g --eta 3.0 5.0 --ptmax 150 --no-eta
+            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g --eta 3.5 4.5 --ptmax 150 --no-eta
          done
          ;;
-    diff-jets-nopu)
+    stack-jets-nopu)
          for X in TTbar_PU0; do
             f104v0=plots/106X/from104X/v0/val/${X}; 
             me=$PLOTDIR/${X}; PT="pt"; X="jet"; 
-            for W in PF Calo; do for G in "" _gauss; do for R in "" _res; do for E in 00_13 30_50; do # 13_17 17_25 25_30
+            for W in PF Calo; do for G in "" _gauss; do for R in "" _res; do for E in 00_13 13_17 17_25 25_30 30_50; do # 
                     plot=${X}_eta_${E}${R}${G}-l1pf_${PT}
                     python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}${G}${R} v0=$f104v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
             done; done; done; done;
@@ -68,23 +81,37 @@ case $W in
     run-jets)
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible}_PU200; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()';
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()' --max-files 60;
              #break 
          done
          ;;
     plot-jets)
-         #for X in {TTbar,VBF_HToInvisible}_PU200; do
          X=TTbar_PU200
              python scripts/respPlots.py perfTuple_${X}.${V}.root -p jet --no-eta -G $PLOTDIR/${X} -w l1pfpu --ymax 2.2 --ymaxRes 0.9 -E 3.0
          X=VBF_HToInvisible_PU200
              python scripts/respPlots.py perfTuple_${X}.${V}.root -p jet --no-eta -G $PLOTDIR/${X} -w l1pfpu --ymax 2.5 --ymaxRes 0.9 --eta 3.0 5.0 --ptmax 150
              python scripts/respPlots.py perfTuple_${X}.${V}.root -p jet --no-eta -G $PLOTDIR/${X} -w l1pfpu --ymax 2.5 --ymaxRes 0.9 --eta 3.5 4.5 --ptmax 150
-         #done
          ;;
+    stack-jets)
+         X=TTbar_PU200
+            f104v0=plots/106X/from104X/v0/val/${X}; 
+            me=$PLOTDIR/${X}; PT="pt"; X="jet"; 
+            for W in PF Calo Puppi; do for G in _gauss; do for R in "" _res; do for E in 00_13 13_17 17_25 25_30; do    
+                    plot=${X}_eta_${E}${R}${G}-l1pfpu_${PT}
+                    python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}${G}${R} v0=$f104v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
+            done; done; done; done;
+         X=VBF_HToInvisible_PU200
+            f104v0=plots/106X/from104X/v0/val/${X}; 
+            me=$PLOTDIR/${X}; PT="pt"; X="jet"; 
+            for W in PF Calo Puppi; do for G in _gauss; do for R in "" _res; do for E in 30_50 35_45; do 
+                    plot=${X}_eta_${E}${R}${G}-l1pfpu_${PT}
+                    python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}${G}${R} v0=$f104v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
+            done; done; done; done;
+          ;;
     run-rates)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()';
+         for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do  
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()' --maxfiles 80;
          done
          ;;
     plot-rates)
@@ -104,26 +131,26 @@ case $W in
          ;;
     stack-rates)
          for X in {TTbar,VBF_HToInvisible}_PU200; do 
-            v0=plots/106X/from104X/v0/val/met/${X}
-            me=$PLOTDIR/met/${X}
-            W="Puppi"; 
+            v0=plots/106X/from104X/v0/val/met/${X}; me=$PLOTDIR/met/${X}; W="Puppi"; 
             for plot in metisorate-l1pfpu_eta5.0_pt30_{1,2,5}0kHz; do
                 python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff v0=$v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
             done
          done
          X=TTbar_PU200; 
-         v0=plots/106X/from104X/v0/val/ht/${X}
-         me=$PLOTDIR/ht/${X}
-         W="Puppi"; 
+         v0=plots/106X/from104X/v0/val/ht/${X}; me=$PLOTDIR/ht/${X}; W="Puppi"; 
          for plot in jet{1,4}isorate-l1pfpu_eta2.4_pt10_20kHz htisorate-l1pfpu_eta{2.4,3.5}_pt30_20kHz; do
              python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff  v0=$v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
          done
          X=VBF_HToInvisible_PU200; 
+         v0=plots/106X/from104X/v0/val/ht/${X}; me=$PLOTDIR/ht/${X} W="Puppi"; 
+         for plot in jet2isorate-l1pfpu_eta4.7_pt10_{1,2,5}0kHz ptj-mjj620isorate-l1pfpu_eta4.7_pt10_{1,2,5}0kHz; do
+             python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff  v0=$v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
+         done
          ;;
     run-mult)
          python runPerformanceNTuple.py || exit 1;
          X=TTbar_PU200; 
-         ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()';
+         ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()' --maxfiles 24;
          ;;
     plot-mult)
          python runPerformanceNTuple.py || exit 1;
@@ -132,5 +159,7 @@ case $W in
              python scripts/objMultiplicityPlot.py perfTuple_${X}.${V}_regional.root  $PLOTDIR/multiplicities/${X} -d $D
          done;
          ;;
-
-esac;
+  esac;
+  W=$1; shift;
+done
+true
