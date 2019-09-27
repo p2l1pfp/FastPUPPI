@@ -61,6 +61,9 @@ for particle in particles:
             for ext in "pdf","png":
                 out = odir+'/'+particle+"_"+detectorLabel+"_"+x+"."+ext
                 c1.Print(out)
+            tfout = ROOT.TFile.Open(odir+'/'+particle+"_"+detectorLabel+"_"+x+".root", "RECREATE");
+            tfout.WriteTObject(h);
+            tfout.Close()
         print "plotting %svecNL1%s" % (detectorFull, particle)
         n = tree.Draw("%svecNL1%s" % (detectorFull, particle), "mc_id == 998", "")
         h = ROOT.gROOT.FindObject("htemp")
@@ -72,4 +75,7 @@ for particle in particles:
         for ext in "pdf","png":
             out = odir+'/'+particle+"_"+detectorLabel+"_vec."+ext
             c1.Print(out)
+        tfout = ROOT.TFile.Open(odir+'/'+particle+"_"+detectorLabel+"_vec.root", "RECREATE");
+        tfout.WriteTObject(h);
+        tfout.Close()
             

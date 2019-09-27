@@ -2,14 +2,14 @@ import os, re
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
-ROOT.gStyle.SetOptStat(False)
-ROOT.gStyle.SetErrorX(0.5)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 from array import array
 from math import pow, sin, cos, hypot
 import itertools
 from FastPUPPI.NtupleProducer.scripts.makeJecs import _progress
+from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
+
 
 def calcHT(jets):
     return sum(j[0] for j in jets) if jets else 0
@@ -233,11 +233,7 @@ options, args = parser.parse_args()
 tfiles = [ROOT.TFile.Open(f) for f in args[:2]]
 
 odir = args[2] 
-os.system("mkdir -p "+odir)
-os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));
-ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE']);
-ROOT.gStyle.SetOptStat(0)
-c1 = ROOT.TCanvas("c1","c1")
+plotter = plotTemplate(odir)
 
 ROOT.gSystem.Load("libL1TriggerPhase2L1ParticleFlow")
 ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"')
@@ -361,14 +357,14 @@ for plotkind in options.plots.split(","):
           if not plots: 
               print "   nothing to plot!"
               continue
-          c1.SetLogy(False)
+          plotter.SetLogy(False)
           if plotkind == "rate":
-              c1.SetLogy(True)
+              plotter.SetLogy(True)
               frame = ROOT.TH1D("",";L1 %s cut (%s); Minbias rate @ PU200 [kHz]" % (options.varlabel, qualif), 100, 0, options.xmax)
               frame.GetYaxis().SetDecimals(True)
               frame.GetXaxis().SetNdivisions(505)
               frame.GetYaxis().SetRangeUser(0.5, 100e3)
-              leg = ROOT.TLegend(0.6,0.99,0.95,0.99-0.06*len(things))
+              leg = ROOT.TLegend(0.56,0.93,0.93,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d' % (options.var, plotkind, objset, options.eta, options.pt)
           elif plotkind == "effc":
               gentext, genpost = "iciency", "" 
@@ -376,15 +372,15 @@ for plotkind in options.plots.split(","):
                   gentext = " (Gen %s > %s)" % (options.varlabel, options.genht)
                   gentpost = "_gen%.0f" % (options.genht)
               frame = ROOT.TH1D("",";L1 %s thresh (%s); Eff%s" % (options.varlabel, qualif, gentext), 100, 0, options.xmax)
-              leg = ROOT.TLegend(0.6,0.19,0.95,0.19+0.06*len(things))
+              leg = ROOT.TLegend(0.6,0.93,0.93,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d%s' % (options.var, plotkind, objset, options.eta, options.pt, genpost)
           elif plotkind == "isorate":
               frame = ROOT.TH1D("",";Gen %s (%s); Eff (L1 rate %.0f kHz)" % (options.varlabel, qualif, targetrate), 100, 0, options.xmax)
               frame.GetYaxis().SetDecimals(True)
-              leg = ROOT.TLegend(0.65,0.19,0.99,0.19+0.065*len(things))
+              leg = ROOT.TLegend(0.50,0.18,0.93,0.18+0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d_%.0fkHz' % (options.var, plotkind, objset, options.eta, options.pt, targetrate)
           elif plotkind == "roc":
-              c1.SetLogy(True)
+              plotter.SetLogy(True)
               gentext, genpost = "iciency", "" 
               if options.genht > 0:
                   gentext = " (Gen %s > %s)" % (options.varlabel, options.genht)
@@ -393,7 +389,7 @@ for plotkind in options.plots.split(","):
               frame.GetYaxis().SetDecimals(True)
               frame.GetXaxis().SetNdivisions(505)
               frame.GetYaxis().SetRangeUser(0.5, 100e3)
-              leg = ROOT.TLegend(0.2,0.98,0.55,0.98-0.06*len(things))
+              leg = ROOT.TLegend(0.2,0.93,0.55,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d%s' % (options.var, plotkind, objset, options.eta, options.pt, genpost)
           frame.Draw()
           if plotkind in ("rate","roc"):
@@ -406,8 +402,8 @@ for plotkind in options.plots.split(","):
           for n,p in plots: 
               leg.AddEntry(p, n, "L" if plotkind in ("rate","roc") else "LP")
           leg.Draw()
-          
-          c1.Print('%s/%s%s.png' % (odir, plotname, ("_"+options.label) if options.label else ""))
+          plotter.decorations()
+          plotter.Print('%s%s' % (plotname, ("_"+options.label) if options.label else ""))
           fout = ROOT.TFile.Open('%s/%s%s.root' % (odir, plotname, ("_"+options.label) if options.label else ""), "RECREATE")
           fout.WriteTObject(frame,"frame")
           for n,p in plots: 
