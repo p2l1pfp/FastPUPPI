@@ -7,6 +7,8 @@ ROOT.gErrorIgnoreLevel = ROOT.kWarning
 from math import ceil, floor, sqrt
 from array import array
 
+from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
+
 
 def quantiles(yswz, zeroSuppress=True):
     ys = [y for y in yswz if y > 0] if zeroSuppress else yswz[:]
@@ -465,14 +467,9 @@ if __name__ == "__main__":
         if a.endswith(".root"): 
             tree.Add(a)
             args.remove(a)
+
     odir = args[0] # "plots/910pre2/test"
-    os.system("mkdir -p "+odir)
-    os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));
-    ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE']);
-    ROOT.gStyle.SetOptStat(False)
-    ROOT.gStyle.SetOptFit(False)
-    ROOT.gStyle.SetErrorX(0.5)
-    c1 = ROOT.TCanvas("c1","c1")
+    plotter = plotTemplate(odir)
     for oname,cut in sels:
         print "Plotting ",oname
         isNeutrino = oname.startswith("null")
@@ -617,7 +614,7 @@ if __name__ == "__main__":
                         frame.GetXaxis().SetTitle(options.xpt[1]+" (GeV)")
                         legsize = 0.042*(len(plots)+0.5)
                         if not hasfitlegend: legsize /= 2;
-                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-legsize)
+                        leg = ROOT.TLegend(0.4,0.93,0.95,0.93-legsize)
                         leg.SetTextSize(0.035);
                         leg.SetNColumns(2)
                     frame.GetYaxis().SetDecimals(True)
@@ -648,8 +645,8 @@ if __name__ == "__main__":
                                 eq = ("%.2f #timesp_{T} %+.1f" % (max(0,p.fit.GetParameter(1)), p.fit.GetParameter(0))).replace("+","+ ").replace(" -"," #minus ")
                             leg.AddEntry(p.fit, eq, "L")
                     leg.Draw()
-                    out = odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".png"
-                    c1.Print(out)
+                    plotter.decorations(pu=(0 if "PU0" in odir else 200))
+                    plotter.Print(oname+pfix+"-"+kind+"_"+ptdef)
                     fout = ROOT.TFile.Open(odir+'/'+oname+pfix+"-"+kind+"_"+ptdef+".root", "RECREATE")
                     fout.WriteTObject(frame,"frame")
                     for n,p in plots: 
