@@ -170,7 +170,7 @@ for D in ['Barrel','HF','HGCal','HGCalNoTK']:
 def goRegional():
     process.l1pfProducerBarrel.regions = cms.VPSet(
         cms.PSet(
-            etaBoundaries = cms.vdouble(-1.5, -0.75, 0, 0.75, 1.5),
+            etaBoundaries = cms.vdouble(-1.5, -0.5, 0.5, 1.5),
             etaExtra = cms.double(0.25),
             phiExtra = cms.double(0.25),
             phiSlices = cms.uint32(9)
@@ -206,13 +206,13 @@ def goRegional():
     )
     process.l1pfProducerHF.regions = cms.VPSet(
         cms.PSet(
-            etaBoundaries = cms.vdouble(-5, -4.5, -4, -3.5, -3),
+            etaBoundaries = cms.vdouble(-5, -4, -3),
             etaExtra = cms.double(0.25),
             phiExtra = cms.double(0.25),
             phiSlices = cms.uint32(9)
         ),
         cms.PSet(
-            etaBoundaries = cms.vdouble(3, 3.5, 4, 4.5, 5),
+            etaBoundaries = cms.vdouble(3, 4, 5),
             etaExtra = cms.double(0.25),
             phiExtra = cms.double(0.25),
             phiSlices = cms.uint32(9)
