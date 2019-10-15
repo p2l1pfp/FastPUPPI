@@ -1,6 +1,6 @@
 #!/bin/bash
 
-V="v0"
+V="v0.1"
 PLOTDIR="plots/106X/from104X/${V}/corr"
 SAMPLES="--v0";
 

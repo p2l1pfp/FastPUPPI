@@ -395,3 +395,9 @@ def goGun(calib=1):
 def goMT(nthreads=2):
     process.options.numberOfThreads = cms.untracked.uint32(nthreads)
     process.options.numberOfStreams = cms.untracked.uint32(0)
+def noPU():
+    for X in "", "EM", "Raw", "EMRaw":
+        pfc = getattr(process, 'pfClustersFromHGC3DClusters'+X, None)
+        if not pfc: continue
+        pfc.emVsPUID.wp = "-1.0"
+
