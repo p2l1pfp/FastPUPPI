@@ -1,11 +1,11 @@
-import os, re
+import re
 import ROOT
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 from array import array
-from math import pow, sin, cos, hypot
+from math import pow, sin, cos, hypot, sqrt
 import itertools
 from FastPUPPI.NtupleProducer.scripts.makeJecs import _progress
 from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
@@ -209,17 +209,34 @@ whats = WHATS + [
         ("Puppi",     "L1Puppi",       ROOT.kBlue+1, 21, 1.5),
         ("Puppi4MET", "L1PuppiForMET", ROOT.kAzure+10, 21, 1.5),
     ]),
+    ('l1pfpu_metref',[
+        ("Calo",       "L1Calo$",     ROOT.kViolet+1, 21, 1.5),
+        ("TK #Deltaz", "L1TKV5$",     ROOT.kOrange-7, 34, 1.2),
+        ("RefTK",      "RefL1TrackerEtMiss$",     ROOT.kGreen+2, 34, 1.2),
+        ("PF",         "L1PF$",       ROOT.kOrange+7, 21, 1.5),
+        ("Puppi",      "L1Puppi$",    ROOT.kRed+1, 20, 1.1),
+    ]),
+    ('l1pfpu_jetref',[
+        ("Calo",       "L1Calo$",     ROOT.kViolet+1, 21, 1.5),
+        ("TK #Deltaz", "L1TKV5$",     ROOT.kOrange-7, 34, 1.2),
+        ("RefTK",      "RefTwoLayerJets$",     ROOT.kGreen+2, 34, 1.2),
+        ("PF",         "L1PF$",       ROOT.kOrange+7, 21, 1.5),
+        ("PFCHS",      "L1CHS$",      ROOT.kMagenta-6, 21, 1.2),
+        ("Puppi",      "L1Puppi$",    ROOT.kRed+1, 20, 1.1),
+    ]),
+
 ]
 
 from optparse import OptionParser
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-w", dest="what", default=None, help="Choose set (il1pf, l1pf, ...)")
 parser.add_option("-W", dest="what_reg",     default=None, help="Choose set (inputs, l1pf, ...)")
-parser.add_option("-P","--plots", dest="plots", default="rate,isorate,roc,effc", help="Choose plot or comma-separated list of plots")
+parser.add_option("-P","--plots", dest="plots", default="rate,isorate,roc,effc,plateff,platroc", help="Choose plot or comma-separated list of plots")
 parser.add_option("-j","--jecs", dest="jecs", default="jecs.root", help="Choose JEC file")
 parser.add_option("--jm","--jec-method", dest="jecMethod", default="", help="Choose JEC method")
 parser.add_option("-R","--raw", dest="rawJets", default=False, action="store_true", help="Don't appy JECs")
 parser.add_option("-s", dest="genht",  default=None, type="float", help="Choose gen ht")
+parser.add_option("-E", dest="eff",  default=None, type="float", help="Choose plateau efficiency")
 parser.add_option("-r", dest="rate",  default="10,20,50", type="string", help="Choose rate [kHz] (for isorate plots, can specify more than one)")
 parser.add_option("-l","--label", dest="label",  default=None, type="string", help="Extra label for plots")
 parser.add_option("-p", "--pt", dest="pt",  default=30, type="float", help="Choose pt cut")
@@ -242,31 +259,36 @@ if options.var == "ht":
     if options.varlabel is None: options.varlabel = "H_{T}"
     if options.genht    is None: options.genht    = 300
     if options.xmax     is None: options.xmax     = 1000
+    if options.eff      is None: options.eff      = 0.95
     qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
     what = options.var
 elif options.var == "mht":
     if options.varlabel is None: options.varlabel = "H_{T}^{miss}"
     if options.genht    is None: options.genht    = 150
     if options.xmax     is None: options.xmax     = 500
+    if options.eff      is None: options.eff      = 0.95
     qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
     what = options.var
 elif options.var == "metmht":
     if options.varlabel is None: options.varlabel = "E_{T}^{miss} - H_{T}^{miss}"
     if options.genht    is None: options.genht    = 150
     if options.xmax     is None: options.xmax     = 500
+    if options.eff      is None: options.eff      = 0.95
     qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
     what = options.var
 elif options.var == "mjj":
     if options.varlabel is None: options.varlabel = "m(jj)"
     if options.genht    is None: options.genht    = 750
     if options.xmax     is None: options.xmax     = 2000
+    if options.eff      is None: options.eff      = 0.95
     qualif = "p_{T}^{corr} > %.0f, |#eta| < %.1f" % (options.pt, options.eta)
     what = options.var
 elif re.match(r"jet\d+$", options.var):
     ijet = int(options.var.replace("jet",""))
     if options.varlabel is None: options.varlabel = "jet %d p_{T}" % ijet
-    if options.genht    is None: options.genht    = 200 if ijet <= 2 else ( 60 if ijet <= 4 else  40)
+    if options.genht    is None: options.genht    = 200 if ijet <= 2 else ( 45 if ijet <= 4 else  30)
     if options.xmax     is None: options.xmax     = 400 if ijet <= 2 else (150 if ijet <= 4 else 100)
+    if options.eff      is None: options.eff      = 0.95 if ijet <= 2 else 0.90
     options.pt = 10
     qualif = "|#eta| < %.1f" % (options.eta)
     what = options.var
@@ -274,6 +296,7 @@ elif options.var.startswith("ptj-mjj"):
     if options.varlabel is None: options.varlabel = "jet p_{T}"
     if options.genht    is None: options.genht    = 100
     if options.xmax     is None: options.xmax     = 300
+    if options.eff      is None: options.eff      = 0.95
     options.pt = 10
     qualif = "|#eta| < %.1f, m(jj) > %s" % (options.eta, options.var.replace("ptj-mjj",""))
     what = options.var
@@ -281,6 +304,7 @@ elif options.var.startswith("met"):
     if options.varlabel is None: options.varlabel = "E_{T}^{miss}"
     if options.genht    is None: options.genht    = 150
     if options.xmax     is None: options.xmax     = 500
+    if options.eff      is None: options.eff      = 0.95
     what = "met"
     options.eta = 5.0 
     if "Central" in options.var:  options.eta = 2.4 
@@ -308,7 +332,7 @@ for plotkind in options.plots.split(","):
           for name,obj,col,msty,msiz in things:
               if "GenAcc$" in obj: continue
               obj = obj.replace("$","")
-              if options.var.startswith("met"):
+              if options.var.startswith("met") or "RefTwoLayerJets" in obj:
                   jecs = None
               else:
                   jecdirname = obj+"Jets"+( "_"+options.jecMethod if options.jecMethod else "")
@@ -318,16 +342,18 @@ for plotkind in options.plots.split(","):
                       continue
                   jecs = ROOT.l1tpf.corrector(jecdir)
               label = name
+              ptcut = options.pt
+              if "RefTwoLayerJets" in obj: ptcut = 5
               if plotkind == "rate":
-                  recoArrayB = makeCorrArray(background, what, obj, options.pt, options.eta, jecs)
+                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
                   if not recoArrayB: continue
                   plot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
               elif plotkind == "effc":
-                  recoArrayS = makeCorrArray(signal, what, obj, options.pt, options.eta, jecs)
+                  recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
                   if not recoArrayS: continue
                   plot = makeCumulativeHTEffGenCut(name, recoArrayS, genArray, options.genht, options.xmax, norm=1)
               elif plotkind == "isorate":
-                  recoArrayB = makeCorrArray(background, what, obj, options.pt, options.eta, jecs)
+                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
                   if not recoArrayB: continue
                   rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
                   cut = 9999
@@ -335,20 +361,131 @@ for plotkind in options.plots.split(","):
                       if rateplot.GetBinContent(ix) <= targetrate:
                           cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                           break
-                  recoArrayS = makeCorrArray(signal, what, obj, options.pt, options.eta, jecs)
+                  recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
                   if not recoArrayS: continue
                   plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
                   label = "%s(%s) > %.0f" % (options.varlabel, name,cut)
               elif plotkind == "roc":
-                  recoArrayB = makeCorrArray(background, what, obj, options.pt, options.eta, jecs)
+                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
                   if not recoArrayB: continue
-                  recoArrayS = makeCorrArray(signal,     what, obj, options.pt, options.eta, jecs)
+                  recoArrayS = makeCorrArray(signal,     what, obj, ptcut, options.eta, jecs)
                   if not recoArrayS: continue
                   effsig  = makeCumulativeHTEffGenCut(name+"_s", recoArrayS, genArray, options.genht, options.xmax, norm=1)
                   ratebkg = makeCumulativeHTEff(name+"_b", recoArrayB, options.xmax)
                   if not effsig or not ratebkg: continue
                   plot = makeROC(effsig,ratebkg)
                   msty = 0
+              elif plotkind == "plateff":
+                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                  if not recoArrayB: continue
+                  rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
+                  def effForRate(rate):
+                    cut = 9999
+                    for ix in xrange(1,rateplot.GetNbinsX()+1):
+                        if rateplot.GetBinContent(ix) <= rate:
+                            cut = rateplot.GetXaxis().GetBinLowEdge(ix)
+                            break
+                    #print "Cut for %s @ rate %g: %g" % (what+obj, rate, cut)
+                    recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
+                    if not recoArrayS: return None
+                    plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
+                    eff = plot.GetEfficiency(plot.FindFixBin(options.genht))
+                    #print "Eff at %g: %g" % (options.genht, eff)
+                    return eff, plot, cut
+                  rate = 50
+                  while True:
+                    eff, plot, cut = effForRate(rate)
+                    if not eff: break
+                    if eff < options.eff:
+                        if rate >= 30e3: 
+                            eff = None; break
+                        rate = min(rate*5, 30e3)
+                    else:
+                        break
+                  if not eff: continue
+                  #print "Upper bound: eff %g at rate %g" % (eff, rate) 
+                  maxrate = rate; rate = rate / 5;
+                  while True:
+                    eff, plot, cut = effForRate(rate)
+                    if not eff: break
+                    if eff > options.eff:
+                        rate /= 2; 
+                    else:
+                        break
+                  if not eff: continue                 
+                  #print "Lower bound: eff %g at rate %g" % (eff, rate) 
+                  minrate = rate
+                  while True:
+                    rate = sqrt(maxrate * minrate)
+                    eff, plot, cut = effForRate(rate)
+                    if not eff: 
+                        #print "Bisection failed?"
+                        break
+                    if eff < options.eff:
+                        #print "New lower bound: eff %g at rate %g" % (eff, rate)
+                        minrate = rate;
+                    else:
+                        #print "New upper bound: eff %g at rate %g" % (eff, rate)
+                        maxrate = rate
+                    if maxrate/minrate < 1.1: 
+                        break
+                  if not eff: continue
+                  if rate < 10:    ratestr = "%.1fkHz" % rate
+                  elif rate < 500: ratestr = "%.0fkHz" % rate
+                  else:            ratestr = "%.1fMHz" % (rate/1000)
+                  label = "%s @ %s" % (name, ratestr)
+              elif plotkind == "platroc":
+                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                  if not recoArrayB: continue
+                  rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
+                  def platForRate(rate):
+                    cut = None
+                    for ix in xrange(1,rateplot.GetNbinsX()+1):
+                        if rateplot.GetBinContent(ix) <= rate:
+                            cut = rateplot.GetXaxis().GetBinLowEdge(ix)
+                            break
+                    if cut is None:
+                        return None
+                    #print "Cut for %s @ rate %g: %g" % (what+obj, rate, cut)
+                    recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
+                    if not recoArrayS: return None
+                    plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
+                    hist = plot.GetTotalHistogram(); xaxis = hist.GetXaxis()
+                    for i in xrange(2,hist.GetNbinsX()+1):
+                        if plot.GetEfficiency(i) > options.eff:
+                            graph = plot.CreateGraph()
+                            xmin, xmax = xaxis.GetBinLowEdge(i-1), xaxis.GetBinCenter(i)
+                            if graph.Eval(xmin,None,"S") > options.eff: 
+                                #print "ERROR xmin for %s @ %g (%g): i = %d" % (what+obj, rate, cut, i)
+                                pass
+                            elif graph.Eval(xmax,None,"S") < options.eff:
+                                #print "ERROR xmax for %s @ %g (%g): i = %d" % (what+obj, rate, cut, i)
+                                pass
+                            else:
+                                xmid = 0.5*(xmax+xmin)
+                                while abs(xmax-xmin) > 0.05*(abs(xmax)+abs(xmin)):
+                                    if graph.Eval(xmid,None,"S") < options.eff:
+                                        xmin = xmid
+                                    else:
+                                        xmax = xmid
+                                    xmid = 0.5*(xmax+xmin)
+                                #print "Plateau at %g eff for %s @ %g: %g" % (options.eff, what+obj, rate, xmid)
+                                return xmid
+                            break
+                    return None
+                  points = []
+                  rate = 1
+                  while rate <= 30e3:
+                    plat = platForRate(rate)
+                    if plat: 
+                        if len(points) == 0 or points[-1][0] != plat:
+                            points.append((plat,rate))
+                    rate *= 1.2
+                  if not points: continue
+                  plot = ROOT.TGraph(len(points))
+                  for i,(x,y) in enumerate(points):
+                    plot.SetPoint(i,x,y)
+                  label = name
               else: raise RuntimeError
               if not plot: continue
               plot.SetLineWidth(3); plot.SetLineColor(col);  plot.SetMarkerColor(col)
@@ -370,7 +507,7 @@ for plotkind in options.plots.split(","):
               gentext, genpost = "iciency", "" 
               if options.genht > 0:
                   gentext = " (Gen %s > %s)" % (options.varlabel, options.genht)
-                  gentpost = "_gen%.0f" % (options.genht)
+                  genpost = "_gen%.0f" % (options.genht)
               frame = ROOT.TH1D("",";L1 %s thresh (%s); Eff%s" % (options.varlabel, qualif, gentext), 100, 0, options.xmax)
               leg = ROOT.TLegend(0.6,0.93,0.93,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d%s' % (options.var, plotkind, objset, options.eta, options.pt, genpost)
@@ -379,26 +516,43 @@ for plotkind in options.plots.split(","):
               frame.GetYaxis().SetDecimals(True)
               leg = ROOT.TLegend(0.50,0.18,0.93,0.18+0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d_%.0fkHz' % (options.var, plotkind, objset, options.eta, options.pt, targetrate)
+          elif plotkind == "plateff":
+              frame = ROOT.TH1D("",";Gen %s (%s); Eff" % (options.varlabel, qualif), 100, 0, options.xmax)
+              frame.GetYaxis().SetDecimals(True)
+              leg = ROOT.TLegend(0.30,0.18,0.93,0.18+0.055*len(things))
+              plotname = '%s%s-%s_eta%s_pt%d_eff%.2fat%g' % (options.var, plotkind, objset, options.eta, options.pt, options.eff, options.genht)
           elif plotkind == "roc":
               plotter.SetLogy(True)
               gentext, genpost = "iciency", "" 
               if options.genht > 0:
                   gentext = " (Gen %s > %s)" % (options.varlabel, options.genht)
-                  gentpost = "_gen%.0f" % (options.genht)
+                  genpost = "_gen%.0f" % (options.genht)
               frame = ROOT.TH1D("",";Eff%s; Minbias rate @ PU200 [kHz]" % (gentext), 100, 0, 1)
               frame.GetYaxis().SetDecimals(True)
               frame.GetXaxis().SetNdivisions(505)
               frame.GetYaxis().SetRangeUser(0.5, 100e3)
               leg = ROOT.TLegend(0.2,0.93,0.55,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d%s' % (options.var, plotkind, objset, options.eta, options.pt, genpost)
+          elif plotkind == "platroc":
+              plotter.SetLogy(True)
+              xtit = "Gen threshold at %g%% eff" % (options.eff*100)
+              frame = ROOT.TH1D("",";%s; Minbias rate @ PU200 [kHz]" % (xtit), 100, 0, options.xmax)
+              frame.GetYaxis().SetDecimals(True)
+              #frame.GetXaxis().SetNdivisions(505)
+              frame.GetYaxis().SetRangeUser(0.5, 100e3)
+              leg = ROOT.TLegend(0.6,0.93,0.93,0.93-0.055*len(things))
+              plotname = '%s%s-%s_eta%s_pt%d_eff%.3f' % (options.var, plotkind, objset, options.eta, options.pt, options.eff)
           frame.Draw()
-          if plotkind in ("rate","roc"):
+          if plotkind in ("rate","roc","platroc"):
               line = ROOT.TLine()
               line.SetLineStyle(7)
               for y in 40e3, 100, 10:
                   line.DrawLine(frame.GetXaxis().GetXmin(),y,frame.GetXaxis().GetXmax(),y)
           for n,p in plots: 
-              p.Draw("PCX SAME" if ("TH1" not in p.ClassName()) else "C SAME")
+              if plotkind == "platroc":
+                  p.Draw("PLX SAME")
+              else:
+                  p.Draw("PCX SAME" if ("TH1" not in p.ClassName()) else "C SAME")
           for n,p in plots: 
               leg.AddEntry(p, n, "L" if plotkind in ("rate","roc") else "LP")
           leg.Draw()
