@@ -1,6 +1,6 @@
 #!/bin/bash
 
-V="v0"
+V="v0.1"
 PLOTDIR="plots/106X/from104X/${V}/corr"
 SAMPLES="--v0";
 
@@ -81,7 +81,7 @@ case $W in
          python runRespNTupler.py || exit 1;
          for f in $NTUPLES; do test -f $f && mv -v $f ${f/$V/$V.0}; done
          for X in Particle{Gun,GunPt0p5To5,GunPt80To300}_${PU}; do 
-             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun()'; 
+             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU()'; 
              grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && break || true;
          done
          ;;

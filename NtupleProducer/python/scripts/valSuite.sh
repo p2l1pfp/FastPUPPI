@@ -3,7 +3,7 @@
 V="$1"; shift
 PLOTDIR="plots/106X/from104X/${V}/val"
 SAMPLES="--$V";
-[[ "$V" == "v0.1" ]] && SAMPLES="--v0"
+[[ "$V" == "v0.1" || "$V" == "v0.2" ]] && SAMPLES="--v0"
 [[ "$V" == "v3" ]] && SAMPLES="--v3_fat"
 
 W=$1; shift;
@@ -58,7 +58,7 @@ while [[ "$W" != "" ]]; do
     run-jets-nopu)
          python runPerformanceNTuple.py || exit 1;
          for X in TTbar_PU0; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()'; 
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();noPU()'; 
          done
          ;;
     plot-jets-nopu)
@@ -114,9 +114,11 @@ while [[ "$W" != "" ]]; do
              ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()' --maxfiles 80;
          done
          ;;
-    plot-rates)
+    make-jecs)
          X=TTbar_PU200; Y=VBF_HToInvisible_PU200;
          python scripts/makeJecs.py perfNano_${X}.${V}.root perfNano_${Y}.${V}.root  -A  -o jecs.${V}.root 
+         ;;
+    plot-rates)
          for X in {TTbar,VBF_HToInvisible}_PU200; do 
              python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/met/$X -j jecs.${V}.root -w l1pfpu -v met --eta 5.0
          done
@@ -125,6 +127,7 @@ while [[ "$W" != "" ]]; do
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet4 --eta 2.4
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ht   --eta 2.4
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ht   --eta 3.5
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet4 --eta 3.5
          X=VBF_HToInvisible_PU200; 
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet2       --eta 4.7
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ptj-mjj620 --eta 4.7
@@ -138,7 +141,7 @@ while [[ "$W" != "" ]]; do
          done
          X=TTbar_PU200; 
          v0=plots/106X/from104X/v0/val/ht/${X}; me=$PLOTDIR/ht/${X}; W="Puppi"; 
-         for plot in jet{1,4}isorate-l1pfpu_eta2.4_pt10_20kHz htisorate-l1pfpu_eta{2.4,3.5}_pt30_20kHz; do
+         for plot in jet{1,4}isorate-l1pfpu_eta2.4_pt10_20kHz jet4isorate-l1pfpu_eta3.5_pt10_20kHz htisorate-l1pfpu_eta{2.4,3.5}_pt30_20kHz; do
              python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff  v0=$v0/$plot.root,Azure+2 ${V}=$me/$plot.root,Green+2;
          done
          X=VBF_HToInvisible_PU200; 

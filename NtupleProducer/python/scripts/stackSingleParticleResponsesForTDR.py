@@ -1,16 +1,21 @@
 import os, re, sys
-from collections import defaultdict
 import ROOT
 from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
 
 
-V="v0"; VT="v0"
+V="v0.1_TDR"; VT="v0"
 PLOTDIR="plots/106X/from104X/"+V+"/tdr/"+VT+"/"
 
+PARTICLES=["pion","pizero","klong"]
+if "pions" in sys.argv: 
+    PARTICLES=PARTICLES[:2]
+    pions=True
+else:
+    pions=False
 
-PARTICLES=["pion","pizero"]
+LABELS=dict(pion="#pi^{#pm}", pizero="#pi^{0}", klong="K^{0}_{L}")
 ETAS=[(0,1.3),(1.7,2.5)]
-if False:
+if "replot" in sys.argv:
     NTUPLES = " ".join("respTupleNew_Particle"+G+"_PU0."+V+".root" for G in ("Gun","GunPt0p5To5","GunPt80To300"))
     for P in PARTICLES:
         for E in ETAS:
@@ -18,9 +23,9 @@ if False:
     sys.exit(0)
 
 plotter = plotTemplate(PLOTDIR)
-markers = [ 21, 20,  25, 24 ]
-sizes   = [ 1.5, 1.35, 1.4, 1.2 ]
-colors  = [ ROOT.kGreen, ROOT.kGreen+2, ROOT.kAzure+1, ROOT.kBlue+2, ]
+markers = [ 21, 25, 20, 24, 33, 27 ]
+sizes   = [ 1.65, 1.40, 1.55, 1.25, 1.9, 1.6 ]
+colors  = [ ROOT.kGreen, ROOT.kGreen+3, ROOT.kAzure+1, ROOT.kBlue+2, ROOT.kRed+1, ROOT.kRed+1 ]
 for (R,G) in ("",""), ("_res","_gauss"):
     tfiles = {}
     graphs = []; labels = []
@@ -33,23 +38,25 @@ for (R,G) in ("",""), ("_res","_gauss"):
             g.SetMarkerStyle(markers[i])
             g.SetMarkerSize(sizes[i])
             g.SetMarkerColor(colors[i])
+            g.SetLineWidth(2)
             graphs.append(g)
-            labels.append( "#pi^{%s}, %.1f < |#eta| < %.1f" % ("0" if P == "pizero" else "#pm", E[0], E[1]) )
+            labels.append( "%s, %.1f < |#eta| < %.1f" % (LABELS[P], E[0], E[1]) )
             i += 1
     frame = ROOT.TH1F("frame","frame",100,0,100)
-    frame.GetXaxis().SetTitle("p_{T} (GeV)")
+    frame.GetXaxis().SetTitle("p_{T}^{gen} (GeV)")
     if R == "_res":
         frame.GetYaxis().SetTitle("#sigma(p_{T})/p_{T}^{gen}")
-        frame.GetYaxis().SetRangeUser(0, 0.35)
-        frame.GetYaxis().SetNdivisions(1005)
+        frame.GetYaxis().SetRangeUser(0, 0.35 if pions else 0.55)
+        if pions: frame.GetYaxis().SetNdivisions(1005)
     else:
         frame.GetYaxis().SetTitle("median p_{T}/p_{T}^{gen}")
         frame.GetYaxis().SetRangeUser(0.5, 1.1)
     frame.GetYaxis().SetDecimals(True)
     frame.Draw()
 
-    legy = 0.91 if R == "_res" else 0.40
-    leg = ROOT.TLegend(0.45,legy,0.92,legy-0.06*len(labels))
+    legysize = 0.065*len(labels)
+    legy = 0.91 if R == "_res" else 0.16+legysize
+    leg = ROOT.TLegend(0.45,legy,0.92,legy-legysize)
     #leg.SetNColumns(2)
     leg.SetTextSize(0.05)
     for n,p in zip(labels,graphs): 
@@ -58,4 +65,9 @@ for (R,G) in ("",""), ("_res","_gauss"):
     leg.Draw()
     
     plotter.decorations(pu=0)
-    plotter.Print("pions_stack%s%s" % (R,G))
+    if pions: 
+        plotter.Print("pions_stack%s%s" % (R,G))
+        print "Made pions"
+    else:
+        plotter.Print("hadrons_stack%s%s" % (R,G))
+        print "Made hadrons"

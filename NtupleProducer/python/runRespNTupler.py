@@ -191,6 +191,10 @@ def hgcAcc(pdgId,pt=10,eta=(1.6,2.6),prompt=False):
     )
     process.p.insert(0, process.acceptance)
 
+def noPU():
+    for X in "", "EM", "Raw", "EMRaw":
+        pfc = getattr(process, 'pfClustersFromHGC3DClusters'+X)
+        pfc.emVsPUID.wp = "-1.0"
 def goOld():
     process.pfClustersFromL1EGClusters.corrector  = "L1Trigger/Phase2L1ParticleFlow/data/emcorr_barrel_93X.root"
     process.pfClustersFromHGC3DClustersEM.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/emcorr_hgc_old3d_93X.root"

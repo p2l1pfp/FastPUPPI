@@ -27,14 +27,25 @@ class plotTemplate:
         tex.SetTextSize(0.035)
         tex.SetTextAlign(31)
         tex.DrawLatexNDC(0.96,0.95,"%s%s, %s PU" % (energy, ", 3000 fb^{-1}" if lumi else "", pu))
+    def addSpam(self,x1,y1,text,textSize=0.035,textAlign=21):
+        tex = ROOT.TLatex()
+        tex.SetTextSize(textSize)
+        tex.SetTextFont(42)
+        tex.DrawLatexNDC(x1,y1,text)
     def SetLogy(self, logy):
         self.canvas.SetLogy(logy)
-    def Print(self,basename, exts=["png","pdf"]):
+    def Print(self,basename, exts=["png","pdf","eps"]):
         errorLevel = ROOT.gErrorIgnoreLevel
         ROOT.gErrorIgnoreLevel = ROOT.kWarning
         if self.outdir: basename = self.outdir + "/" + basename
         for e in exts:
+            if (e == "png") and "eps" in exts: continue
             self.canvas.Print(basename+"."+e)
+        if "png" in exts and "eps" in exts:
+            ret = os.system("LD_LIBRARY_PATH=\"/lib64:$LD_LIBRARY_PATH\" convert -density 150 -quality 100 %s.eps %s.png" % (basename,basename))
+            if ret != 0 and not os.path.exists(basename+".png"):
+                # fall back to plain root, even if it doesn't work great
+                self.canvas.Print(basename+".png")
         ROOT.gErrorIgnoreLevel = errorLevel
 
 
