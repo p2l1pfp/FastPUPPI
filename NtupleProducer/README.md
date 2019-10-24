@@ -79,14 +79,10 @@ python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_P
 
 3) For object multiplicitly studies:
 
-Plot the number of elements in a given detector (`Barrel`, `HGCal`, `HGCalNoTK`, `HF`): 
+Plot the number of elements in all subdetectors: 
 ```
-python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root -d Barrel plotdir 
+python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root  plotdir -s TTbar_PU200  
 ```
- * note: you should add `goRegional()` to the options in `runPerformanceNTuple.py` if you want to get meaningful numbers per region and not just overall
-
-
-Print out the multiplicities needed to avoid truncation at a given confidence level
-```
-python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root -d HF --cl 0.95
-```
+Notes:
+ * you should add `goRegional()` to the options in `runPerformanceNTuple.py` if you want to get meaningful numbers per region and not just overall
+ * you can select only some subdetector with `-d`, or some kind of object with `-c`.

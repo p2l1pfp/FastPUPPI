@@ -9,26 +9,21 @@ ROOT.gStyle.SetErrorX(0.5)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 from math import *
 from optparse import OptionParser
-import sys
-sys.path.insert(0,'./')
-from display.examplePlot import *
+from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
 
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("--cl", type=float, dest="cl", default=0.95, help="Compute number to avoid truncations at this CL")
 parser.add_option("-p", type="string", dest="particles", action="append", default=[], help="objects to count: Calo, EmCalo, Mu, TK, PF, Puppi [PF,Puppi]Charged, [PF,Puppi]Neutral, [PF,Puppi]ChargedHadron, [PF,Puppi]NeutralHadron, [PF,Puppi]Photon, [PF,Puppi]Electron, [PF,Puppi]Muon; default is all")
 parser.add_option("-d", type="string", dest="detectors", action='append', default=[], help="choice of detector: Barrel, HGCal, HGCalNoTK, HF; default is all")
-parser.add_option("-s", dest="sample", choices =['ttbar_200pu','vbf_200pu'], default = 'ttbar_200pu', help="choice of sample: ttbar_200pu and vbf_200pu")
+parser.add_option("-s", dest="sample", choices =['TTbar_PU200','VBF_HToInvisible_PU200'], default = 'TTbar_PU200', help="choice of sample: TTbar_PU200 and VBF_HToInvisible_PU200")
 options, args = parser.parse_args()
 
 odir = args[1] 
-os.system("mkdir -p "+odir)
-#os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir))
-#ROOT.gROOT.ProcessLine(".x %s/src/FastPUPPI/NtupleProducer/python/display/tdrstyle.cc" % os.environ['CMSSW_BASE'])
+plotter = plotTemplate(odir)
+plotter.canvas.SetLeftMargin(0.20) # bigger margin 
 
 if options.cl >= 1:
     raise RuntimeError("--cl must take an argument stricly between 0 and 1")
-
-c1 = CreateCanvas("c1",Grid=False)
 
 detectors = ["Barrel","HF","HGCal","HGCalNoTK"]
 particles = [ "Calo", "EmCalo", "Mu", "TK" ]
@@ -71,25 +66,12 @@ for detector in detectors:
             else:
                 h.GetYaxis().SetTitle("Events")
                 h.GetXaxis().SetTitle("Max %s per %s region"%(particle, detectorLabel))
+            h.GetYaxis().SetTitleOffset(1.5)
             h.Draw()
-            if x=='vec': 
-                c1.SetLogy(1)
-            else:
-                c1.SetLogy(0)
+            plotter.SetLogy(x == 'vec')
             if x=='max' and options.cl>0:
                 h.SetMaximum(1.4*h.GetMaximum())
-                leg = ROOT.TLegend(0.20,0.76,0.75,0.86)
-                leg.SetBorderSize(0)
-                leg.SetFillStyle(0)
-                leg.SetTextSize(0.03)
-                if options.sample=='ttbar_200pu':
-                    leg.SetHeader("t#bar{t}, 200 PU")
-                else:
-                    leg.SetHeader("VBF, 200 PU")
-                leg.AddEntry(h, "Min. objects (%.0f%% no trunc.): %i"%(options.cl*100., min_obj))
-                leg.Draw("same")
-            DrawPrelimLabel(c1)
-            DrawLumiLabel(c1, Lumi="")
-            out = odir+'/'+particle+"_"+detectorLabel+"_"+x
-            SaveCanvas(c1,PlotName=out)
-            
+                plotter.addSpam(0.25, 0.87, "t#bar{t}" if  options.sample=='TTbar_PU200' else "VBF H #rightarrow inv", textSize=0.045)
+                plotter.addSpam(0.25, 0.81, "Min. objects (%.0f%% no trunc.): %i"%(options.cl*100., min_obj), textSize=0.045)
+            plotter.decorations()
+            plotter.Print(particle+"_"+detectorLabel+"_"+x, exts=["png","pdf","eps","root"])
