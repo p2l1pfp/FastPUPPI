@@ -152,14 +152,14 @@ while [[ "$W" != "" ]]; do
          ;;
     run-mult)
          python runPerformanceNTuple.py || exit 1;
-         X=TTbar_PU200; 
-         ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()' --maxfiles 24;
+         for X in {TTbar,VBF_HToInvisible}_PU200; do 
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()' --maxfiles 24;
+         done
          ;;
     plot-mult)
          python runPerformanceNTuple.py || exit 1;
-         X=TTbar_PU200; 
-         for D in Barrel HGCal HGCalNoTK HF; do
-             python scripts/objMultiplicityPlot.py perfTuple_${X}.${V}_regional.root  $PLOTDIR/multiplicities/${X} -d $D
+         for X in {TTbar,VBF_HToInvisible}_PU200; do 
+             python scripts/objMultiplicityPlot.py perfTuple_${X}.${V}_regional.root  $PLOTDIR/multiplicities/${X} -s $X 
          done;
          ;;
   esac;
