@@ -41,6 +41,19 @@ class CalcJ2_MJJcut:
         if len(jjs) <= 0: return 0
         return max(min(jj[0].Pt(), jj[1].Pt()) for jj in jjs)
 
+def makeCalcCpp(what):
+    if what == "ht": 
+        return ROOT.CalcHT()
+    if what == "mht": 
+        return ROOT.CalcMHT()
+    if what == "mjj": 
+        return ROOT.CalcMJJ()
+    if re.match(r"jet\d+$", options.var): 
+        return ROOT.CalcJ(int(options.var.replace("jet","")))
+    if what.startswith("ptj-mjj"): 
+        return ROOT.CalcJ2_MJJcut(float(what.replace("ptj-mjj","")))
+    return None
+
 def makeCalc(what):
     if what == "ht": 
         return calcHT
@@ -66,8 +79,13 @@ def makeGenArray(tree, what, ptCut, etaCut, _cache={}):
         ret = makeGenMETArray(tree, what, etaCut)
         _cache[_key] = ret
         return ret
-    progress = _progress("  Reading GenJets ...")
     calc = makeCalc(what)
+    cppcalc = makeCalcCpp(what)
+    if cppcalc:
+        progress = _progress("  Reading GenJets in C++...")
+        ret2 = ROOT.makeJetArray(tree, "Gen", ptCut, etaCut, cppcalc);
+        progress.done("done, %d entries" % len(ret2))
+    progress = _progress("  Reading GenJets ...")
     ret = []
     tree.SetBranchStatus("*",0);
     tree.SetBranchStatus("nGenJets",1);
@@ -77,14 +95,28 @@ def makeGenArray(tree, what, ptCut, etaCut, _cache={}):
         pt,eta,phi = tree.GenJets_pt, tree.GenJets_eta, tree.GenJets_phi
         jets = [ (pt[j],eta[j],phi[j]) for j in xrange(tree.nGenJets) if pt[j] > ptCut and abs(eta[j]) < etaCut ]
         ret.append(calc(jets))
+    tree.SetBranchStatus("*",1);
     ret = array('f',ret)
     _cache[_key] = ret
     progress.done("done, %d entries" % len(ret))
+    if cppcalc:
+        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
+        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
+        for i,(r1,r2) in enumerate(zip(ret,ret2)):
+            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
+            diff = r1 - r2; absdiff = abs(diff)
+            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
+        scale = 1.0/max(len(ret),1)
+        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
+        if sumabsdiff*scale > 1: raise RuntimeError()
     return ret
 def makeGenMETArray(tree, what, etaCut):
     if   etaCut <= 1.5: post = "MetBarrel_pt" 
     elif etaCut <= 2.4: post = "MetCentral_pt"
     else:               post = "Met_pt"
+    progress = _progress("  Reading gen"+post+" in C++...")
+    ret2 = ROOT.makeMetArray(tree, "gen"+post[:-3]);
+    progress.done("done, %d entries" % len(ret2))
     progress = _progress("  Reading gen"+post+" ...")
     tree.SetBranchStatus("*",0);
     tree.SetBranchStatus("gen"+post,1);
@@ -93,7 +125,18 @@ def makeGenMETArray(tree, what, etaCut):
         tree.GetEntry(i)
         ret.append(getattr(tree,"gen"+post))
     ret = array('f',ret)
+    tree.SetBranchStatus("*",1);
     progress.done("done, %d entries" % len(ret))
+    if True:
+        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
+        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
+        for i,(r1,r2) in enumerate(zip(ret,ret2)):
+            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
+            diff = r1 - r2; absdiff = abs(diff)
+            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
+        scale = 1.0/max(len(ret),1)
+        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
+        if sumabsdiff*scale > 1: raise RuntimeError()
     return ret
 def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
     _key = (id(tree),what,obj,int(ptCorrCut*100),int(etaCut*1000))
@@ -109,9 +152,14 @@ def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
         _cache[_key] = ret
         return ret
     calc = makeCalc(what)
+    cppcalc = makeCalcCpp(what)
     ret = []
     if not tree.GetBranch("n"+obj+"Jets"): 
         return None
+    if cppcalc:
+        progress = _progress("  Reading "+obj+"Jets in C++...")
+        ret2 = ROOT.makeJetArray(tree, obj, ptCorrCut, etaCut, cppcalc, corr);
+        progress.done("done, %d entries" % len(ret2))
     progress = _progress("  Reading "+obj+"Jets ...")
     tree.SetBranchStatus("*",0);
     tree.SetBranchStatus("n"+obj+"Jets",1);
@@ -132,9 +180,20 @@ def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
             if pt > ptCorrCut: 
                 jets.append( (pt,eta[j],phi[j]) ) 
         ret.append(calc(jets))
+    tree.SetBranchStatus("*",1);
     ret = array('f',ret)
     _cache[_key] = ret
     progress.done("done, %d entries" % len(ret))
+    if cppcalc:
+        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
+        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
+        for i,(r1,r2) in enumerate(zip(ret,ret2)):
+            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
+            diff = r1 - r2; absdiff = abs(diff)
+            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
+        scale = 1.0/max(len(ret),1)
+        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
+        if sumabsdiff*scale > 1: raise RuntimeError()
     return ret
 def makeRecoMETArray(tree, what, obj, etaCut):
     if   etaCut <= 1.5: post = "MetBarrel_pt" 
@@ -142,6 +201,9 @@ def makeRecoMETArray(tree, what, obj, etaCut):
     else:               post = "Met_pt"
     if not tree.GetBranch(obj+post): 
         return None
+    progress = _progress("  Reading "+obj+post+" in C++...")
+    ret2 = ROOT.makeMetArray(tree, obj+post[:-3]);
+    progress.done("done, %d entries" % len(ret2))
     progress = _progress("  Reading "+obj+post+" ...")
     tree.SetBranchStatus("*",0);
     tree.SetBranchStatus(obj+post,1);
@@ -149,7 +211,18 @@ def makeRecoMETArray(tree, what, obj, etaCut):
     for i in xrange(tree.GetEntries()):
         tree.GetEntry(i)
         ret.append(getattr(tree,obj+post))
+    tree.SetBranchStatus("*",1);
     progress.done("done, %d entries" % len(ret))
+    if True:
+        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
+        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
+        for i,(r1,r2) in enumerate(zip(ret,ret2)):
+            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
+            diff = r1 - r2; absdiff = abs(diff)
+            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
+        scale = 1.0/max(len(ret),1)
+        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
+        if sumabsdiff*scale > 1: raise RuntimeError()
     return array('f',ret)
 
 
