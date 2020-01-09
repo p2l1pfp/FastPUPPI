@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cassert>
 #include <vector>
 #include <TH1F.h>
 #include <TEfficiency.h>
@@ -13,9 +14,10 @@
 #include <TTreeReaderValue.h>
 #include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"
 
-unsigned int fillTH1FastGenCut(TH1F *ret, unsigned int n, const float *corrArr, const float *genArr, float genThr) {
+unsigned int fillTH1FastGenCut(TH1F *ret, const std::vector<float> & corrArr, const std::vector<float> & genArr, float genThr) {
+    assert(genArr.size() == corrArr.size());
     unsigned int nsel = 0;
-    for (unsigned int i = 0; i < n; ++i) {
+    for (unsigned int i = 0, n = corrArr.size(); i < n; ++i) {
         if (genArr[i] > genThr) { ret->Fill(corrArr[i]); nsel++; }
     }
     unsigned int nbins = ret->GetNbinsX();
@@ -24,18 +26,19 @@ unsigned int fillTH1FastGenCut(TH1F *ret, unsigned int n, const float *corrArr, 
     return nsel;
 }
 
-unsigned int fillTH1Fast(TH1F *ret, unsigned int n, const float *corrArr) {
-    for (unsigned int i = 0; i < n; ++i) {
+unsigned int fillTH1Fast(TH1F *ret, const std::vector<float> & corrArr) {
+    for (unsigned int i = 0, n = corrArr.size(); i < n; ++i) {
         ret->Fill(corrArr[i]);
     }
     unsigned int nbins = ret->GetNbinsX();
     ret->SetBinContent(nbins, ret->GetBinContent(nbins) + ret->GetBinContent(nbins+1));
     ret->GetBinContent(nbins+1, 0);
-    return n;
+    return corrArr.size();
 }
 
-void fillTEffFast(TEfficiency *eff, unsigned int n, const float *refArr, const float *corrArr, float corrThr) {
-    for (unsigned int i = 0; i < n; ++i) {
+void fillTEffFast(TEfficiency *eff, const std::vector<float> & refArr, const std::vector<float> & corrArr, float corrThr) {
+    assert(refArr.size() == corrArr.size());
+    for (unsigned int i = 0, n = refArr.size(); i < n; ++i) {
         eff->Fill(corrArr[i] > corrThr, refArr[i]);
     }
 }
@@ -165,6 +168,14 @@ std::vector<float> makeMetArray(TTree *tree, const std::string & obj) {
 
     while (reader.Next()) {
         ret.push_back(*met_pt);
+    }
+    return ret;
+}
+
+std::vector<float> makeMinimum(const std::vector<float> & v1, const std::vector<float> & v2) {
+    std::vector<float> ret(v1.size()); 
+    for (unsigned int i = 0, n = v1.size(); i < n; ++i) {
+        ret[i] = std::min(v1[i], v2[i]);
     }
     return ret;
 }

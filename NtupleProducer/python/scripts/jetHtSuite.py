@@ -12,35 +12,6 @@ from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
 
 ROOT.gROOT.ProcessLine('#include "%s/src/FastPUPPI/NtupleProducer/python/scripts/jetHtSuite.h"' % os.environ['CMSSW_BASE']);
 
-
-def calcHT(jets):
-    return sum(j[0] for j in jets) if jets else 0
-def calcMHT(jets):
-    return hypot(sum(j[0]*sin(j[2]) for j in jets),sum(j[0]*cos(j[2]) for j in jets))  if jets else 0
-def calcMJJ(jets):
-    if len(jets) <= 1: return 0
-    lvclass = ROOT.Math.LorentzVector("ROOT::Math::PtEtaPhiM4D<double>")
-    jp4s = [ lvclass(j[0],j[1],j[2],0) for j in jets ]
-    return max((j1+j2).M() for (j1,j2) in itertools.combinations(jp4s,2))
-
-class CalcJ:
-    def __init__(self,index):
-        self._index = index
-    def __call__(self,jets):
-        if len(jets) <= self._index: return 0
-        jsort = sorted(jets, key = lambda j : -j[0])
-        return jsort[self._index][0]
-class CalcJ2_MJJcut:
-    def __init__(self,mjj):
-        self._mjj = mjj
-    def __call__(self,jets):
-        if len(jets) <= 1: return 0
-        lvclass = ROOT.Math.LorentzVector("ROOT::Math::PtEtaPhiM4D<double>")
-        jp4s = [ lvclass(j[0],j[1],j[2],0) for j in jets ]
-        jjs = [ jj for jj in itertools.combinations(jp4s,2) if (jj[0]+jj[1]).M() > self._mjj ]
-        if len(jjs) <= 0: return 0
-        return max(min(jj[0].Pt(), jj[1].Pt()) for jj in jjs)
-
 def makeCalcCpp(what):
     if what == "ht": 
         return ROOT.CalcHT()
@@ -54,192 +25,56 @@ def makeCalcCpp(what):
         return ROOT.CalcJ2_MJJcut(float(what.replace("ptj-mjj","")))
     return None
 
-def makeCalc(what):
-    if what == "ht": 
-        return calcHT
-    if what == "mht": 
-        return calcMHT
-    if what == "mjj": 
-        return calcMJJ
-    if re.match(r"jet\d+$", options.var): 
-        return CalcJ(int(options.var.replace("jet",""))-1)
-    if what.startswith("ptj-mjj"): 
-        return CalcJ2_MJJcut(float(what.replace("ptj-mjj","")))
+def makeGenArray(tree, what, ptCut, etaCut):
+    return makeCorrArray(tree, what, "Gen", ptCut, etaCut, None)
 
-def makeGenArray(tree, what, ptCut, etaCut, _cache={}):
-    _key = (id(tree),what,int(ptCut*100),int(etaCut*1000))
-    if _key in _cache: return _cache[_key]
-    if what == "metmht":
-        met = makeGenArray(tree, "met",     0,    5.0, _cache=_cache)
-        mht = makeGenArray(tree, "mht", ptCut, etaCut, _cache=_cache)
-        ret = map(min, zip(met,mht))
-        _cache[_key] = ret
-        return ret
-    if "met" in what:
-        ret = makeGenMETArray(tree, what, etaCut)
-        _cache[_key] = ret
-        return ret
-    calc = makeCalc(what)
-    cppcalc = makeCalcCpp(what)
-    if cppcalc:
-        progress = _progress("  Reading GenJets in C++...")
-        ret2 = ROOT.makeJetArray(tree, "Gen", ptCut, etaCut, cppcalc);
-        progress.done("done, %d entries" % len(ret2))
-    progress = _progress("  Reading GenJets ...")
-    ret = []
-    tree.SetBranchStatus("*",0);
-    tree.SetBranchStatus("nGenJets",1);
-    tree.SetBranchStatus("GenJets_*",1);
-    for i in xrange(tree.GetEntries()):
-        tree.GetEntry(i)
-        pt,eta,phi = tree.GenJets_pt, tree.GenJets_eta, tree.GenJets_phi
-        jets = [ (pt[j],eta[j],phi[j]) for j in xrange(tree.nGenJets) if pt[j] > ptCut and abs(eta[j]) < etaCut ]
-        ret.append(calc(jets))
-    tree.SetBranchStatus("*",1);
-    ret = array('f',ret)
-    _cache[_key] = ret
-    progress.done("done, %d entries" % len(ret))
-    if cppcalc:
-        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
-        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
-        for i,(r1,r2) in enumerate(zip(ret,ret2)):
-            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
-            diff = r1 - r2; absdiff = abs(diff)
-            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
-        scale = 1.0/max(len(ret),1)
-        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
-        if sumabsdiff*scale > 1: raise RuntimeError()
-    return ret
-def makeGenMETArray(tree, what, etaCut):
-    if   etaCut <= 1.5: post = "MetBarrel_pt" 
-    elif etaCut <= 2.4: post = "MetCentral_pt"
-    else:               post = "Met_pt"
-    progress = _progress("  Reading gen"+post+" in C++...")
-    ret2 = ROOT.makeMetArray(tree, "gen"+post[:-3]);
-    progress.done("done, %d entries" % len(ret2))
-    progress = _progress("  Reading gen"+post+" ...")
-    tree.SetBranchStatus("*",0);
-    tree.SetBranchStatus("gen"+post,1);
-    ret = []
-    for i in xrange(tree.GetEntries()):
-        tree.GetEntry(i)
-        ret.append(getattr(tree,"gen"+post))
-    ret = array('f',ret)
-    tree.SetBranchStatus("*",1);
-    progress.done("done, %d entries" % len(ret))
-    if True:
-        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
-        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
-        for i,(r1,r2) in enumerate(zip(ret,ret2)):
-            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
-            diff = r1 - r2; absdiff = abs(diff)
-            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
-        scale = 1.0/max(len(ret),1)
-        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
-        if sumabsdiff*scale > 1: raise RuntimeError()
-    return ret
 def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
     _key = (id(tree),what,obj,int(ptCorrCut*100),int(etaCut*1000))
     if _key in _cache: return _cache[_key]
     if what == "metmht":
-        met = makeCorrArray(tree, "met", obj, ptCorrCut,    5.0, corr, _cache=_cache)
+        met = makeCorrArray(tree, "met", obj,     0,      5.0,   corr, _cache=_cache)
         mht = makeCorrArray(tree, "mht", obj, ptCorrCut, etaCut, corr, _cache=_cache)
-        ret = array('f',map(min, zip(met,mht)))
+        ret = ROOT.makeMinimum(met,mht)
         _cache[_key] = ret
         return ret
     if "met" in what:
-        ret = makeRecoMETArray(tree, what, obj, etaCut)
+        ret = makeMETArray(tree, what, obj, etaCut)
         _cache[_key] = ret
         return ret
-    calc = makeCalc(what)
-    cppcalc = makeCalcCpp(what)
-    ret = []
-    if not tree.GetBranch("n"+obj+"Jets"): 
+    if not tree.GetBranch("n"+obj+"Jets"):
+        if obj == "Gen": raise RuntimeError("Missing GenJets!");
         return None
-    if cppcalc:
-        progress = _progress("  Reading "+obj+"Jets in C++...")
-        ret2 = ROOT.makeJetArray(tree, obj, ptCorrCut, etaCut, cppcalc, corr);
-        progress.done("done, %d entries" % len(ret2))
-    progress = _progress("  Reading "+obj+"Jets ...")
-    tree.SetBranchStatus("*",0);
-    tree.SetBranchStatus("n"+obj+"Jets",1);
-    tree.SetBranchStatus(obj+"Jets_pt",1);
-    tree.SetBranchStatus(obj+"Jets_eta",1);
-    tree.SetBranchStatus(obj+"Jets_phi",1);
-    for i in xrange(tree.GetEntries()):
-        tree.GetEntry(i)
-        number = getattr(tree, "n"+obj+"Jets")
-        rawpt,eta,phi = getattr(tree, obj+"Jets_pt"), getattr(tree, obj+"Jets_eta"), getattr(tree, obj+"Jets_phi")
-        jets = [ ]
-        for j in xrange(number):
-            if abs(eta[j]) > etaCut: continue
-            if corr:
-                pt = corr.correctedPt(rawpt[j], eta[j])
-            else:
-                pt = rawpt[j]
-            if pt > ptCorrCut: 
-                jets.append( (pt,eta[j],phi[j]) ) 
-        ret.append(calc(jets))
-    tree.SetBranchStatus("*",1);
-    ret = array('f',ret)
+    cppcalc = makeCalcCpp(what)
+    progress = _progress("  Reading "+obj+"Jets in C++...")
+    ret = ROOT.makeJetArray(tree, obj, ptCorrCut, etaCut, cppcalc, corr);
     _cache[_key] = ret
     progress.done("done, %d entries" % len(ret))
-    if cppcalc:
-        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
-        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
-        for i,(r1,r2) in enumerate(zip(ret,ret2)):
-            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
-            diff = r1 - r2; absdiff = abs(diff)
-            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
-        scale = 1.0/max(len(ret),1)
-        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
-        if sumabsdiff*scale > 1: raise RuntimeError()
     return ret
-def makeRecoMETArray(tree, what, obj, etaCut):
-    if   etaCut <= 1.5: post = "MetBarrel_pt" 
-    elif etaCut <= 2.4: post = "MetCentral_pt"
-    else:               post = "Met_pt"
-    if not tree.GetBranch(obj+post): 
+
+def makeMETArray(tree, what, obj, etaCut):
+    if obj == "Gen": obj = "gen" # fix issue with naming convention
+    if   etaCut <= 1.5: post = "MetBarrel" 
+    elif etaCut <= 2.4: post = "MetCentral"
+    else:               post = "Met"
+    if not tree.GetBranch(obj+post+"_pt"): 
+        if obj == "gen": raise RuntimeError("Missing gen"+post);
         return None
     progress = _progress("  Reading "+obj+post+" in C++...")
-    ret2 = ROOT.makeMetArray(tree, obj+post[:-3]);
-    progress.done("done, %d entries" % len(ret2))
-    progress = _progress("  Reading "+obj+post+" ...")
-    tree.SetBranchStatus("*",0);
-    tree.SetBranchStatus(obj+post,1);
-    ret = []
-    for i in xrange(tree.GetEntries()):
-        tree.GetEntry(i)
-        ret.append(getattr(tree,obj+post))
-    tree.SetBranchStatus("*",1);
+    ret = ROOT.makeMetArray(tree, obj+post);
     progress.done("done, %d entries" % len(ret))
-    if True:
-        print "   Comparing numbers (%d vs %d) " % (len(ret), ret2.size())
-        sumdiff = 0; sumabsdiff = 0; maxabsdiff = 0;
-        for i,(r1,r2) in enumerate(zip(ret,ret2)):
-            #if i < 10: print "     %8d %14.4f %14.4f  %.9g" % (i, r1, r2, r1-r2)
-            diff = r1 - r2; absdiff = abs(diff)
-            sumdiff += diff; sumabsdiff += absdiff; maxabsdiff = max(absdiff, maxabsdiff)
-        scale = 1.0/max(len(ret),1)
-        print "    <diff> = %.9g   <|diff|> = %.9g,   max|diff| = %.9g" % (sumdiff*scale, sumabsdiff*scale, maxabsdiff)
-        if sumabsdiff*scale > 1: raise RuntimeError()
-    return array('f',ret)
-
+    return ret
 
 def makeCumulativeHTEff(name, corrArray, xmax, norm=2760.0*11246/1000):
     return makeCumulativeHTEffGenCut(name, corrArray, None, None, xmax, norm)
 
 def makeCumulativeHTEffGenCut(name, corrArray, genArray, genThr, xmax, norm):
-    if not isinstance(corrArray, array):
-        print "Slow code"
-        return makeCumulativeHTEff(name, genCutCorrArray(corrArray,genArray,genThr), xmax, norm=norm)
     if len(corrArray) == 0: return None
     nbins = 2000
     ret = ROOT.TH1F("ceff_"+name.replace(" ","_"), "", nbins, 0., xmax);
     if genArray:
-        nsel = ROOT.fillTH1FastGenCut(ret, len(corrArray), corrArray, genArray, genThr)
+        nsel = ROOT.fillTH1FastGenCut(ret, corrArray, genArray, genThr)
     else:
-        nsel = ROOT.fillTH1Fast(ret, len(corrArray), corrArray)
+        nsel = ROOT.fillTH1Fast(ret, corrArray)
     if nsel == 0: return None
     tot, msum = float(norm)/nsel, 0
     for ib in xrange(0, nbins):
@@ -262,7 +97,7 @@ def makeEffHist(name, refArr, corrArr, corrThr, xmax, logxbins=None):
             ret = ROOT.TEfficiency(name.replace(" ","_")+"_eff","",nbins,array('d',edges))
     else:
         ret = ROOT.TEfficiency(name+"_eff","",20,0,xmax)
-    ROOT.fillTEffFast(ret, len(refArr), refArr, corrArr, corrThr)
+    ROOT.fillTEffFast(ret, refArr, corrArr, corrThr)
     ret.SetStatisticOption(ret.kFCP)
     return ret
 
@@ -315,17 +150,6 @@ whats = WHATS + [
         ("TK",      "RefTwoLayerJets$",     ROOT.kGreen+2, 34, 1.2),
         ("Puppi",   "RefPhase1PuppiJets$",  ROOT.kRed+1, 20, 0.9), 
     ]),
-    ('l1pfpu_jetbench',[
-        #("Calo",       "L1Calo$",    ROOT.kViolet+1, 21, 1.5),
-        #("TK #Deltaz", "L1TKV5$",    ROOT.kGreen+2, 34, 1.2),
-        ("ak4Puppi",   "L1Puppi$",   ROOT.kRed+1, 20, 1.1),
-    ]),
-    ('l1pfpu_jetbench2',[
-        #("Calo",       "L1Calo$",    ROOT.kViolet+1, 21, 1.5),
-        #("TK #Deltaz", "L1TKV5$",    ROOT.kGreen+2, 34, 1.2),
-        ("ak4Puppi",   "L1Puppi$",   ROOT.kRed+1, 20, 1.1),
-    ]),
-
 ]
 
 from optparse import OptionParser
@@ -346,12 +170,13 @@ parser.add_option("-v", dest="var",  default="ht", help="Choose variable (ht, me
 parser.add_option("--xlabel","--varlabel", dest="varlabel", default=None, help="X axis label for the variable")
 parser.add_option("--xmax", dest="xmax",  default=None, type=float, help="Choose variable")
 parser.add_option("--logxbins", dest="logxbins",  default=None, nargs=2, type=float, help="--logxbins N X will make N bins, the last being a factor X larger than the first")
+parser.add_option("--print", dest="printQualityPlots", action="store_true", default=False, help="Make print-quality plots (incl. pdf & eps)")
 options, args = parser.parse_args()
 
 tfiles = [ROOT.TFile.Open(f) for f in args[:2]]
 
 odir = args[2] 
-plotter = plotTemplate(odir)
+plotter = plotTemplate(odir, defaultExts = (["png","eps","pdf"] if options.printQualityPlots else ["png"]))
 
 ROOT.gSystem.Load("libL1TriggerPhase2L1ParticleFlow")
 ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"')
@@ -398,7 +223,7 @@ elif options.var.startswith("ptj-mjj"):
     if options.genht    is None: options.genht    = 100
     if options.xmax     is None: options.xmax     = 300
     if options.eff      is None: options.eff      = "0.9,0.95"
-    options.pt = 10
+    options.pt = 20 # slightly increase the cut, to avoid too large combinatoric.
     qualif = "|#eta| < %.1f, m(jj) > %s" % (options.eta, options.var.replace("ptj-mjj",""))
     what = options.var
 elif options.var.startswith("met"):
@@ -421,7 +246,7 @@ jecfile = ROOT.TFile.Open(options.jecs)
 def makePlatEffPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cache={}):
     _key = (id(signal),id(background),what,obj,str(ptcut),str(plotparam))
     if _key in _cache: 
-        print "  retrieved plateff for %s, %s, %s from cache" % (what, obj, plotparam)
+        #print "  retrieved plateff for %s, %s, %s from cache" % (what, obj, plotparam)
         return _cache[_key]
     # ok there we go
     recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
@@ -490,10 +315,10 @@ def makePlatEffPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
 def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cache={}):
     _key = (id(signal),id(background),what,obj,str(ptcut),str(plotparam))
     if _key in _cache: 
-        print "  retrieved platroc for %s, %s, %s from cache" % (what, obj, plotparam)
+        #print "  retrieved platroc for %s, %s, %s from cache" % (what, obj, plotparam)
         return _cache[_key]
     # ok there we go
-    platprogress = _progress("  making platroc for %s, %s, %s" % (what, obj, plotparam))
+    #platprogress = _progress("  making platroc for %s, %s, %s" % (what, obj, plotparam))
     recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
     if not recoArrayB: return (None,None)
     recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
@@ -540,7 +365,7 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
           if len(points) == 0 or points[-1][0] != plat:
               points.append((plat,rate))
       rate *= 1.2
-    platprogress.done(" done, with %d points" % len(points))
+    #platprogress.done(" done, with %d points" % len(points))
     if not points: return (None,None)
     plot = ROOT.TGraph(len(points))
     for i,(x,y) in enumerate(points):
@@ -548,9 +373,10 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
     label = name
     _cache[_key] = (plot,label)
     return (plot,label)
+
 print "Plotting for %s (%s)" % (options.var, options.varlabel)
 for plotkind in options.plots.split(","):
-  progress = _progress("Make plot "+plotkind+"\n")
+  progress = _progress("Make plot %s: \n" % plotkind)
   if plotkind != "rate":
     genArray = makeGenArray(signal, what, options.pt, options.eta)
   if plotkind == "isorate":
@@ -689,6 +515,7 @@ for plotkind in options.plots.split(","):
               leg.AddEntry(p, n, "L" if plotkind in ("rate","roc") else "LP")
           leg.Draw()
           plotter.decorations()
+          #printprogress = _progress("  Printing plot %s%s (plot)" % (plotname, ("_"+options.label) if options.label else ""))
           plotter.Print('%s%s' % (plotname, ("_"+options.label) if options.label else ""))
           fout = ROOT.TFile.Open('%s/%s%s.root' % (odir, plotname, ("_"+options.label) if options.label else ""), "RECREATE")
           fout.WriteTObject(frame,"frame")
@@ -697,7 +524,8 @@ for plotkind in options.plots.split(","):
               fout.WriteTObject(p)
           fout.Close()
           del frame
-  progress.done("done plot "+plotkind)
+          #printprogress.done()
+  progress.done("  Done plot %s" % plotkind)
   print ""
 
 
