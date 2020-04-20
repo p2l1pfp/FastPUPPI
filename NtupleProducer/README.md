@@ -18,7 +18,8 @@ The first step is to produce the inputs:
 cd FastPUPPI/NtupleProducer/python/
 cmsRun runInputs106X.py # 
 ```
-Currently only `10_6_X` (L1T TDR, Geometry D41 using HGCal v10) samples are supported. The `11_1_X` samples (HLT TDR, Geometry D49, HGCal v11) will be added soon. The `10_4_X` (MTD TDR) and `9_3_X`samples are not yet supported.
+Currently only `10_6_X` (L1T TDR, Phase2C8, Geometry D41 using HGCal v10) samples are supported. 
+Support for the `11_1_X` samples (HLT TDR, Phase2C9, Geometry D49, HGCal v11) will be added soon. The `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported.
 
 By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
 This however takes up a substantial disk space especially at PU 200. 
