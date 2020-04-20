@@ -1,14 +1,14 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_10_6_1_patch2
-cd CMSSW_10_6_1_patch2/src
+cmsrel CMSSW_11_1_0_pre6
+cd CMSSW_11_1_0_pre6/src
 cmsenv
 git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_10_6_1p2_X
+git cms-checkout-topic -u p2l1pfp:L1PF_11_1_X
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 106X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
 
 scram b -j8
 ```
@@ -16,8 +16,9 @@ scram b -j8
 The first step is to produce the inputs:
 ```
 cd FastPUPPI/NtupleProducer/python/
-cmsRun runInputs104X.py # or runInputs106X.py or runInputs93X.py depending on the version of the input files
+cmsRun runInputs106X.py # 
 ```
+Currently only `10_6_X` (L1T TDR, Geometry D41 using HGCal v10) samples are supported. The `11_1_X` samples (HLT TDR, Geometry D49, HGCal v11) will be added soon. The `10_4_X` (MTD TDR) and `9_3_X`samples are not yet supported.
 
 By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
 This however takes up a substantial disk space especially at PU 200. 

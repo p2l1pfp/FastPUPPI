@@ -6,7 +6,7 @@
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/Common/interface/View.h"
 
-#include "DataFormats/Phase2L1ParticleFlow/interface/PFTau.h"
+#include "DataFormats/L1TParticleFlow/interface/PFTau.h"
 #include "DataFormats/HepMCCandidate/interface/GenParticle.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
