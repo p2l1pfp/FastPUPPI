@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2C9_trigger)
+process = cms.Process("IN", eras.Phase2C8_trigger)
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.Geometry.GeometryExtended2026D41Reco_cff')
 process.load('Configuration.Geometry.GeometryExtended2026D41_cff')
@@ -18,11 +18,6 @@ process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackTrigger.TrackTrigger_cff')
 process.load("L1Trigger.TrackFindingTracklet.Tracklet_cfi") 
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
-process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
-process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
-
-
-
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:/eos/cms/store/mc/PhaseIITDRSpring19DR/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW/NoPU_106X_upgrade2023_realistic_v3-v2/40000/009982E7-AEA5-0042-B199-D1F75139909F.root'),

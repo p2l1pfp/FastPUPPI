@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("RESP", eras.Phase2C4_trigger)
+process = cms.Process("RESP", eras.Phase2C8_trigger)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
@@ -11,30 +11,27 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
-    #fileNames = cms.untracked.vstring('file:inputs.root'),
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/user/gpetrucc/l1tr/105X/NewInputs104X/010319/ParticleGun_PU0/inputs104X_ParticleGun_PU0_job1.root'),
-    duplicateCheckMode = cms.untracked.string("noDuplicateCheck"),
-    skipBadFiles = cms.untracked.bool(True),
+    fileNames = cms.untracked.vstring('file:inputs106X.root'),
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
             "drop l1tPFTracks_*_*_*",
             "drop l1tPFCandidates_*_*_*")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D41Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D41_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_old_cff")
 
 process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
+process.pfClustersFromHGC3DClustersEM    = process.pfClustersFromHGC3DClusters.clone(emOnly = True, etMin = 0.)
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
 
 process.pfClustersFromCombinedCaloHCalUnclust = process.pfClustersFromCombinedCaloHCal.clone(
@@ -47,11 +44,7 @@ process.runPF = cms.Sequence(
     process.pfClustersFromHGC3DClustersEMRaw
     + process.pfClustersFromCombinedCaloHCalUnclust
     + process.pfClustersFromHGC3DClustersEM 
-    + process.pfClustersFromL1EGClusters 
-    + process.pfClustersFromCombinedCalo 
     + process.pfTracksFromL1Tracks
-    + process.l1pfProducerOld
-    + process.l1OldPuppiForMET
 )
 
 
@@ -76,12 +69,6 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1HGCal   = cms.VInputTag('pfClustersFromHGC3DClusters'),
         L1HGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', ),
         L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated'),
-        # old (non-split)
-        L1OldRawCalo = cms.VInputTag('pfClustersFromCombinedCalo:uncalibrated'),
-        L1OldRawCaloEM = cms.VInputTag('pfClustersFromCombinedCalo:emUncalibrated'),
-        L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw'),
-        L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducerOld','EmCalo')),
-        L1OldCalo = cms.VInputTag("l1pfProducerOld:Calo",),
         # alternate: don't use L1EG clusters when making hadrons
         L1RawBarrelCaloUnclust   = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:uncalibrated'),
         L1RawBarrelCaloEMUnclust = cms.VInputTag('pfClustersFromCombinedCaloHCalUnclust:emUncalibrated'),
@@ -94,10 +81,6 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1TKV5_sel = cms.string("pfTrack.nStubs >= 5"),
         L1PF = cms.VInputTag("l1pfCandidates:PF",),
         L1Puppi = cms.VInputTag("l1pfCandidates:Puppi",),
-        # old (non-split)
-        L1OldPF = cms.VInputTag("l1pfProducerOld:PF",),
-        L1OldPuppi = cms.VInputTag("l1pfProducerOld:Puppi",),
-        L1OldPuppiForMET = cms.VInputTag("l1OldPuppiForMET",),
     ),
     copyUInts = cms.VInputTag(),
     copyFloats = cms.VInputTag(),
@@ -195,10 +178,3 @@ def noPU():
     for X in "", "EM", "Raw", "EMRaw":
         pfc = getattr(process, 'pfClustersFromHGC3DClusters'+X)
         pfc.emVsPUID.wp = "-1.0"
-def goOld():
-    process.pfClustersFromL1EGClusters.corrector  = "L1Trigger/Phase2L1ParticleFlow/data/emcorr_barrel_93X.root"
-    process.pfClustersFromHGC3DClustersEM.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/emcorr_hgc_old3d_93X.root"
-    process.pfClustersFromCombinedCalo.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_93X.root"
-    process.pfClustersFromHGC3DClusters.corrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_HGCal3D_STC_93X.root"
-    process.pfClustersFromCombinedCaloHCal.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hadcorr_barrel_93X.root"
-    process.pfClustersFromCombinedCaloHF.hadCorrector =  "L1Trigger/Phase2L1ParticleFlow/data/hfcorr_93X.root"
