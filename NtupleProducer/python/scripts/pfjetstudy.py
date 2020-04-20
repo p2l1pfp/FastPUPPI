@@ -22,6 +22,7 @@ parser.add_option("-g", "--global", dest="ged", action="store_true", default=Fal
 parser.add_option("--min-pt", dest="minPt", type=float, default=20, help="Number of events to consider")
 parser.add_option("--max-eta", dest="maxEta", type=float, default=5, help="Number of events to consider")
 parser.add_option("--ld", "--link-debug", dest="linkDebug", default=None, help="show linking information")
+parser.add_option("-J", "--jet", dest="jets", type=str, action="append", default=[], help="Specific jet to select eta,phi")
 options, args = parser.parse_args()
 
 events = Events(args[0])
@@ -93,6 +94,10 @@ for iev,event in enumerate(events):
     if options.ged:
         allGenJ = [None]
         print "Full event:"
+    elif options.jets:
+        centers = [ map(float,c.split(",")) for c in options.jets ]
+        print "Selected gen jets in the event:"
+        allGenJ = [ j for j in allGenJ if min(deltaR(j.eta(), j.phi(), c[0], c[1]) for c in centers) < 0.2 ]
     else:
         print "Gen jets in the event:"
     for j in allGenJ:

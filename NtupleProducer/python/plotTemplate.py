@@ -3,7 +3,7 @@ ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
 
 class plotTemplate:
-    def __init__(self, outdir=None):
+    def __init__(self, outdir=None, defaultExts=["png","pdf","eps"]):
         self.outdir = outdir
         if outdir:
             if not os.path.isdir(outdir):
@@ -14,6 +14,7 @@ class plotTemplate:
         ROOT.gStyle.SetOptStat(0)
         ROOT.gStyle.SetOptFit(0)
         self.canvas = ROOT.TCanvas("c1","c1")
+        self._defaultExts = defaultExts 
     def newCanvas(self):
         if self.canvas: del self.canvas
         self.canvas = ROOT.TCanvas("c1","c1")
@@ -34,7 +35,8 @@ class plotTemplate:
         tex.DrawLatexNDC(x1,y1,text)
     def SetLogy(self, logy):
         self.canvas.SetLogy(logy)
-    def Print(self,basename, exts=["png","pdf","eps"]):
+    def Print(self,basename, exts=None):
+        if exts == None: exts = self._defaultExts;
         errorLevel = ROOT.gErrorIgnoreLevel
         ROOT.gErrorIgnoreLevel = ROOT.kWarning
         if self.outdir: basename = self.outdir + "/" + basename
