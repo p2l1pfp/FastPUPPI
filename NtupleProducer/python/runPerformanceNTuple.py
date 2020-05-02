@@ -373,16 +373,18 @@ def addCalib():
         process.ntuple.objects.L1OldRawEcal = cms.VInputTag('pfClustersFromL1EGClustersRaw', 'pfClustersFromHGC3DClustersEMRaw')
         process.ntuple.objects.L1OldEcal = cms.VInputTag(cms.InputTag('l1pfProducerOld','EmCalo'))
 
-def addRefs():
+def addRefs(calo=True,tk=True):
     process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
     process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1pfCandidates", "Puppi") # make sure the process name is not pre-encoded
     process.extraPFStuff.add(process.Phase1L1TJetProducer,process.Phase1L1TJetCalibrator)
-    process.l1pfjetTable.jets.RefTwoLayerJets = cms.InputTag("TwoLayerJets", "L1TwoLayerJets")
-    process.l1pfjetTable.jets.RefTwoLayerJets_sel = cms.string("pt > 5")
     process.l1pfjetTable.jets.RefPhase1PuppiJets = cms.InputTag("Phase1L1TJetCalibrator", "Phase1L1TJetFromPfCandidates")
-    process.l1pfjetTable.jets.RefCaloJets = cms.InputTag("L1CaloJetProducer","L1CaloJetCollectionBXV")
-    process.l1pfmetTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
-    process.l1pfmetCentralTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
+    if calo:
+        process.l1pfjetTable.jets.RefCaloJets = cms.InputTag("L1CaloJetProducer","L1CaloJetCollectionBXV")
+    if tk:
+        process.l1pfjetTable.jets.RefTwoLayerJets = cms.InputTag("TwoLayerJets", "L1TwoLayerJets")
+        process.l1pfjetTable.jets.RefTwoLayerJets_sel = cms.string("pt > 5")
+        process.l1pfmetTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
+        process.l1pfmetCentralTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
 
 def addTkPtCut(ptCut):
     process.l1pfProducerBarrelTkPt3 = process.l1pfProducerBarrel.clone(trkPtCut = ptCut)

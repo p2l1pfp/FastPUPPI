@@ -33,6 +33,8 @@ process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.cl
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersEM    = process.pfClustersFromHGC3DClusters.clone(emOnly = True, etMin = 0.)
 process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
+process.pfClustersFromCombinedCaloHFOnly = process.pfClustersFromCombinedCaloHF.clone(hcalCandidates =[])
+
 
 process.pfClustersFromCombinedCaloHCalUnclust = process.pfClustersFromCombinedCaloHCal.clone(
     ecalCandidates = []
@@ -44,6 +46,7 @@ process.runPF = cms.Sequence(
     process.pfClustersFromHGC3DClustersEMRaw
     + process.pfClustersFromCombinedCaloHCalUnclust
     + process.pfClustersFromHGC3DClustersEM 
+    + process.pfClustersFromCombinedCaloHFOnly
     + process.pfTracksFromL1Tracks
 )
 
@@ -60,10 +63,12 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
         L1RawBarrelEcal   = cms.VInputTag('pfClustersFromL1EGClustersRaw' ),
         L1RawBarrelCalo   = cms.VInputTag('pfClustersFromCombinedCaloHCal:uncalibrated'),
         L1RawBarrelCaloEM = cms.VInputTag('pfClustersFromCombinedCaloHCal:emUncalibrated'),
+        L1BareHGCal   = cms.VInputTag(cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering")),
         L1RawHGCal   = cms.VInputTag('pfClustersFromHGC3DClustersRaw'),
         L1RawHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEMRaw'),
         L1RawHFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:uncalibrated'),
-        L1RawHFCells = cms.VInputTag('pfClustersFromCombinedCaloHF:hcalCells'),
+        L1RawHFOnlyCalo  = cms.VInputTag('pfClustersFromCombinedCaloHFOnly:uncalibrated'),
+        L1RawHFOnlyCells = cms.VInputTag('pfClustersFromCombinedCaloHFOnly:hcalCells'),
         L1BarrelEcal = cms.VInputTag('pfClustersFromL1EGClusters' ),
         L1BarrelCalo = cms.VInputTag('pfClustersFromCombinedCaloHCal:calibrated'),
         L1HGCal   = cms.VInputTag('pfClustersFromHGC3DClusters'),

@@ -9,30 +9,26 @@ fi
 N=8
 if [[ "$1" == "-j" ]]; then N=$2; shift; shift; fi;
 
-if [[ "$1" == "--v0" ]]; then # this is the default but we keep anyway
+if [[ "$1" == "--106X_v0" ]]; then
     shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/240719_oldhgc.done/$1
-    PREFIX="inputs104X_"
-elif [[ "$1" == "--106X_v0" ]]; then # this is the default but we keep anyway
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs106X/250819.done/$1
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_X/NewInputs106X/200420.done/$1
     PREFIX="inputs106X_"
-    if echo $CODE | grep -q 106X; then
-        echo "Assume $CODE is ready for 106X";
-    else
-        echo "Convert ${CODE}.py to ${CODE/_104X/}_106X.py automatically updating era and geometry";
-        sed -e 's+Phase2C4+Phase2C8+g' -e 's+GeometryExtended2023D35+GeometryExtended2023D41+' ${CODE}.py > ${CODE/_104X/}_106X.py;
-        CODE=${CODE/_104X/}_106X
-    fi
-elif [[ "$1" == "--v3_fat" ]]; then # this is the default but we keep anyway
+elif [[ "$1" == "--110X_v0" ]]; then
     shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/106X/NewInputs104X/300819_hgcv3_fat.done/$1
-    PREFIX="inputs104X_"
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_X/NewInputs110X/280420.done/$1
+    PREFIX="inputs110X_"
+    if echo $CODE | grep -q 110X; then
+        echo "Assume $CODE is ready for 110X";
+    else
+        echo "Convert ${CODE}.py to ${CODE/_106X/}_110X.py automatically updating era and geometry";
+        sed -e 's+Phase2C8+Phase2C9+g' -e 's+GeometryExtended2026D41+GeometryExtended2026D49+' ${CODE}.py > ${CODE/_106X/}_110X.py;
+        CODE=${CODE/_106X/}_110X
+    fi
+
 else 
     echo "You mush specify the version of the input samples to run on "
-    echo "   --v0      : 104X MDT MC inputs, with default 106X HGCal TPs "
-    echo "   --106X_v0 : 106X L1T MC inputs, with default 106X HGCal TPs "
-    echo "   --v3_fat  : 104X MDT MC inputs, with experimental HGCal TPs, and inputs for re-running HGCal 3D clustering"
+    echo "   --106X_v0 : 106X L1T MC inputs, with default HGCal TPs "
+    echo "   --110X_v0 : 110X HLT MC inputs, with default HGCal TPs "
 
 fi;
  

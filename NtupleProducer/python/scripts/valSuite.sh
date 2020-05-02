@@ -1,10 +1,11 @@
 #!/bin/bash
 
-V="$1"; shift
-PLOTDIR="plots/106X/from104X/${V}/val"
-SAMPLES="--$V";
-[[ "$V" == "v0.1" || "$V" == "v0.2" ]] && SAMPLES="--v0"
-[[ "$V" == "v3" ]] && SAMPLES="--v3_fat"
+V="$1"; # should be >RELEASE>_v<n>[.<something>] 
+shift
+REL=${V%%_v[0-9]*} # will be 106X or 110X 
+SAMP=${V%%.*}
+PLOTDIR="plots/11_1_X/from${REL}/${V}/val"
+SAMPLES="--${V%%.*}"; # remove the ".
 
 W=$1; shift;
 while [[ "$W" != "" ]]; do
@@ -111,7 +112,7 @@ while [[ "$W" != "" ]]; do
     run-rates)
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do  
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()' --maxfiles 80;
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addRefs(calo=False,tk=False)' --maxfiles 80;
          done
          ;;
     make-jecs)
@@ -119,18 +120,21 @@ while [[ "$W" != "" ]]; do
          python scripts/makeJecs.py perfNano_${X}.${V}.root perfNano_${Y}.${V}.root  -A  -o jecs.${V}.root 
          ;;
     plot-rates)
+         METPLOTS="l1pfpu_metnoref" # l1pfpu_metref,l1pfpu_metrefonly,
+         JETPLOTS="l1pfpu_jetnoref" # l1pfpu_jetref,l1pfpu_jetrefonly,
          for X in {TTbar,VBF_HToInvisible}_PU200; do 
-             python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/met/$X -j jecs.${V}.root -w l1pfpu -v met --eta 5.0
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/met/$X -j jecs.${V}.root -w $METPLOTS -v met --eta 5.0
          done
-         X=TTbar_PU200; 
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet1 --eta 2.4
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet4 --eta 2.4
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ht   --eta 2.4
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ht   --eta 3.5
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet4 --eta 3.5
+         #X=TTbar_PU200; 
+         X=GluGluToHHTo4B_PU200; 
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet1 --eta 2.4
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet4 --eta 2.4
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v ht   --eta 2.4
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v ht   --eta 3.5
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet4 --eta 3.5
          X=VBF_HToInvisible_PU200; 
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v jet2       --eta 4.7
-         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w l1pfpu -v ptj-mjj620 --eta 4.7
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet2       --eta 4.7
+         python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v ptj-mjj620 --eta 4.7
          ;;
     stack-rates)
          for X in {TTbar,VBF_HToInvisible}_PU200; do 
@@ -152,13 +156,13 @@ while [[ "$W" != "" ]]; do
          ;;
     run-mult)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible}_PU200; do 
+         for X in {TTbar,VBF_HToInvisible,VBFHToBB}_PU200; do 
              ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}_regional  --inline-customize 'respOnly();goRegional()' --maxfiles 24;
          done
          ;;
     plot-mult)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible}_PU200; do 
+         for X in {TTbar,VBF_HToInvisible,VBFHToBB}_PU200; do 
              python scripts/objMultiplicityPlot.py perfTuple_${X}.${V}_regional.root  $PLOTDIR/multiplicities/${X} -s $X 
          done;
          ;;

@@ -70,7 +70,8 @@ if __name__ == "__main__":
     parser.add_option("--semicoarse-eta", dest="semiCoarseEta", default=False, action="store_true")
     parser.add_option("--barrel-eta", dest="barrelEta", default=False, action="store_true")
     parser.add_option("--hgcal-eta", dest="hgcalEta", default=False, action="store_true")
-    parser.add_option("--hf-eta", dest="hfEta", default=False, action="store_true")
+    parser.add_option("--hf-eta", dest="hfEta", default=False, action="store_const", const="coarse")
+    parser.add_option("--hf-eta-fine", dest="hfEta", default=False, action="store_const", const="fine")
     parser.add_option("--no-fit-hf", dest="noFitHF", default=False, action="store_true")
     parser.add_option("--root", dest="rootfile", default=None)
     parser.add_option("--eta", dest="eta", nargs=2, default=None, type="float")
@@ -105,8 +106,9 @@ if __name__ == "__main__":
             ("klong", "mc_id == 130", 2, 5),
             ("pimix", "(abs(mc_id) == 211 || abs(mc_id) == 111)", 2, 5),
             ("piswitch", "(abs(mc_id) == 211 || (abs(mc_id) == 111 && abs(mc_eta) > 2.5))", 2, 5),
-            ("mix", "(abs(mc_id) == 211 || abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 130)", 2, 5),
-            ("emmix", "(abs(mc_id) == 111 || abs(mc_id) == 22)", 2, 5),
+            ("mix", "(abs(mc_id) == 211 || abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 130 || abs(mc_id) == 11)", 2, 5),
+            ("mixmix", "(abs(mc_id) == 211 || abs(mc_id) == 22)", 2, 5),
+            ("emmix", "(abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 11)", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
             ("electron", "abs(mc_id) == 11", 10, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
@@ -126,10 +128,10 @@ if __name__ == "__main__":
 	    etas = [ 0.7, 1.2, 1.6 ]
             etas = [ (etas[i-1] if i else 0.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.hgcalEta:
-	    etas = [ 1.9, 2.2, 2.5, 2.8, 2.95 ]
+	    etas = [ 1.7, 1.9, 2.2, 2.5, 2.8, 2.9 ]
             etas = [ (etas[i-1] if i else 1.55, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.hfEta:
-	    etas = [ 3.5, 4.0, 4.5, 5.0 ]
+	    etas = [ 3.1, 3.2, 3.3, 3.4, 3.5, 4.0, 4.5, 5.0]  if options.hfEta == "fine" else [ 3.5, 4.0, 4.5, 5.0 ]
             etas = [ (etas[i-1] if i else 3.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
@@ -184,7 +186,6 @@ if __name__ == "__main__":
         if a.endswith(".root"): 
             tree.Add(a)
             args.remove(a)
-    print args
     odir = args[0] # "plots/910pre2/test"
     os.system("mkdir -p "+odir)
     os.system("cp %s/src/FastPUPPI/NtupleProducer/python/display/index.php %s/" % (os.environ['CMSSW_BASE'], odir));
