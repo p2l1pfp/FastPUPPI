@@ -465,6 +465,9 @@ if __name__ == "__main__":
             particle += "_"+options.extralabel
         if not options.noEtaPlot:
             sels.append(("%s_pt_%02d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
+            if particle == "jet":
+                for minPt2 in (50, 75, 100):
+                    sels.append(("%s_pt_%02d_inf" % (particle, minPt2), "mc_pt > %g && %s" % (minPt2, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
         etas = [ (0.0,1.3), (1.3,1.7), (1.7,2.5), (2.5,3.0), (3.0,5.0) ]
         if options.eta: etas = [ options.eta ]

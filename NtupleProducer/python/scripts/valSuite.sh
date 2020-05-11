@@ -125,8 +125,7 @@ while [[ "$W" != "" ]]; do
          for X in {TTbar,VBF_HToInvisible}_PU200; do 
              python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/met/$X -j jecs.${V}.root -w $METPLOTS -v met --eta 5.0
          done
-         #X=TTbar_PU200; 
-         X=GluGluToHHTo4B_PU200; 
+         X=TTbar_PU200; 
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet1 --eta 2.4
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v jet4 --eta 2.4
          python scripts/jetHtSuite.py perfNano_${X}.${V}.root perfNano_SingleNeutrino_PU200.${V}.root $PLOTDIR/ht/$X -j jecs.${V}.root -w $JETPLOTS -v ht   --eta 2.4
