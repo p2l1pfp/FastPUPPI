@@ -1,0 +1,9 @@
+*.report.txt
+perfTuple*.root
+perfNano*.root
+jecs.*.root
+*.dump
+respTuple*.root
+runPerformanceNTuple_*job*
+runPerformanceNTuple_*sh
+runPerformanceNTuple_*log

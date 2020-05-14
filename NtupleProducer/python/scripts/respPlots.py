@@ -35,7 +35,9 @@ def doRespEta(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
         return doRespEtaProf(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
     return doRespEtaMedian(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
 def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etamax=5.0, maxEntries=999999999):
-    ys = [[] for ieta in xrange(etabins)]
+    etabins = [ (i+1)*0.1 for i in xrange(32) ] + [ 3.4 + 0.2*i for i in xrange((50-34)/2+1) ]
+    etabins = [ e for e in etabins if e <= etamax ]
+    ys = [[] for ieta in etabins]
     npoints = tree.Draw("("+expr+")/"+mcpt+":abs(mc_eta)", cut, "", maxEntries);
     #print "Draw(("+expr+")/"+mcpt+":abs(mc_eta), "+cut+") --> ",npoints
     if npoints <= 0: return None
@@ -44,19 +46,21 @@ def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etam
     for i in xrange(graph.GetN()):
         #if yi[i] == 0: continue
         if (xi[i] > etamax): continue
-        ieta = int(floor(etabins*xi[i]/etamax))
-        ys[ieta].append(yi[i])
+        for ieta, etahi in enumerate(etabins):
+            if xi[i] < etahi:
+                ys[ieta].append(yi[i])
+                break
     ret = ROOT.TGraphAsymmErrors()
     ret.SetName(name)
-    for ieta in xrange(etabins):
+    for ieta, etahi in enumerate(etabins):
+        etalo = etabins[ieta-1] if ieta else 0
         if len(ys[ieta]) == 0: continue
         (median,lo,hi) = quantiles(ys[ieta], zeroSuppress=not(oname.startswith("null")))
         if not median: continue
         ipoint = ret.GetN()
         ret.Set(ipoint+1)
-        ret.SetPoint(ipoint, (ieta+0.5)*etamax/etabins, median)
-        #ret.SetPointError(ieta, 0.5*etamax/etabins, 0.5*etamax/etabins, (median-lo),(hi-median))
-        ret.SetPointError(ipoint, 0.5*etamax/etabins, 0.5*etamax/etabins, (median-lo)/sqrt(len(ys[ieta])),(hi-median)/sqrt(len(ys[ieta])))
+        ret.SetPoint(ipoint, 0.5*(etahi+etalo), median)
+        ret.SetPointError(ipoint, 0.5*(etahi-etalo), 0.5*(etahi-etalo), (median-lo)/sqrt(len(ys[ieta])),(hi-median)/sqrt(len(ys[ieta])))
     return ret
 def doEtaProf(oname, tree, name, expr, cut, maxEntries=999999999):
     npoints = tree.Draw(expr+":abs(mc_eta)>>"+name+"(50,0,5.0)", cut, "PROF", maxEntries);
@@ -249,7 +253,11 @@ whats = [
     ]),
     ('debug-hf',[
         #("Cells",  "L1RawHFCells$",  ROOT.kGreen+2,  20, 1.1),
-        ("Raw",  "L1RawHFCalo$",     ROOT.kRed+1,    21, 1.6),
+        ("HFCells",  "L1RawHFOnlyCells$",  ROOT.kGray+1,   21, 1.0),
+        ("RawComb",  "L1RawHFCalo$",       ROOT.kRed+1,    21, 1.6),
+        ("HFRaw",    "L1RawHFOnlyCalo$",   ROOT.kRed-4,    21, 1.1),
+        ("HGCRaw",   "L1RawHGCal$",        ROOT.kGreen+0,  21, 1.1),
+        ("HGCRaw",   "L1BareHGCal$",        ROOT.kGreen+2,  21, 0.8),
         ("Corr",  "L1HFCalo$",       ROOT.kAzure+2,  20, 1.0),
     ]),
     ('debug-hcal',[
@@ -417,7 +425,8 @@ if __name__ == "__main__":
     parser.add_option("--no-fit", dest="fit", action="store_const", const="none", help="skip fits")
     parser.add_option("--no-resol", dest="noResol", default=False, action="store_true", help="skip resolution plots")
     parser.add_option("--fitrange", dest="fitrange", nargs=2, default=(0,999), type="float")
-    parser.add_option("--no-eta", dest="noEtaPlot", default=False, action="store_true", help="skip resolution plots")
+    parser.add_option("--no-eta", dest="noEtaPlot", default=False, action="store_true", help="skip plots vs eta")
+    parser.add_option("--no-pt", dest="noPtPlot", default=False, action="store_true", help="skip plots vs pt")
     parser.add_option("--corr-resol", dest="respCorr", default="exact", help="response correction for resolution: exact (compute & apply JECs as function of pt reco, then get resolution), gen (JECs vs pt gen), divide (divide by response), simple (divide by response at infinity)")
     parser.add_option("-E", "--etaMax", dest="etaMax",  default=5.0, type=float)
     parser.add_option("--ymax", dest="yMax",  default=1.6, type=float)
@@ -436,6 +445,7 @@ if __name__ == "__main__":
             ("pion", "abs(mc_id) == 211", 10, 5),
             ("pizero", "abs(mc_id) == 111", 10, 5),
             ("klong", "abs(mc_id) == 130", 10, 5),
+            ("kshort", "abs(mc_id) == 310", 10, 5),
             ("pimix", "(abs(mc_id) == 211 || abs(mc_id) == 111)", 10, 5),
             ("mixmix", "(abs(mc_id) == 211 || abs(mc_id) == 22)", 10, 5),
             ("mix", "(abs(mc_id) == 211 || abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 130)", 2, 5),
@@ -455,10 +465,14 @@ if __name__ == "__main__":
             particle += "_"+options.extralabel
         if not options.noEtaPlot:
             sels.append(("%s_pt_%02d_inf" % (particle, minPt), "mc_pt > %g && %s" % (minPt, pdgIdCut)))
+            if particle == "jet":
+                for minPt2 in (50, 75, 100):
+                    sels.append(("%s_pt_%02d_inf" % (particle, minPt2), "mc_pt > %g && %s" % (minPt2, pdgIdCut)))
         if "null" in particle: continue; # not point in profiling random cones vs pt
         etas = [ (0.0,1.3), (1.3,1.7), (1.7,2.5), (2.5,3.0), (3.0,5.0) ]
         if options.eta: etas = [ options.eta ]
         for etamin, etamax in etas:
+            if options.noPtPlot: break
             if etamax > options.etaMax: break
             sels.append(("%s_eta_%02.0f_%02.0f" % (particle,10*etamin,10*etamax), "abs(mc_eta) > %s && abs(mc_eta) < %s && %s" % (etamin,etamax,pdgIdCut)))
 
@@ -570,7 +584,7 @@ if __name__ == "__main__":
                         frame = ROOT.TH1F("stk","stk",100,minEta,maxEta)
                         frame.GetXaxis().SetTitle("|#eta|")
                         ymax = options.yMax
-                        leg = ROOT.TLegend(0.2,0.99,0.95,0.99-0.025*len(things))
+                        leg = ROOT.TLegend(0.2,0.93,0.95,0.93-0.025*len(things))
                         leg.SetTextSize(0.04);
                         leg.SetNColumns(2)
                         if ptdef.startswith("pt"):

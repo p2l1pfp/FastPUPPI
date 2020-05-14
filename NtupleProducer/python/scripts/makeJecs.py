@@ -25,7 +25,7 @@ if __name__ == "__main__":
     from optparse import OptionParser
     parser = OptionParser("%(prog) infile [ src [ dst ] ]")
     parser.add_option("-m", dest="methods",  default="fitlin")
-    parser.add_option("--etabins", dest="etabins", default="0,1.3,1.7,2.1,2.4,2.8,3.2,4.0,4.8")
+    parser.add_option("--etabins", dest="etabins", default="0,1.3,1.7,1.9,2.1,2.4,2.8,3.0,3.3,3.6,4.0,4.8")
     parser.add_option("--yr","--yrange", dest="yrange", nargs=2, default=(0.65,1.3), type="float")
     parser.add_option("--fr","--fitrange", dest="fitrange", nargs=2, default=(20,999), type="float")
     parser.add_option("--cp","--closure-plots", dest="closurePlots", default=None, type="string")
