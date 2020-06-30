@@ -150,6 +150,13 @@ whats = WHATS + [
         ("TK",      "RefTwoLayerJets$",     ROOT.kGreen+2, 34, 1.2),
         ("Puppi",   "RefPhase1PuppiJets$",  ROOT.kRed+1, 20, 0.9), 
     ]),
+    ('l1pfpu_bitwise',[
+        ("CMSSW",       "L1CMSSWPuppi$",      ROOT.kGray+2, 20, 2.0),
+        ("Tuned",       "L1Puppi$",           ROOT.kRed+1, 20, 1.7),
+        ("Regional",    "L1PuppiRegional$",   ROOT.kViolet+1, 20, 1.4),
+        ("BitwisePF",   "L1PuppiBitwisePF$",  ROOT.kAzure+1, 20, 1.1),
+        ("BitwisePuppi","L1PuppiBitwise$",    ROOT.kGreen+2, 20, 0.8),
+    ]),
 ]
 
 from optparse import OptionParser
