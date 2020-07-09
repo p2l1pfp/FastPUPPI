@@ -370,6 +370,214 @@ def addCalib():
     process.ntuple.objects.L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated')
     process.ntuple.objects.L1HGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', )
 
+def addRegional(label="Regional", relativeCoordinates=False):
+    # clone each part
+    for D in ['Barrel','HF','HGCal','HGCalNoTK']:
+        pfreg = getattr(process, 'l1pfProducer'+D).clone() 
+        setattr(process, 'l1pfProducer'+label+D, pfreg)
+        process.extraPFStuff.add(pfreg)
+    # merging
+    pfcomb = cms.EDProducer("L1TPFCandMultiMerger",
+            pfProducers = cms.VInputTag(
+                cms.InputTag("l1pfProducer"+label+"Barrel"), 
+                cms.InputTag("l1pfProducer"+label+"HGCal"),
+                cms.InputTag("l1pfProducer"+label+"HGCalNoTK"),
+                cms.InputTag("l1pfProducer"+label+"HF")
+                ),
+            labelsToMerge = cms.vstring("Calo", "TK", "TKVtx", "PF", "Puppi"),
+    )
+    setattr(process, 'l1pfCandidates'+label, pfcomb)
+    process.extraPFStuff.add(pfcomb)
+    # monitoring
+    monitorPerf("L1Calo"+label, "l1pfCandidates"+label+":Calo", makeRespSplit = False)
+    monitorPerf("L1TK"+label, "l1pfCandidates"+label+":TK", makeRespSplit = False, makeJets=False, makeMET=False)
+    monitorPerf("L1TKV"+label, "l1pfCandidates"+label+":TKVtx", makeRespSplit = False, makeJets=False, makeMET=False)
+    monitorPerf("L1PF"+label, "l1pfCandidates"+label+":PF")
+    monitorPerf("L1Puppi"+label, "l1pfCandidates"+label+":Puppi")
+    # and finally go regional
+    goRegional(label, relativeCoordinates=relativeCoordinates)
+def firmwareLike():
+    ## Make a copy called "CMSSW", and then configure the setup to be close ro firmware
+    for det in "Barrel", "HGCal", "HGCalNoTK", "HF":
+        l1pf = getattr(process, 'l1pfProducer'+det).clone()
+        setattr(process, 'l1pfProducerCMSSW'+det, l1pf)
+        process.extraPFStuff.add(l1pf)
+    process.l1pfCandidatesCMSSW = cms.EDProducer("L1TPFCandMultiMerger",
+            pfProducers = cms.VInputTag(
+                cms.InputTag("l1pfProducerCMSSWBarrel"), 
+                cms.InputTag("l1pfProducerCMSSWHGCal"),
+                cms.InputTag("l1pfProducerCMSSWHGCalNoTK"),
+                cms.InputTag("l1pfProducerCMSSWHF")
+                ),
+            labelsToMerge = cms.vstring("PF","Puppi"),
+    )
+    process.extraPFStuff.add(process.l1pfCandidatesCMSSW)
+    monitorPerf("L1CMSSWPF", "l1pfCandidatesCMSSW:PF")        
+    monitorPerf("L1CMSSWPuppi", "l1pfCandidatesCMSSW:Puppi")        
+    process.l1pfProducerBarrel.linking.ecalPriority = False # FIXME (was never implemented)
+    process.l1pfProducerBarrel.linking.trackEmMayUseCaloMomenta = False # FIXME (was never implemented)
+    process.l1pfProducerBarrel.linking.emCaloUseAlsoCaloSigma = False # FIXME (was never implemented, but could be)
+    process.l1pfProducerBarrel.linking.emCaloSubtractionPtSlope = 1.0 # FIXME (could be implemented)
+    for det in "Barrel", "HGCal", "HGCalNoTK", "HF":
+        l1pf = getattr(process, 'l1pfProducer'+det)
+        l1pf.linking.trackMuMatch = "drBestByPtDiff" # FIXME (could be implemented, but expensive)
+        l1pf.linking.trackCaloLinkMetric = "bestByDR2Pt2" # FIXME (could be implemented, but very expensive - needs sqrt)
+def addBitwise(label="Bitwise",alsoPuppi="linpuppi"):
+    if not hasattr(process, "l1pfCandidatesRegional"):
+        addRegional(relativeCoordinates=True)
+    barrel = process.l1pfProducerRegionalBarrel.clone(pfAlgo = "BitwisePFAlgo",
+            bitwiseAlgo = cms.string("pfalgo3"),
+            bitwiseConfig = cms.PSet(
+                NTRACK = cms.uint32(99),
+                NEMCALO = cms.uint32(99),
+                NCALO = cms.uint32(99),
+                NMU = cms.uint32(9),
+                NPHOTON = cms.uint32(99),
+                NSELCALO = cms.uint32(99),
+                NALLNEUTRAL = cms.uint32(199),
+                DR2MAX_TK_MU = cms.uint32(2101),
+                DR2MAX_TK_EM = cms.uint32(84),
+                DR2MAX_EM_CALO = cms.uint32(525),
+                DR2MAX_TK_CALO = cms.uint32(1182),
+                TK_MAXINVPT_LOOSE = cms.uint32(40),
+                TK_MAXINVPT_TIGHT = cms.uint32(80),
+            ))
+    hgcal = process.l1pfProducerRegionalHGCal.clone(pfAlgo = "BitwisePFAlgo",
+            bitwiseAlgo = cms.string("pfalgo2hgc"),
+            bitwiseConfig = cms.PSet(
+                NTRACK = cms.uint32(99),
+                NCALO = cms.uint32(99),
+                NMU = cms.uint32(9),
+                NSELCALO = cms.uint32(99),
+                DR2MAX_TK_MU = cms.uint32(2101),
+                DR2MAX_TK_CALO = cms.uint32(525),
+                TK_MAXINVPT_LOOSE = cms.uint32(40),
+                TK_MAXINVPT_TIGHT = cms.uint32(80),
+            ))
+    setattr(process, "l1pfProducer%sBarrel" % label, barrel)
+    setattr(process, "l1pfProducer%sHGCal" % label, hgcal)
+    process.extraPFStuff.add(barrel, hgcal)
+    if alsoPuppi:
+        barrel.puAlgo = "BitwisePuppiAlgo"
+        #barrel.debugPuppi = cms.untracked.int32(1)
+        barrel.bitwisePUAlgo = cms.string("linpuppi_flt" if alsoPuppi == "flt" else "linpuppi")
+        barrel.bitwisePUConfig = cms.PSet(
+                nTrack = cms.uint32(99),
+                nIn = cms.uint32(99),
+                nOut = cms.uint32(99),
+                dR2Max = cms.uint32(4727),
+                dR2Min = cms.uint32(257),
+                ptMax  = cms.uint32(200),
+                dzCut  = cms.uint32(10),
+                absEtaBins = cms.vint32(),
+                ptSlopeNe  = cms.vdouble(0.3),
+                ptSlopePh  = cms.vdouble(0.3),
+                ptZeroNe   = cms.vdouble(4.0),
+                ptZeroPh   = cms.vdouble(2.5),
+                alphaSlope = cms.vdouble(0.7),
+                alphaZero  = cms.vdouble(6.0),
+                alphaCrop  = cms.vdouble(4.0),
+                priorNe    = cms.vdouble(5.0),
+                priorPh    = cms.vdouble(1.0),
+                ptCut      = cms.vuint32(4),
+                )
+        hgcal.puAlgo = "BitwisePuppiAlgo"
+        #hgcal.debugPuppi = cms.untracked.int32(1)
+        hgcal.bitwisePUAlgo = cms.string("linpuppi_flt" if alsoPuppi == "flt" else "linpuppi")
+        hgcal.bitwisePUConfig = cms.PSet(
+                nTrack = cms.uint32(99),
+                nIn = cms.uint32(99),
+                nOut = cms.uint32(99),
+                dR2Max = cms.uint32(4727),
+                dR2Min = cms.uint32(84),
+                ptMax  = cms.uint32(200),
+                dzCut  = cms.uint32(40),
+                absEtaBins = cms.vint32(0),
+                ptSlopeNe  = cms.vdouble(0.3,0.3),
+                ptSlopePh  = cms.vdouble(0.4,0.4),
+                ptZeroNe   = cms.vdouble(5.0,7.0),
+                ptZeroPh   = cms.vdouble(3.0,4.0),
+                alphaSlope = cms.vdouble(1.5,1.5),
+                alphaZero  = cms.vdouble(6.0,6.0),
+                alphaCrop  = cms.vdouble(3.0,3.0),
+                priorNe    = cms.vdouble(5.0,5.0),
+                priorPh    = cms.vdouble(1.5,1.5),
+                ptCut      = cms.vuint32(4, 8),
+                )
+        hgcalNoTK = process.l1pfProducerRegionalHGCalNoTK.clone(puAlgo = "BitwisePuppiAlgo")
+        #hgcalNoTK.debugPuppi = cms.untracked.int32(1)
+        hgcalNoTK.bitwisePUAlgo = cms.string("fwdlinpuppi_flt" if alsoPuppi == "flt" else "fwdlinpuppi")
+        hgcalNoTK.bitwisePUConfig = cms.PSet(
+                nTrack = cms.uint32(99),
+                nIn = cms.uint32(99),
+                nOut = cms.uint32(99),
+                dR2Max = cms.uint32(4727),
+                dR2Min = cms.uint32(84),
+                ptMax  = cms.uint32(200),
+                dzCut  = cms.uint32(40),
+                absEtaBins = cms.vint32(),
+                ptSlopeNe  = cms.vdouble(0.3),
+                ptSlopePh  = cms.vdouble(0.4),
+                ptZeroNe   = cms.vdouble(9.0),
+                ptZeroPh   = cms.vdouble(5.0),
+                alphaSlope = cms.vdouble(2.2),
+                alphaZero  = cms.vdouble(9.0),
+                alphaCrop  = cms.vdouble(4.0),
+                priorNe    = cms.vdouble(7.0),
+                priorPh    = cms.vdouble(5.0),
+                ptCut      = cms.vuint32(16),
+                )
+        hf = process.l1pfProducerRegionalHF.clone(puAlgo = "BitwisePuppiAlgo")
+        #hf.debugPuppi = cms.untracked.int32(1)
+        hf.bitwisePUAlgo = cms.string("fwdlinpuppi_flt" if alsoPuppi == "flt" else "fwdlinpuppi")
+        hf.bitwisePUConfig = cms.PSet(
+                nTrack = cms.uint32(99),
+                nIn = cms.uint32(99),
+                nOut = cms.uint32(99),
+                dR2Max = cms.uint32(4727),
+                dR2Min = cms.uint32(525),
+                ptMax  = cms.uint32(400),
+                dzCut  = cms.uint32(40),
+                absEtaBins = cms.vint32(),
+                ptSlopeNe  = cms.vdouble(0.25),
+                ptSlopePh  = cms.vdouble(0.25),
+                ptZeroNe   = cms.vdouble(14. ),
+                ptZeroPh   = cms.vdouble(14. ),
+                alphaSlope = cms.vdouble(0.6 ),
+                alphaZero  = cms.vdouble(9.0 ),
+                alphaCrop  = cms.vdouble(4.0 ),
+                priorNe    = cms.vdouble(6.0 ),
+                priorPh    = cms.vdouble(6.0 ),
+                ptCut      = cms.vuint32(40),
+                )
+        setattr(process, "l1pfProducer%sHGCalNoTK" % label, hgcalNoTK)
+        setattr(process, "l1pfProducer%sHF" % label, hf)
+        process.extraPFStuff.add(hgcalNoTK, hf)
+        pfcands = cms.EDProducer("L1TPFCandMultiMerger",
+                pfProducers = cms.VInputTag(
+                    cms.InputTag("l1pfProducer%sBarrel" % label), 
+                    cms.InputTag("l1pfProducer%sHGCal" % label),
+                    cms.InputTag("l1pfProducer%sHGCalNoTK" % label),
+                    cms.InputTag("l1pfProducer%sHF" % label)
+                    ),
+                labelsToMerge = cms.vstring("PF", "Puppi"),
+        )
+    else:
+        pfcands = cms.EDProducer("L1TPFCandMultiMerger",
+                pfProducers = cms.VInputTag(
+                    cms.InputTag("l1pfProducer%sBarrel" % label), 
+                    cms.InputTag("l1pfProducer%sHGCal" % label),
+                    cms.InputTag("l1pfProducerRegionalHGCalNoTK"),
+                    cms.InputTag("l1pfProducerRegionalHF")
+                    ),
+                labelsToMerge = cms.vstring("PF", "Puppi"),
+        ) 
+    setattr(process, "l1pfCandidates%s" % label, pfcands)
+    process.extraPFStuff.add(pfcands)
+    monitorPerf("L1PF%s" % label, "l1pfCandidates%s:PF" % label)
+    monitorPerf("L1Puppi%s" % label, "l1pfCandidates%s:Puppi"% label)
+
+
 def addRefs(calo=True,tk=True):
     process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
     process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1pfCandidates", "Puppi") # make sure the process name is not pre-encoded
