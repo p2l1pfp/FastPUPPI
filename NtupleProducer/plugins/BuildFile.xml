@@ -8,7 +8,7 @@
 <use name="DataFormats/METReco"/>
 <use name="DataFormats/Math"/>
 <use name="DataFormats/NanoAOD"/>
-<use name="DataFormats/Phase2L1ParticleFlow"/>
+<use name="DataFormats/L1TParticleFlow"/>
 <use name="FWCore/Framework"/>
 <use name="FWCore/ParameterSet"/>
 <use name="FWCore/ServiceRegistry"/>
