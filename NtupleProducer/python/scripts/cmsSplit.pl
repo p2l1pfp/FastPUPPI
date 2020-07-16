@@ -216,6 +216,9 @@ if (defined($dbsql)) {
     }
 }  elsif (defined($filedir)) {
     print "Using input files from $filedir\n" if $verbose;
+    if ($filedir =~ m{^/eos/cms} && !(-d '/eos/cms')) {
+        $filedir =~ s{^/eos/cms}{};
+    }
     if ($filedir =~ m{^/store/}) {
         my $stdir  = dirname($filedir);
         my $stglob = basename($filedir);

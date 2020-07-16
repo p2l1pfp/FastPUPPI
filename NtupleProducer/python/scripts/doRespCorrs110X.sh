@@ -1,8 +1,8 @@
 #!/bin/bash
 
-V="110X_v0"
+V="110X_v1.2"
 PLOTDIR="plots/11_1_X/from110X/${V}/corr"
-SAMPLES="--110X_v0";
+SAMPLES="--110X_v1";
 
 PU=PU0
 if [[ "$1" == "--pu200" ]]; then 
@@ -17,11 +17,11 @@ fi
 
 
 
-if [[ "$1" == "--backup" ]]; then
-    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoubleMuon_gun_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,SingleElectron_PT2to200,SingleKaon_PT0to200_eta1p4To3p1,SinglePhoton_PT2to200}_${PU}.${V}.0.root); # ,Mu_FlatPt2to100
+if [[ "$1" == "--backup" ]]; then  # DoubleMuon_gun_FlatPt-1To100,SingleElectron_PT2to200,SingleKaon_PT0to200_eta1p4To3p1,SinglePhoton_PT2to200
+    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.0.root); 
     shift;
 else
-    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoubleMuon_gun_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,SingleElectron_PT2to200,SingleKaon_PT0to200_eta1p4To3p1,SinglePhoton_PT2to200}_${PU}.${V}.root);
+    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.root); 
 fi;
 
 W=$1; shift;
@@ -40,8 +40,8 @@ case $W in
          cp -v hadcorr_barrel_110X.root  $CMSSW_BASE/src/L1Trigger/Phase2L1ParticleFlow/data
          ;;
     hgc)
-         python scripts/respCorrSimple.py $NTUPLES $PLOTDIR/$W -p mix  -w L1RawHGCal_pt -e L1RawHGCal_pt --fitrange 15 150 --root hadcorr_HGCal3D_TC_110X.root \
-                    --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmax 150 --hgcal-eta && \
+         python scripts/respCorrSimple.py $NTUPLES $PLOTDIR/$W -p mix  -w L1RawHGCal_pt -e L1RawHGCal_pt --fitrange 15 100 --root hadcorr_HGCal3D_TC_110X.root \
+                    --emf-slices L1RawHGCalEM_pt02/L1RawHGCal_pt02 0.125,0.250,0.50,0.875,1.125  --ptmax 100 --hgcal-eta && \
          cp -v hadcorr_HGCal3D_TC_110X.root  $CMSSW_BASE/src/L1Trigger/Phase2L1ParticleFlow/data
          ;;
     hf)
@@ -74,8 +74,8 @@ case $W in
     rerun)
          python runRespNTupler.py || exit 1;
          for f in $NTUPLES; do test -f $f && mv -v $f ${f/$V/$V.0}; done
-         for X in {MultiPion_PT0to200,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,SingleElectron_PT2to200,SinglePhoton_PT2to200,SingleKaon_PT0to200_eta1p4To3p1,DoubleMuon_gun_FlatPt-1To100}_${PU}; do #  Mu_FlatPt2to100
-             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU();' --maxfiles 99; 
+         for X in {MultiPion_PT0to200,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,K0Long_PT0to200_gun}_${PU}; do
+             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU();' ;  # --maxfiles 999;
              grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && break || true;
          done
          ;;
@@ -90,11 +90,9 @@ case $W in
     plot-hgc)
          python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,electron --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 100 --ptdef pt02,ptbest
          python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,electron --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 0.35 --ptmax 100 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,mixmix  --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,mixmix  --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,ptbest
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p kshort  --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,pt
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p kshort  --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,pt
-         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,electron,pion,mixmix  -w debug-hgc --eta 1.3 3.3 --no-pt  --ymax 1.8 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,klong,mixmix  --gauss -w debug-hgc --eta 1.7 2.5 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p pion,klong,mixmix  --gauss -w debug-hgc --eta 2.5 3.0 --no-eta --ymax 1.8 --ymaxRes 1.2  --ptmax 100 --ptdef pt02,ptbest
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,electron,pion,klong,mixmix  -w debug-hgc --eta 1.3 3.3 --no-pt  --ymax 1.8 --ptdef pt02,ptbest
          ;;
     plot-hf)
          python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -p photon,pion,mixmix --gauss -w debug-hf --eta 3.0 3.5  --ymax 1.8 --ymaxRes 1.5 --ptmax 100 --ptdef pt02,ptbest --no-eta
@@ -107,8 +105,7 @@ case $W in
     plots-pf)
          if [[ "$PU" == "PU0" ]]; then
              python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon  -g  --ymaxRes 0.35 --ptmax 100 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,mixmix      -g  --ymaxRes 1.2  --ptmax 100 -E 3.0
-             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p kshort           -g  --ymaxRes 1.2  --ptmax 100 --eta 1.3 3.3 --ptdef pt02,pt
+             python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,mixmix,klong      -g  --ymaxRes 1.2  --ptmax 100 -E 3.0
              python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,photon,mixmix -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
              python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,photon,mixmix -g  --eta 3.5 4.5  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit --no-eta
          else

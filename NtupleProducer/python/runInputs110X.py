@@ -1,7 +1,7 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("IN", eras.Phase2C9_trigger)
+process = cms.Process("IN", eras.Phase2C9)
 process.load('Configuration.StandardSequences.Services_cff')
 process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
 process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
@@ -10,7 +10,7 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', '')
 
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
@@ -20,21 +20,13 @@ process.load("L1Trigger.TrackFindingTracklet.Tracklet_cfi")
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/relval/CMSSW_11_0_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU25ns_110X_mcRun4_realistic_v3_2026D49PU200-v2/10000/C8EAEB8B-43B0-B247-882D-125005FF50A6.root'),
-    inputCommands = cms.untracked.vstring("keep *", 
-        "drop l1tHGCalTowerMapBXVector_hgcalTriggerPrimitiveDigiProducer_towerMap_HLT",
-        "drop *_hgcalTriggerPrimitiveDigiProducer_*_*",
-        "drop l1tEMTFHit2016Extras_simEmtfDigis_CSC_HLT",
-        "drop l1tEMTFHit2016Extras_simEmtfDigis_RPC_HLT",
-        "drop l1tEMTFHit2016s_simEmtfDigis__HLT",
-        "drop l1tEMTFTrack2016Extras_simEmtfDigis__HLT",
-        "drop l1tEMTFTrack2016s_simEmtfDigis__HLT")
-
+    fileNames = cms.untracked.vstring('/store/relval/CMSSW_11_0_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU25ns_110X_mcRun4_realistic_v3_2026D49PU200-v2/10000/5FCE3C90-998F-F246-AD88-23C0F54CAA21.root'),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(25))
 process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
 
 process.p = cms.Path(
+    process.TrackTriggerClustersStubs +
     process.offlineBeamSpot +
     process.TTTracksFromTrackletEmulation +
     process.SimL1Emulator
@@ -49,10 +41,10 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_genMetTrue_*_*",
             # --- PF IN
             "keep *_TTTracksFromTrackletEmulation_*_*",
-            # ecal
-            "keep *_l1EGammaCrystalsProducer_L1EGXtalClusterNoCuts_*",
-            "keep *_l1EGammaCrystalsProducer_*_*",
-            # HGC
+            # new ecal and hcal
+            "keep *_L1EGammaClusterEmuProducer_*_*",
+            # hcal (old, used for HF)
+            "keep *_simHcalTriggerPrimitiveDigis__*",
             #"keep *_hgcalVFEProducer_*_IN", # uncomment to be able to re-run the concentrator
             "keep *_hgcalConcentratorProducer*_*_IN",
             #"keep *_hgcalBackEndLayer1Producer*_*_IN",
@@ -63,10 +55,6 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_simGmtStage2Digis__*",
             "keep *_simGtExtFakeStage2Digis_*_*",
             "keep *_me0TriggerPseudoDigis_*_*",
-            # hcal (old)
-            "keep *_simHcalTriggerPrimitiveDigis__*",
-            # new ecal and hcal
-            "keep *_L1EGammaClusterEmuProducer_*_*",
             # --- Stage2 ---
             "keep *_simCaloStage2Digis_*_*",
             # --- VERTEXING ---

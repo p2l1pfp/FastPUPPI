@@ -102,7 +102,7 @@ for iev,event in enumerate(events):
         print "Gen jets in the event:"
     for j in allGenJ:
         if j:
-            if abs(j.eta()) > 2.5: continue
+            #if abs(j.eta()) > 2.5: continue
             #if j.mcId != 1 or j.pt() < 20: continue
             if j.pt() < options.minPt: continue
             print "------------------------"     
@@ -161,6 +161,10 @@ for iev,event in enumerate(events):
                 p4unpack = ROOT.l1t.CaloTools.p4MP if ":MP" in a else ROOT.l1t.CaloTools.p4Demux
                 for o in objs: 
                     o.setP4(p4unpack(o))
+            elif "l1tp2::CaloTower" in a:
+                objs = [ o for o in objs if o.hcalTowerEt()+o.ecalTowerEt() > 0 ]
+                for o in objs:
+                    o.setP4(ROOT.reco.Particle.PolarLorentzVector( o.hcalTowerEt()+o.ecalTowerEt(), o.towerEta(), o.towerPhi(), 0. ))
             if j:
                 matches = [ p for p in objs if deltaR(p,j) < 0.5 ]
                 for d in matches: d.dr = deltaR(d,j)
