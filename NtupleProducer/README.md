@@ -1,14 +1,14 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_11_1_0_pre6
-cd CMSSW_11_1_0_pre6/src
+cmsrel CMSSW_11_1_0_patch2
+cd CMSSW_11_1_0_patch2/src
 cmsenv
-git cms-init
-git cms-checkout-topic -u p2l1pfp:L1PF_11_1_X
+git cms-checkout-topic p2l1pfp:L1PF_11_1_0_patch2
+git clone https://github.com/gpetruc/L1Trigger-Phase2L1ParticleFlow.git -b UpdateCalib-CMSSW_11_1_0_patch2 $CMSSW_BASE/external/$SCRAM_ARCH/data/L1Trigger/Phase2L1ParticleFlow/data
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_0_X
 
 scram b -j8
 ```
@@ -18,10 +18,9 @@ The first step is to produce the inputs:
 cd FastPUPPI/NtupleProducer/python/
 cmsRun runInputs106X.py # 
 ```
-Currently only two kinds of samples are supported:
- * `10_6_X` : L1T TDR, Phase2C8, Geometry D41 using HGCal v10
+Currently only these kind of samples are supported:
  * `11_0_X` : HLT TDR, Phase2C9, Geometry D49, HGCal v11.
-The older `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported.
+The older `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported. Support for `10_6_X` (L1T TDR) could be recovered if requested.
 
 By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
 This however takes up a substantial disk space especially at PU 200. 
@@ -42,8 +41,8 @@ NB:
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runRespNTupler.py --110X_v0 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v0  --inline-customize 'goGun()'
-./scripts/prun.sh runRespNTupler.py --110X_v0 TTbar_PU0 TTbar_PU0.110X_v0
+./scripts/prun.sh runRespNTupler.py --110X_v1 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v1  --inline-customize 'goGun()'
+./scripts/prun.sh runRespNTupler.py --110X_v1 TTbar_PU0 TTbar_PU0.110X_v1
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
@@ -57,7 +56,7 @@ This produces both a response ntuple like the one for the runRespNTupler.py (but
 To run the ntuplizer over many files do for instance:
 
 ```
-./scripts/prun.sh runPerformanceNTuple.py --110X_v0  TTbar_PU200 TTbar_PU200.110X_v0 --inline-customize 'addCHS();addTKs()';
+./scripts/prun.sh runPerformanceNTuple.py --110X_v1  TTbar_PU200 TTbar_PU200.110X_v1 --inline-customize 'addCHS();addTKs()';
 ```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
@@ -66,8 +65,8 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 1) For single particle or jet response:
 
 ```
-python scripts/respPlots.py respTupleNew_SinglePion_PU0.110X_v0.root plots_dir -w l1pfw -p pion
-python scripts/respPlots.py respTupleNew_TTbar_PU200.110X_v0.root plots_dir -w l1pf -p jet
+python scripts/respPlots.py respTupleNew_SinglePion_PU0.110X_v1.root plots_dir -w l1pfw -p pion
+python scripts/respPlots.py respTupleNew_TTbar_PU200.110X_v1.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet, MET and HT plots, the first step is to produce JECs
