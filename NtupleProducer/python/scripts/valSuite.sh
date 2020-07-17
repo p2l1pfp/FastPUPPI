@@ -59,7 +59,7 @@ while [[ "$W" != "" ]]; do
     run-jets-nopu)
          python runPerformanceNTuple.py || exit 1;
          for X in TTbar_PU0; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();noPU()'; 
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addSeededConeJets("PF","l1pfCandidates:PF");noPU()'; 
          done
          ;;
     plot-jets-nopu)
@@ -82,7 +82,7 @@ while [[ "$W" != "" ]]; do
     run-jets)
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible}_PU200; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs()' --max-files 60;
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addSeededConeJets()' --max-files 60;
              #break 
          done
          ;;
@@ -112,7 +112,7 @@ while [[ "$W" != "" ]]; do
     run-rates)
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do  
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addRefs(calo=False,tk=False)' --maxfiles 80;
+             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addRefs(calo=False,tk=False);addSeededConeJets()' --maxfiles 80;
          done
          ;;
     make-jecs)

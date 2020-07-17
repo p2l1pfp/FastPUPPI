@@ -578,6 +578,13 @@ def addBitwise(label="Bitwise",alsoPuppi="linpuppi"):
     monitorPerf("L1Puppi%s" % label, "l1pfCandidates%s:Puppi"% label)
 
 
+def addSeededConeJets(what="Puppi",src="l1pfCandidates:Puppi"):
+    process.load('L1Trigger.Phase2L1Jets.L1SeedConePFJetProducer_cfi')
+    scModule = process.L1SeedConePFJetProducer.clone(L1PFObjects = src)
+    setattr(process, 'sc'+what, scModule)
+    process.extraPFStuff.add(scModule)
+    setattr(process.l1pfjetTable.jets, 'sc'+what, cms.InputTag('sc'+what))
+
 def addRefs(calo=True,tk=True):
     process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
     process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1pfCandidates", "Puppi") # make sure the process name is not pre-encoded
