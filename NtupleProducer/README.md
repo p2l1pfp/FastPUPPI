@@ -1,14 +1,13 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_11_1_0_patch2
-cd CMSSW_11_1_0_patch2/src
+cmsrel CMSSW_11_1_2
+cd CMSSW_11_1_2/src
 cmsenv
-git cms-checkout-topic p2l1pfp:L1PF_11_1_0_patch2
-git clone https://github.com/gpetruc/L1Trigger-Phase2L1ParticleFlow.git -b UpdateCalib-CMSSW_11_1_0_patch2 $CMSSW_BASE/external/$SCRAM_ARCH/data/L1Trigger/Phase2L1ParticleFlow/data
+git cms-checkout-topic p2l1pfp:L1PF_11_1_2_X
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_0_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
 
 scram b -j8
 ```

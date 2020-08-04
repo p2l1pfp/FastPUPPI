@@ -578,7 +578,7 @@ def addBitwise(label="Bitwise",alsoPuppi="linpuppi"):
 
 
 def addSeededConeJets(what="Puppi",src="l1pfCandidates:Puppi"):
-    process.load('L1Trigger.Phase2L1Jets.L1SeedConePFJetProducer_cfi')
+    process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
     scModule = process.L1SeedConePFJetProducer.clone(L1PFObjects = src)
     setattr(process, 'sc'+what, scModule)
     process.extraPFStuff.add(scModule)
