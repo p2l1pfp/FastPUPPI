@@ -58,7 +58,7 @@ process.extraPFStuff.add(
 )
 
 def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True,
-                makeInputMultiplicities=False, makeOutputMultiplicities=False):
+                makeInputMultiplicities=False, makeOutputMultiplicities=False, saveCands=False):
     def _add(name, what):
         setattr(process, name, what)
         process.extraPFStuff.add(what)
@@ -79,6 +79,8 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
     if makeJets:
         _add('ak4'+label, ak4PFJets.clone(src = tag, doAreaFastjet = False))
         setattr(process.l1pfjetTable.jets, label, cms.InputTag('ak4'+label))
+    if saveCands:
+        setattr(process.l1pfcandTable.cands, label, cms.InputTag(tag))
     if makeMET:
         _add('met'+label, pfMet.clone(src = tag, calculateSignificance = False))
         setattr(process.l1pfmetTable.mets, label, cms.InputTag('met'+label))
@@ -145,6 +147,17 @@ process.l1pfjetTable = cms.EDProducer("L1PFJetTableProducer",
     ),
 )
 
+process.l1pfcandTable = cms.EDProducer("L1PFCandTableProducer",
+    commonSel = cms.string("pt > 0.0 && abs(eta) < 10.0"),
+    cands = cms.PSet(
+    ),
+    moreVariables = cms.PSet(
+        puppiWeight = cms.string("puppiWeight"),
+        pdgId = cms.string("pdgId"),
+        charge = cms.string("charge")
+    ),
+)
+
 process.l1pfmetTable = cms.EDProducer("L1PFMetTableProducer",
     genMet = cms.InputTag("genMetTrue"), 
     flavour = cms.string(""),
@@ -162,7 +175,7 @@ monitorPerf("L1Puppi", "l1ctLayer1:Puppi")
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.p = cms.Path(
         process.ntuple + #process.content +
-        process.l1pfjetTable + 
+        process.l1pfjetTable + process.l1pfcandTable +
         process.l1pfmetTable + process.l1pfmetCentralTable
         )
 process.p.associate(process.extraPFStuff)
