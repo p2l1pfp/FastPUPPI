@@ -1,10 +1,10 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_11_1_2
-cd CMSSW_11_1_2/src
+cmsrel CMSSW_11_1_6
+cd CMSSW_11_1_6/src
 cmsenv
-git cms-checkout-topic p2l1pfp:L1PF_11_1_2_X
+git cms-checkout-topic p2l1pfp:L1PF_11_1_6_X
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
