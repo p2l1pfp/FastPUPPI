@@ -39,8 +39,14 @@ tobjs = []
 labels = []
 frame = None
 for i,fname in enumerate(args[2:]):
+    obj_to_get = args[1]
     if "," in fname:
-        (fname,colorname) = fname.split(",")
+        if fname.count(",") == 1:
+            (fname,colorname) = fname.split(",")
+        elif fname.count(",") == 2:
+            (fname,obj_to_get,colorname) = fname.split(",")
+        else:
+            raise RuntimeError("Too many commas in '%s' % fname")
         color = eval("ROOT.k"+colorname)
     else:
         color = colors.pop()
@@ -48,13 +54,16 @@ for i,fname in enumerate(args[2:]):
         (name, fname) = fname.split("=")
     else: 
         name = fname.replace(".root","")
+    if not os.path.isfile(fname):
+        print "File %s does not exist" % fname
+        sys.exit(1)
     tfile = ROOT.TFile.Open(fname)
     if not tfile: 
         print "ERROR opening %s" % tfile
         continue
-    tobj = tfile.Get(args[1])
+    tobj = tfile.Get(obj_to_get)
     if not tobj:
-        print "ERROR fetching %r from %s" % (args[1], tfile)
+        print "ERROR fetching %r from %s" % (obj_to_get, tfile)
         tfile.ls()
         continue
     if not frame:

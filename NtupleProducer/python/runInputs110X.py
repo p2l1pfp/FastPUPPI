@@ -29,7 +29,7 @@ process.p = cms.Path(
     process.TrackTriggerClustersStubs +
     process.offlineBeamSpot +
     process.TTTracksFromTrackletEmulation +
-    process.TTTracksFromExtendedTrackletEmulation +
+    #process.TTTracksFromExtendedTrackletEmulation +
     process.SimL1Emulator
 )
 
@@ -42,7 +42,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_genMetTrue_*_*",
             # --- PF IN
             "keep *_TTTracksFromTrackletEmulation_*_*",
-            "keep *_TTTracksFromExtendedTrackletEmulation_*_*",
+            #"keep *_TTTracksFromExtendedTrackletEmulation_*_*",
             # new ecal and hcal
             "keep *_L1EGammaClusterEmuProducer_*_*",
             # hcal (old, used for HF)

@@ -15,7 +15,7 @@ scram b -j8
 The first step is to produce the inputs:
 ```
 cd FastPUPPI/NtupleProducer/python/
-cmsRun runInputs106X.py # 
+cmsRun runInputs110X.py 
 ```
 Currently only these kind of samples are supported:
  * `11_0_X` : HLT TDR, Phase2C9, Geometry D49, HGCal v11.

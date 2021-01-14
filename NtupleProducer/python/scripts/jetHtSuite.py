@@ -80,7 +80,7 @@ def makeCumulativeHTEffGenCut(name, corrArray, genArray, genThr, xmax, norm):
     for ib in xrange(0, nbins):
         msum += ret.GetBinContent(nbins-ib) * tot
         ret.SetBinContent(nbins-ib, msum)
-    ret.SetDirectory(None)
+    ret.SetDirectory(ROOT.nullptr)
     return ret
 
 def makeEffHist(name, refArr, corrArr, corrThr, xmax, logxbins=None):
