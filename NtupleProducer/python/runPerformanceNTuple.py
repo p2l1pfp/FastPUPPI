@@ -639,4 +639,11 @@ def doDumpFile(basename="TTbar_PU200"):
         l1pf.genOrigin = cms.InputTag("genParticles","xyz0")
     process.maxEvents.input = 100
 
+def addEDMOutput():
+    process.out = cms.OutputModule("PoolOutputModule",
+                                   fileName = cms.untracked.string("debugPF.root"),
+                                   SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p"))
+                               )
+    process.end = cms.EndPath(process.out)
+    process.maxEvents.input = 10
 
