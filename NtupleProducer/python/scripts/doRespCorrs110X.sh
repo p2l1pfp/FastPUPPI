@@ -1,8 +1,8 @@
 #!/bin/bash
 
-V="110X_v1.2"
+V="110X_v2.0"
 PLOTDIR="plots/11_1_X/from110X/${V}/corr"
-SAMPLES="--110X_v1";
+SAMPLES="--110X_v2";
 
 PU=PU0
 if [[ "$1" == "--pu200" ]]; then 
@@ -17,7 +17,7 @@ fi
 
 
 
-if [[ "$1" == "--backup" ]]; then  # DoubleMuon_gun_FlatPt-1To100,SingleElectron_PT2to200,SingleKaon_PT0to200_eta1p4To3p1,SinglePhoton_PT2to200
+if [[ "$1" == "--backup" ]]; then # ,DoublePhoton_FlatPt-1To100
     NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.0.root); 
     shift;
 else
@@ -74,7 +74,7 @@ case $W in
     rerun)
          python runRespNTupler.py || exit 1;
          for f in $NTUPLES; do test -f $f && mv -v $f ${f/$V/$V.0}; done
-         for X in {MultiPion_PT0to200,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,K0Long_PT0to200_gun}_${PU}; do
+         for X in {MultiPion_PT0to200,DoublePhoton_FlatPt-1To100,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,K0Long_PT0to200_gun}_${PU}; do
              ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU();' ;  # --maxfiles 999;
              grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && break || true;
          done

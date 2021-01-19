@@ -9,24 +9,19 @@ fi
 N=8
 if [[ "$1" == "-j" ]]; then N=$2; shift; shift; fi;
 
-#if [[ "$1" == "--106X_v0" ]]; then
-#    shift;
-#    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_X/NewInputs106X/200420.done/$1
-#    PREFIX="inputs106X_"
-#    if echo $CODE | grep -q 106X; then
-#        echo "Assume $CODE is ready for 106X";
-#    else
-#        echo "Convert ${CODE}.py to ${CODE/_110X/}_106X.py automatically updating era and geometry";
-#        sed -e 's+Phase2C9+Phase2C8+g' -e 's+GeometryExtended2026D49+GeometryExtended2026D41+' -e 's+auto:phase2_realistic_T15+auto:phase2_realistic+' ${CODE}.py > ${CODE/_110X/}_106X.py;
-#        CODE=${CODE/_110X/}_106X
-#    fi
-if [[ "$1" == "--110X_v1" ]]; then
+
+if [[ "$1" == "--110X_v2" ]]; then
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/$1
+    PREFIX="inputs110X_"
+elif [[ "$1" == "--110X_v1" ]]; then
     shift;
     MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/150720.done/$1
     PREFIX="inputs110X_"
 else 
     echo "You mush specify the version of the input samples to run on "
-    echo "   --110X_v1 : 110X HLT MC inputs remade in 11_1_0_patch2 "
+    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6 (PLEASE USE THIS) "
+    echo "   --110X_v1 : 110X HLT MC inputs remade in 11_1_0_patch2 (old, better NOT to use)"
 fi;
  
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then

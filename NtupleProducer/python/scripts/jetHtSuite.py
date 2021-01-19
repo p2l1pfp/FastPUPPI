@@ -5,8 +5,7 @@ ROOT.gROOT.SetBatch(True)
 ROOT.gErrorIgnoreLevel = ROOT.kWarning
 
 from array import array
-from math import pow, sin, cos, hypot, sqrt
-import itertools
+from math import pow, sqrt
 from FastPUPPI.NtupleProducer.scripts.makeJecs import _progress
 from FastPUPPI.NtupleProducer.plotTemplate import plotTemplate
 
@@ -26,7 +25,7 @@ def makeCalcCpp(what):
     return None
 
 def makeGenArray(tree, what, ptCut, etaCut):
-    return makeCorrArray(tree, what, "Gen", ptCut, etaCut, None)
+    return makeCorrArray(tree, what, "Gen", ptCut, etaCut, ROOT.nullptr)
 
 def makeCorrArray(tree, what, obj, ptCorrCut, etaCut, corr, _cache={}):
     _key = (id(tree),what,obj,int(ptCorrCut*100),int(etaCut*1000))
@@ -80,7 +79,7 @@ def makeCumulativeHTEffGenCut(name, corrArray, genArray, genThr, xmax, norm):
     for ib in xrange(0, nbins):
         msum += ret.GetBinContent(nbins-ib) * tot
         ret.SetBinContent(nbins-ib, msum)
-    ret.SetDirectory(None)
+    ret.SetDirectory(ROOT.nullptr)
     return ret
 
 def makeEffHist(name, refArr, corrArr, corrThr, xmax, logxbins=None):
@@ -346,16 +345,16 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
           if plot.GetEfficiency(i) > plotparam:
               graph = plot.CreateGraph()
               xmin, xmax = xaxis.GetBinLowEdge(i-1), xaxis.GetBinCenter(i)
-              if graph.Eval(xmin,None,"S") > plotparam: 
+              if graph.Eval(xmin,ROOT.nullptr,"S") > plotparam: 
                   #print "ERROR xmin for %s @ %g (%g): i = %d" % (what+obj, rate, cut, i)
                   pass
-              elif graph.Eval(xmax,None,"S") < plotparam:
+              elif graph.Eval(xmax,ROOT.nullptr,"S") < plotparam:
                   #print "ERROR xmax for %s @ %g (%g): i = %d" % (what+obj, rate, cut, i)
                   pass
               else:
                   xmid = 0.5*(xmax+xmin)
                   while abs(xmax-xmin) > 0.05*(abs(xmax)+abs(xmin)):
-                      if graph.Eval(xmid,None,"S") < plotparam:
+                      if graph.Eval(xmid,ROOT.nullptr,"S") < plotparam:
                           xmin = xmid
                       else:
                           xmax = xmid

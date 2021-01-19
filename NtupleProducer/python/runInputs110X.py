@@ -10,7 +10,7 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, 'auto:phase2_realistic_T15', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_Candidate_2020_12_09_15_46_46', '')
 
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
@@ -20,7 +20,7 @@ process.load("L1Trigger.TrackFindingTracklet.Tracklet_cfi")
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('/store/relval/CMSSW_11_0_0/RelValTTbar_14TeV/GEN-SIM-DIGI-RAW/PU25ns_110X_mcRun4_realistic_v3_2026D49PU200-v2/10000/5FCE3C90-998F-F246-AD88-23C0F54CAA21.root'),
+    fileNames = cms.untracked.vstring('/store/mc/Phase2HLTTDRWinter20DIGI/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW/PU200_110X_mcRun4_realistic_v3-v2/110000/005E74D6-B50E-674E-89E6-EAA9A617B476.root',)
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(25))
 process.options = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
@@ -29,6 +29,7 @@ process.p = cms.Path(
     process.TrackTriggerClustersStubs +
     process.offlineBeamSpot +
     process.TTTracksFromTrackletEmulation +
+    #process.TTTracksFromExtendedTrackletEmulation +
     process.SimL1Emulator
 )
 
@@ -41,6 +42,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_genMetTrue_*_*",
             # --- PF IN
             "keep *_TTTracksFromTrackletEmulation_*_*",
+            #"keep *_TTTracksFromExtendedTrackletEmulation_*_*",
             # new ecal and hcal
             "keep *_L1EGammaClusterEmuProducer_*_*",
             # hcal (old, used for HF)

@@ -66,7 +66,7 @@ if __name__ == "__main__":
 
     etas = map(float,options.etabins.split(","))
     indextemplate = ROOT.TH1F("indextemplate", "", len(etas)-1, array('f', etas))
-    indextemplate.SetDirectory(None)
+    indextemplate.SetDirectory(ROOT.nullptr)
 
     methods = options.methods.split(",")
     ptCorrs = {}
