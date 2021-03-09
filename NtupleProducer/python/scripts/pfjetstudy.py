@@ -146,7 +146,7 @@ for iev,event in enumerate(events):
             elif a.startswith("l1tPF"): h = ihpf
             elif a.startswith("pfClu"): h = hpfc
             elif a.startswith("pfTra"): h = hpft
-            elif a.startswith("l1pf") : h = hpf1
+            elif a.startswith("l1pf") or a.startswith("l1ct"): h = hpf1
             elif a.startswith("hgcalBackEndLayer2Producer"): 
                 h = hhgc; alabel += ":HGCalBackendLayer2Processor3DClustering"
             elif a.startswith("hgcalTowerProducer"): 
