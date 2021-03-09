@@ -403,7 +403,16 @@ whats = [
         ("Firmware",  "L1PF$",         ROOT.kOrange+7, 34, 1.2),
     ]),
 
-
+    ('l1pf_newemu',[
+        ("Old",         "L1CMSSWPF$",  ROOT.kGray+2, 20, 2.0),
+        ("Old Tuned",   "L1PF$",       ROOT.kRed, 20, 1.5),
+        ("New",         "L1CTPF$",     ROOT.kGreen+2, 20, 1.0),
+    ]),
+    ('l1pfpu_newemu',[
+        ("Old",         "L1CMSSWPuppi$",  ROOT.kGray+2, 20, 2.0),
+        ("Old Tuned",   "L1Puppi$",       ROOT.kRed, 20, 1.5),
+        ("New",         "L1CTPuppi$",     ROOT.kGreen+2, 20, 1.0),
+    ]),
 
 ]
 

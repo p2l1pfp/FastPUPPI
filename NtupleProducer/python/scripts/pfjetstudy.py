@@ -146,7 +146,7 @@ for iev,event in enumerate(events):
             elif a.startswith("l1tPF"): h = ihpf
             elif a.startswith("pfClu"): h = hpfc
             elif a.startswith("pfTra"): h = hpft
-            elif a.startswith("l1pf") : h = hpf1
+            elif a.startswith("l1pf") or a.startswith("l1ct"): h = hpf1
             elif a.startswith("hgcalBackEndLayer2Producer"): 
                 h = hhgc; alabel += ":HGCalBackendLayer2Processor3DClustering"
             elif a.startswith("hgcalTowerProducer"): 
@@ -172,8 +172,9 @@ for iev,event in enumerate(events):
             else:
                 matches = [ p for p in objs if abs(p.eta()) < options.maxEta ]
                 for d in matches: d.dr = 0
+                matches.sort(key = lambda p : p.phi())
+                matches.sort(key = lambda p : p.eta())
                 matches.sort(key = lambda p : -p.pt())
-
             ptsum = 0
             # OK, try some MC matching for them
             if "PF" in a or "Puppi" in a: 

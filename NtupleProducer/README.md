@@ -1,10 +1,10 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_11_1_6
-cd CMSSW_11_1_6/src
+cmsrel CMSSW_11_1_7
+cd CMSSW_11_1_7/src
 cmsenv
-git cms-checkout-topic p2l1pfp:L1PF_11_1_6_X
+git cms-checkout-topic -u p2l1pfp:L1PF_11_1_7_X_newfirmware
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
@@ -40,8 +40,8 @@ NB:
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runRespNTupler.py --110X_v1 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v1  --inline-customize 'goGun()'
-./scripts/prun.sh runRespNTupler.py --110X_v1 TTbar_PU0 TTbar_PU0.110X_v1
+./scripts/prun.sh runRespNTupler.py --110X_v2 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v2  --inline-customize 'goGun()'
+./scripts/prun.sh runRespNTupler.py --110X_v2 TTbar_PU0 TTbar_PU0.110X_v2
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
@@ -55,7 +55,7 @@ This produces both a response ntuple like the one for the runRespNTupler.py (but
 To run the ntuplizer over many files do for instance:
 
 ```
-./scripts/prun.sh runPerformanceNTuple.py --110X_v1  TTbar_PU200 TTbar_PU200.110X_v1 --inline-customize 'addCHS();addTKs()';
+./scripts/prun.sh runPerformanceNTuple.py --110X_v2  TTbar_PU200 TTbar_PU200.110X_v2 --inline-customize 'addCHS();addTKs()';
 ```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
@@ -64,8 +64,8 @@ The third step is to produce the plots from the ntuple. The plotting scripts are
 1) For single particle or jet response:
 
 ```
-python scripts/respPlots.py respTupleNew_SinglePion_PU0.110X_v1.root plots_dir -w l1pfw -p pion
-python scripts/respPlots.py respTupleNew_TTbar_PU200.110X_v1.root plots_dir -w l1pf -p jet
+python scripts/respPlots.py respTupleNew_SinglePion_PU0.110X_v2.root plots_dir -w l1pfw -p pion
+python scripts/respPlots.py respTupleNew_TTbar_PU200.110X_v2.root plots_dir -w l1pf -p jet
 ```
 
 2) For jet, MET and HT plots, the first step is to produce JECs

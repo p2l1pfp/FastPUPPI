@@ -164,7 +164,7 @@ def goRegional(postfix="", relativeCoordinates=False):
     overlap=0.25 # 0.3
     getattr(process, 'l1pfProducer'+postfix+'Barrel').regions = cms.VPSet(
         cms.PSet(
-            etaBoundaries = cms.vdouble(-1.5, -0.5, 0.5, 1.5),
+            etaBoundaries = cms.vdouble(-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5),
             etaExtra = cms.double(overlap),
             phiExtra = cms.double(overlap),
             phiSlices = cms.uint32(9)
@@ -631,12 +631,17 @@ def noPU():
         if not pfc: continue
         pfc.emVsPUID.wp = "-1.0"
 
-def doDumpFile(basename="TTbar_PU200"):
-    goRegional(relativeCoordinates=True)
-    for det in "Barrel", "HGCal", "HGCalNoTK", "HF":
-        l1pf = getattr(process, 'l1pfProducer'+det)
-        l1pf.dumpFileName = cms.untracked.string(basename+"_"+det+".dump")
-        l1pf.genOrigin = cms.InputTag("genParticles","xyz0")
-    process.maxEvents.input = 100
+def addEDMOutput():
+    process.out = cms.OutputModule("PoolOutputModule",
+                                   fileName = cms.untracked.string("debugPF.root"),
+                                   SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p"))
+                               )
+    process.end = cms.EndPath(process.out)
+    process.maxEvents.input = 10
 
+def addCTL1():
+    process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
+    process.extraPFStuff.add(process.l1ctLayer1Barrel, process.l1ctLayer1HGCal, process.l1ctLayer1HGCalNoTK, process.l1ctLayer1HF, process.l1ctLayer1)
+    monitorPerf("L1CTPF", "l1ctLayer1:PF")
+    monitorPerf("L1CTPuppi", "l1ctLayer1:Puppi")
 
