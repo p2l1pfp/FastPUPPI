@@ -1,50 +1,30 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process("ID", eras.Phase2C4_trigger)
+process = cms.Process("ID", eras.Phase2C9)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
-process.MessageLogger.cerr.FwkReport.reportEvery = 1
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(1000))
+process.MessageLogger.cerr.FwkReport.reportEvery = 100
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs.root'),
+    fileNames = cms.untracked.vstring('file:inputs110X.root'),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2023D35Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2023D35_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '103X_upgrade2023_realistic_v2', '') 
-
-process.load("L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff")
-process.hgcalConcentratorProducerSTC = process.hgcalConcentratorProducer.clone()
-process.hgcalConcentratorProducerSTC.ProcessorParameters.Method = 'superTriggerCellSelect'
-process.hgcalConcentratorProducerSTC.ProcessorParameters.triggercell_threshold_silicon = 0
-process.hgcalConcentratorProducerSTC.ProcessorParameters.TCThreshold_fC = 0
-
-process.hgcalBackEndLayer1ProducerSTC =  process.hgcalBackEndLayer1Producer.clone()
-process.hgcalBackEndLayer1ProducerSTC.InputTriggerCells = cms.InputTag("hgcalConcentratorProducerSTC","HGCalConcentratorProcessorSelection")
-process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.clusterType = cms.string('dummyC2d')
-process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.threshold_scintillator = cms.double(0)
-process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.threshold_silicon      = cms.double(0)
-
-process.hgcalBackEndLayer2ProducerSTC = process.hgcalBackEndLayer2Producer.clone()
-process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.dR_multicluster = 0.03
-process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.type_multicluster = 'HistoMaxC3d'
-process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.threshold_histo_multicluster = 20
-process.hgcalBackEndLayer2ProducerSTC.InputCluster = cms.InputTag("hgcalBackEndLayer1ProducerSTC","HGCalBackendLayer1Processor2DClustering")
-process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.dR_multicluster_byLayer = cms.vdouble(
-            [0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12 )
+process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_Candidate_2020_12_09_15_46_46', '')
 
 ntuple = cms.EDAnalyzer("IDNTuplizer",
-    src = cms.InputTag("FILLME"),
+    src = cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering"),
     cut = cms.string("pt > 1"),
     genParticles = cms.InputTag("genParticles"),
     propagateToCalo = cms.bool(True),
@@ -52,37 +32,35 @@ ntuple = cms.EDAnalyzer("IDNTuplizer",
     minRecoPtOverGenPt = cms.double(0.3),
     onlyMatched = cms.bool(False),
     variables = cms.PSet(
-	pt = cms.string("pt"),
-	emPt = cms.string("? hOverE >= 0 ? pt/(1+hOverE) : 0"),
- 	eta = cms.string("eta"),
- 	phi = cms.string("phi"),
- 	hOverE = cms.string("hOverE"),
+        pt = cms.string("pt"),
+        emPt = cms.string("? hOverE >= 0 ? pt/(1+hOverE) : 0"),
+        eta = cms.string("eta"),
+        phi = cms.string("phi"),
+        hOverE = cms.string("hOverE"),
         emf = cms.string("? hOverE >= 0 ? 1/(1+hOverE) : 0"),
- 	showerLength = cms.string("showerLength"),
- 	coreShowerLength = cms.string("coreShowerLength"),
- 	firstLayer = cms.string("firstLayer"),
- 	maxLayer = cms.string("maxLayer"),
- 	eMax = cms.string("eMax"),
- 	eMaxOverE = cms.string("eMax/energy"),
- 	sigmaEtaEtaMax = cms.string("sigmaEtaEtaMax"),
- 	sigmaPhiPhiMax = cms.string("sigmaPhiPhiMax"),
- 	sigmaEtaEtaTot = cms.string("sigmaEtaEtaTot"),
- 	sigmaPhiPhiTot = cms.string("sigmaPhiPhiTot"),
- 	sigmaZZ = cms.string("sigmaZZ"),
- 	sigmaRRTot = cms.string("sigmaRRTot"),
- 	sigmaRRMax = cms.string("sigmaRRMax"),
- 	sigmaRRMean = cms.string("sigmaRRMean"),
+        showerLength = cms.string("showerLength"),
+        coreShowerLength = cms.string("coreShowerLength"),
+        firstLayer = cms.string("firstLayer"),
+        maxLayer = cms.string("maxLayer"),
+        eMax = cms.string("eMax"),
+        eMaxOverE = cms.string("eMax/energy"),
+        sigmaEtaEtaMax = cms.string("sigmaEtaEtaMax"),
+        sigmaPhiPhiMax = cms.string("sigmaPhiPhiMax"),
+        sigmaEtaEtaTot = cms.string("sigmaEtaEtaTot"),
+        sigmaPhiPhiTot = cms.string("sigmaPhiPhiTot"),
+        sigmaZZ = cms.string("sigmaZZ"),
+        sigmaRRTot = cms.string("sigmaRRTot"),
+        sigmaRRMax = cms.string("sigmaRRMax"),
+        sigmaRRMean = cms.string("sigmaRRMean"),
+        zBarycenter = cms.string("zBarycenter"),
+        layer10percent = cms.string("layer10percent"),
+        layer50percent = cms.string("layer50percent"),
+        layer90percent = cms.string("layer90percent"),
+        triggerCells67percent = cms.string("triggerCells67percent"),
+        triggerCells90percent = cms.string("triggerCells90percent"),
     ),
 )
-
-process.ntupleSTC = ntuple.clone( src = cms.InputTag("hgcalBackEndLayer2ProducerSTC","HGCalBackendLayer2Processor3DClustering") )
-  
-modules = [
-    # process.hgcalConcentratorProducerSTC, # already in the inputs
-    #process.hgcalBackEndLayer1ProducerSTC,
-    #process.hgcalBackEndLayer2ProducerSTC,
-    process.ntupleSTC
-]
+process.ntuple = ntuple.clone()
 
 def newClustering(postfix,
         concentratorAlgo="thresholdSelect", # 'thresholdSelect' or 'superTriggerCellSelect'
@@ -131,8 +109,37 @@ def newClustering(postfix,
     modules.append(nt)
 
 
-#newClustering("STCdR03", reuseConc="STC", reuseL1="STC", layer2Threshold=20, layer2dR = 0.03)
+#process.load("L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff")
+#process.hgcalConcentratorProducerSTC = process.hgcalConcentratorProducer.clone()
+#process.hgcalConcentratorProducerSTC.ProcessorParameters.Method = 'superTriggerCellSelect'
+#process.hgcalConcentratorProducerSTC.ProcessorParameters.triggercell_threshold_silicon = 0
+#process.hgcalConcentratorProducerSTC.ProcessorParameters.TCThreshold_fC = 0
+#
+#process.hgcalBackEndLayer1ProducerSTC =  process.hgcalBackEndLayer1Producer.clone()
+#process.hgcalBackEndLayer1ProducerSTC.InputTriggerCells = cms.InputTag("hgcalConcentratorProducerSTC","HGCalConcentratorProcessorSelection")
+#process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.clusterType = cms.string('dummyC2d')
+#process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.threshold_scintillator = cms.double(0)
+#process.hgcalBackEndLayer1ProducerSTC.ProcessorParameters.C2d_parameters.threshold_silicon      = cms.double(0)
+#
+#process.hgcalBackEndLayer2ProducerSTC = process.hgcalBackEndLayer2Producer.clone()
+#process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.dR_multicluster = 0.03
+#process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.type_multicluster = 'HistoMaxC3d'
+#process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.threshold_histo_multicluster = 20
+#process.hgcalBackEndLayer2ProducerSTC.InputCluster = cms.InputTag("hgcalBackEndLayer1ProducerSTC","HGCalBackendLayer1Processor2DClustering")
+#process.hgcalBackEndLayer2ProducerSTC.ProcessorParameters.C3d_parameters.dR_multicluster_byLayer = cms.vdouble(
+#                    [0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12 )
 
+#process.ntupleSTC = ntuple.clone( src = cms.InputTag("hgcalBackEndLayer2ProducerSTC","HGCalBackendLayer2Processor3DClustering") )
+
+modules = [
+    #process.hgcalConcentratorProducerSTC, # already in the inputs
+    #process.hgcalBackEndLayer1ProducerSTC,
+    #process.hgcalBackEndLayer2ProducerSTC,
+    #process.ntupleSTC,
+    process.ntuple
+]
+
+#newClustering("STCdR03", reuseConc="STC", reuseL1="STC", layer2Threshold=20, layer2dR = 0.03)
 #newClustering("STC070", concentratorAlgo="superTriggerCellSelect", concentratorThreshold=0.7, layer1Threshold=0, layer2Threshold=20, 
 #                    layer2dR = ([0] + [0.010]*7 + [0.020]*7 + [0.030]*7 + [0.040]*7 +   [0.040]*6 + [0.050]*6  +  [0.050]*12))
 #newClustering("STC073",  reuseConc="STC070", layer1Threshold=3, layer2Threshold=20, 
@@ -159,4 +166,5 @@ def hgcAcc(pdgId,ptmin=2):
 def xdup():
     process.options.numberOfThreads = cms.untracked.uint32(2)
     process.options.numberOfStreams = cms.untracked.uint32(0)
+
 
