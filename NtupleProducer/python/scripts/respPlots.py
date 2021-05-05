@@ -71,6 +71,8 @@ def doRespEtaProf(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=9999999
     return doEtaProf(oname, tree, name, "("+expr+")/"+mcpt, cut, maxEntries=maxEntries);
 def ptBins(oname):
     if "jet" in oname: 
+        if "jetmax" in oname: 
+            return [50,100,150,200,250,300,400,500,700]
         return [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250,300]
     else:
         return [1,2,3,4,5,7.5,10,12.5,15,17.5,20,25,30,35,40,45,50,55,60,70,80,90,100,120,150,175,200,250]
@@ -463,6 +465,7 @@ if __name__ == "__main__":
             ("muon", "abs(mc_id) == 13", 10, 5),
             ("tau", "(abs(mc_id) == 15 || abs(mc_id) == 211)", 20, 5),
             ("jet", "abs(mc_id) == 0", 30, 5),
+            ("jetmax", "abs(mc_id) == 0", 50, 5),
             ("null", "abs(mc_id) == 999", 0, 5)
         ]:
         if options.particle and (particle not in selparticles): 

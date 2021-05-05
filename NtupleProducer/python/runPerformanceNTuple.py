@@ -1,5 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
+from PhysicsTools.NanoAOD.common_cff import Var, ExtVar 
 
 process = cms.Process("RESP", eras.Phase2C9)
 
@@ -33,26 +34,21 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_Candidate_2020_12_09_15_46_46', '')
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
+process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
 
-process.extraPFStuff = cms.Task()
-
-process.runPF = cms.Sequence( 
-    process.l1ParticleFlow 
-)
+process.extraPFStuff = cms.Task(process.l1ParticleFlowTask, process.l1ctLayer1Task)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
 process.genMetCentralTrue = process.genMetTrue.clone(src = cms.InputTag("centralGen"))
-process.genMetBarrelTrue = process.genMetTrue.clone(src = cms.InputTag("barrelGen"))
 process.extraPFStuff.add(
     process.genParticlesForMETAllVisible,
     process.centralGen,
     process.barrelGen,
-    process.genMetCentralTrue,
-    process.genMetBarrelTrue
+    process.genMetCentralTrue
 )
 
-def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True, makeBarrelMET=True,
+def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True,
                 makeInputMultiplicities=False, makeOutputMultiplicities=False):
     def _add(name, what):
         setattr(process, name, what)
@@ -81,17 +77,27 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             _add('central'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 2.4")))
             _add('met'+label+'Central', pfMet.clone(src = 'central'+label, calculateSignificance = False))
             setattr(process.l1pfmetCentralTable.mets, label, cms.InputTag('met'+label+'Central'))
-        if makeBarrelMET:
-            _add('barrel'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 1.5")))
-            _add('met'+label+'Barrel', pfMet.clone(src = 'barrel'+label, calculateSignificance = False))
-            setattr(process.l1pfmetBarrelTable.mets, label, cms.InputTag('met'+label+'Barrel'))
-    if makeInputMultiplicities:
+    if makeInputMultiplicities == "CTL1":
+        D = tag.split(":")[0] # l1ctLayer1[Barrel,HGCal,HF] usually
+        I = tag.split(":")[1] # Calo, EmCalo, TK, or Mu, usually
+        for W in ("Reg", "Sec"):
+            for X in ("tot","max"):
+                process.ntuple.copyUInts.append( "%s:%sN%s%s" % (D,X,W,I))
+            process.ntuple.copyVecUInts.append( "%s:vecN%s%s" % (D,W,I))
+    elif makeInputMultiplicities == "Old":
         D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
         I = tag.split(":")[1] # Calo, EmCalo, TK, or Mu, usually
         for X in ["tot","max"]:
             process.ntuple.copyUInts.append( "%s:%sNL1%s" % (D,X,I))
         process.ntuple.copyVecUInts.append( "%s:vecNL1%s" % (D,I))
-    if makeOutputMultiplicities:
+    if makeOutputMultiplicities == "CTL1":
+        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
+        P = tag.split(":")[1] # PF or Puppi, usually
+        for O in ["", "Charged", "Neutral", "Electron", "Muon", "ChargedHadron", "NeutralHadron", "Photon"]:
+            for X in ("tot","max"):
+                process.ntuple.copyUInts.append( "%s:%sN%s%s" % (D,X,P,O))
+            process.ntuple.copyVecUInts.append( "%s:vecN%s%s" % (D,P,O))    
+    elif makeOutputMultiplicities == "Old":
         D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
         P = tag.split(":")[1] # PF or Puppi, usually
         for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
@@ -103,6 +109,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
     genParticles = cms.InputTag("genParticles"),
     isParticleGun = cms.bool(False),
+    writeExtraInfo = cms.bool(False),
     doRandom = cms.bool(False),
     objects = cms.PSet(
         # -- inputs and PF --
@@ -136,94 +143,29 @@ process.l1pfmetTable = cms.EDProducer("L1PFMetTableProducer",
     ),
 )
 process.l1pfmetCentralTable = process.l1pfmetTable.clone(genMet = "genMetCentralTrue", flavour = "Central")
-process.l1pfmetBarrelTable  = process.l1pfmetTable.clone(genMet = "genMetBarrelTrue", flavour = "Barrel")
 
-monitorPerf("L1Calo", "l1pfCandidates:Calo", makeRespSplit = False)
-monitorPerf("L1TK", "l1pfCandidates:TK", makeRespSplit = False, makeJets=False, makeMET=False)
-monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False, makeJets=False, makeMET=False)
-monitorPerf("L1PF", "l1pfCandidates:PF")
-monitorPerf("L1Puppi", "l1pfCandidates:Puppi")
-
+monitorPerf("L1Calo", "l1ctLayer1:Calo")
+monitorPerf("L1TK",   "l1ctLayer1:TK")
+monitorPerf("L1PF",    "l1ctLayer1:PF")
+monitorPerf("L1Puppi", "l1ctLayer1:Puppi")
+# Multiplicities
 for D in ['Barrel','HF','HGCal','HGCalNoTK']:
-    monitorPerf("L1%sCalo"%D,"l1pfProducer%s:Calo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
-    monitorPerf("L1%sEmCalo"%D,"l1pfProducer%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
-    monitorPerf("L1%sTK"%D,"l1pfProducer%s:TK"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
-    monitorPerf("L1%sMu"%D,"l1pfProducer%s:Mu"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities=True)
+    monitorPerf("L1%sCalo"%D,  "l1ctLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+    monitorPerf("L1%sEmCalo"%D,"l1ctLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+    monitorPerf("L1%sTK"%D,    "l1ctLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+    monitorPerf("L1%sMu"%D,    "l1ctLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+    monitorPerf("L1%sPF"%D,    "l1ctLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+    monitorPerf("L1%sPuppi"%D, "l1ctLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
 
-    monitorPerf("L1%sPF"%D,"l1pfProducer%s:PF"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities=True)
-    monitorPerf("L1%sPuppi"%D,"l1pfProducer%s:Puppi"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, 
-               makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities=True)
 
-# define regions
-def goRegional(postfix="", relativeCoordinates=False):
-    overlap=0.25 # 0.3
-    getattr(process, 'l1pfProducer'+postfix+'Barrel').regions = cms.VPSet(
-        cms.PSet(
-            etaBoundaries = cms.vdouble(-1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        )
-    )
-    getattr(process, 'l1pfProducer'+postfix+'HGCalNoTK').regions = cms.VPSet(
-        cms.PSet(
-            etaBoundaries = cms.vdouble(-3, -2.5),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        ),
-        cms.PSet(
-            etaBoundaries = cms.vdouble(2.5, 3),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        )
-    )
-    getattr(process, 'l1pfProducer'+postfix+'HGCal').regions = cms.VPSet(
-        cms.PSet(
-            etaBoundaries = cms.vdouble(-2.5, -1.5),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        ),
-        cms.PSet(
-            etaBoundaries = cms.vdouble(1.5, 2.5),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        )
-    )
-    getattr(process, 'l1pfProducer'+postfix+'HF').regions = cms.VPSet(
-        cms.PSet(
-            etaBoundaries = cms.vdouble(-5, -4, -3),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        ),
-        cms.PSet(
-            etaBoundaries = cms.vdouble(3, 4, 5),
-            etaExtra = cms.double(overlap),
-            phiExtra = cms.double(overlap),
-            phiSlices = cms.uint32(9)
-        )
-    )
-    for D in 'Barrel', 'HGCal', 'HGCalNoTK', 'HF':
-        getattr(process, 'l1pfProducer'+postfix+D).useRelativeRegionalCoordinates = relativeCoordinates
-
-process.runPF.associate(process.extraPFStuff)
 # to check available tags:
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")
 process.p = cms.Path(
-        process.runPF + 
         process.ntuple + #process.content +
         process.l1pfjetTable + 
-        process.l1pfmetTable + process.l1pfmetCentralTable + process.l1pfmetBarrelTable
+        process.l1pfmetTable + process.l1pfmetCentralTable
         )
+process.p.associate(process.extraPFStuff)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("perfTuple.root"))
 
 # for full debug:
@@ -257,96 +199,33 @@ if True:
     process.ntuple.objects.ChGenAcc_sel = cms.string("(abs(eta) < 2.5 && pt > 2 && charge != 0)")
     process.ntuple.objects.PhGenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
     process.ntuple.objects.PhGenAcc_sel = cms.string("pdgId == 22")
-    process.ntuple.objects.MuGenAcc = cms.VInputTag(cms.InputTag("genInAcceptance"))
-    process.ntuple.objects.MuGenAcc_sel = cms.string("abs(pdgId) == 13")
     process.extraPFStuff.add(process.genInAcceptance)
-if False: # test also PF leptons
-    process.ntuple.objects.L1PFMuon = cms.VInputTag("l1pfCandidates:PF",)
-    process.ntuple.objects.L1PFMuon_sel = cms.string("abs(pdgId) == 13")
-    process.ntuple.objects.L1PFElectron = cms.VInputTag("l1pfCandidates:PF",)
-    process.ntuple.objects.L1PFElectron_sel = cms.string("abs(pdgId) == 11")
 def respOnly():
     process.p.remove(process.l1pfjetTable)
     process.p.remove(process.l1pfmetTable)
     process.p.remove(process.l1pfmetCentralTable)
-    process.p.remove(process.l1pfmetBarrelTable)
     process.end.remove(process.outnano)
+def noResp():
+    process.p.remove(process.ntuple)
+
+def addOld(addMultiplicities = False):
+    monitorPerf("L1OldCalo", "l1pfCandidates:Calo", makeRespSplit = False)
+    monitorPerf("L1OldTK", "l1pfCandidates:TK", makeRespSplit = False, makeJets=False, makeMET=False)
+    monitorPerf("L1OldPF", "l1pfCandidates:PF")
+    monitorPerf("L1OldPuppi", "l1pfCandidates:Puppi")
+    process.l1tkv5Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5"))
+    process.extraPFStuff.add(process.l1tkv5Stubs)
+    monitorPerf("L1OldTKV5", "l1tkv5Stubs", makeRespSplit = False)
+
 def addCHS():
     process.l1PuppiCharged = cms.EDFilter("L1TPFCandSelector",
-        src = cms.InputTag("l1pfCandidates:Puppi"),
+        src = cms.InputTag("l1ctLayer1:Puppi"),
         cut = cms.string("charge != 0"))
     process.l1PFNeutral = cms.EDFilter("L1TPFCandSelector",
-        src = cms.InputTag("l1pfCandidates:PF"),
+        src = cms.InputTag("l1ctLayer1:PF"),
         cut = cms.string("charge == 0"))
     process.extraPFStuff.add(process.l1PuppiCharged, process.l1PFNeutral)
     monitorPerf("L1CHS", [ "l1PuppiCharged", "l1PFNeutral" ], makeRespSplit = False)
-def addPFnoMu():
-    process.l1pfProducerBarrelPFnoMu = process.l1pfProducerBarrel.clone()
-    process.l1pfProducerBarrelPFnoMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerBarrelPFnoMu.useTrackerMuons          = cms.bool(False)
-    #
-    process.l1pfProducerHGCalPFnoMu = process.l1pfProducerHGCal.clone()
-    process.l1pfProducerHGCalPFnoMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerHGCalPFnoMu.useTrackerMuons          = cms.bool(False)
-    #
-    process.l1pfProducerHFPFnoMu = process.l1pfProducerHF.clone()
-    process.l1pfProducerHFPFnoMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerHFPFnoMu.useTrackerMuons          = cms.bool(False)
-    #
-    process.l1pfCandidatesPFnoMu = process.l1pfCandidates.clone(
-            pfProducers = ["l1pfProducerBarrelPFnoMu", "l1pfProducerHGCalPFnoMu", "l1pfProducerHFPFnoMu"], 
-            labelsToMerge = [ "Puppi", "PF" ])
-    process.extraPFStuff.add(process.l1pfProducerBarrelPFnoMu, process.l1pfProducerHGCalPFnoMu, process.l1pfProducerHFPFnoMu, process.l1pfCandidatesPFnoMu)
-    monitorPerf("L1PuppinoMu", "l1pfCandidatesPFnoMu:Puppi")
-    monitorPerf("L1PFnoMu", "l1pfCandidatesPFnoMu:PF")
-def addPFtkMu():
-    process.l1pfProducerBarrelPFtkMu = process.l1pfProducerBarrel.clone()
-    process.l1pfProducerBarrelPFtkMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerBarrelPFtkMu.useTrackerMuons          = cms.bool(True)
-    #
-    process.l1pfProducerHGCalPFtkMu = process.l1pfProducerHGCal.clone()
-    process.l1pfProducerHGCalPFtkMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerHGCalPFtkMu.useTrackerMuons          = cms.bool(True)
-    #
-    process.l1pfProducerHFPFtkMu = process.l1pfProducerHF.clone()
-    process.l1pfProducerHFPFtkMu.useStandaloneMuons       = cms.bool(False) 
-    process.l1pfProducerHFPFtkMu.useTrackerMuons          = cms.bool(True)
-    #
-    process.l1pfCandidatesPFtkMu = process.l1pfCandidates.clone(
-            pfProducers = ["l1pfProducerBarrelPFtkMu", "l1pfProducerHGCalPFtkMu", "l1pfProducerHFPFtkMu"], 
-            labelsToMerge = [ "Puppi", "PF" ])
-    process.extraPFStuff.add(process.l1pfProducerBarrelPFtkMu, process.l1pfProducerHGCalPFtkMu, process.l1pfProducerHFPFtkMu, process.l1pfCandidatesPFtkMu)
-    monitorPerf("L1PuppitkMu", "l1pfCandidatesPFtkMu:Puppi")
-    monitorPerf("L1PFtkMu", "l1pfCandidatesPFtkMu:PF")
-def addPuppiOld():
-    process.l1pfProducerBarrelPuppiOld = process.l1pfProducerBarrel.clone(puAlgo = "Puppi")
-    process.l1pfProducerBarrelPuppiOld.puppiEtaCuts       = cms.vdouble(1.5) 
-    process.l1pfProducerBarrelPuppiOld.puppiPtCuts        = cms.vdouble(0.0)
-    process.l1pfProducerBarrelPuppiOld.puppiPtCutsPhotons = cms.vdouble(0.0)
-    #
-    process.l1pfProducerHGCalPuppiOld = process.l1pfProducerHGCal.clone(puAlgo = "Puppi")
-    process.l1pfProducerHGCalPuppiOld.puppiEtaCuts       = cms.vdouble(2.5, 2.85,  3.0) 
-    process.l1pfProducerHGCalPuppiOld.puppiPtCuts        = cms.vdouble( 20,  40,  9999)
-    process.l1pfProducerHGCalPuppiOld.puppiPtCutsPhotons = cms.vdouble( 20,  40,  9999)
-    #
-    process.l1pfProducerHFPuppiOld = process.l1pfProducerHF.clone(puAlgo = "Puppi")
-    process.l1pfProducerHFPuppiOld.puppiEtaCuts       = cms.vdouble(5.5) 
-    process.l1pfProducerHFPuppiOld.puppiPtCuts        = cms.vdouble( 30)
-    process.l1pfProducerHFPuppiOld.puppiPtCutsPhotons = cms.vdouble( 30)
-    #
-    process.l1pfCandidatesPuppiOld = process.l1pfCandidates.clone(
-            pfProducers = ["l1pfProducerBarrelPuppiOld", "l1pfProducerHGCalPuppiOld", "l1pfProducerHFPuppiOld"], 
-            labelsToMerge = [ "Puppi" ])
-    process.extraPFStuff.add(process.l1pfProducerBarrelPuppiOld, process.l1pfProducerHGCalPuppiOld, process.l1pfProducerHFPuppiOld, process.l1pfCandidatesPuppiOld)
-    monitorPerf("L1PuppiOld", "l1pfCandidatesPuppiOld:Puppi")
-def addTKs():
-    process.l1tkv5Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5"))
-    process.l1tkv6Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 6"))
-    process.extraPFStuff.add(process.l1tkv5Stubs, process.l1tkv6Stubs)
-    monitorPerf("L1TKV5", "l1tkv5Stubs", makeRespSplit = False)
-    monitorPerf("L1TKV6", "l1tkv6Stubs", makeRespSplit = False)
-    monitorPerf("L1TK", "l1pfCandidates:TK", makeRespSplit = False)
-    monitorPerf("L1TKV", "l1pfCandidates:TKVtx", makeRespSplit = False)
 def addCalib():
     process.load("L1Trigger.Phase2L1ParticleFlow.pfClustersFromHGC3DClustersEM_cfi")
     process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
@@ -369,215 +248,7 @@ def addCalib():
     process.ntuple.objects.L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated')
     process.ntuple.objects.L1HGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', )
 
-def addRegional(label="Regional", relativeCoordinates=False):
-    # clone each part
-    for D in ['Barrel','HF','HGCal','HGCalNoTK']:
-        pfreg = getattr(process, 'l1pfProducer'+D).clone() 
-        setattr(process, 'l1pfProducer'+label+D, pfreg)
-        process.extraPFStuff.add(pfreg)
-    # merging
-    pfcomb = cms.EDProducer("L1TPFCandMultiMerger",
-            pfProducers = cms.VInputTag(
-                cms.InputTag("l1pfProducer"+label+"Barrel"), 
-                cms.InputTag("l1pfProducer"+label+"HGCal"),
-                cms.InputTag("l1pfProducer"+label+"HGCalNoTK"),
-                cms.InputTag("l1pfProducer"+label+"HF")
-                ),
-            labelsToMerge = cms.vstring("Calo", "TK", "TKVtx", "PF", "Puppi"),
-    )
-    setattr(process, 'l1pfCandidates'+label, pfcomb)
-    process.extraPFStuff.add(pfcomb)
-    # monitoring
-    monitorPerf("L1Calo"+label, "l1pfCandidates"+label+":Calo", makeRespSplit = False)
-    monitorPerf("L1TK"+label, "l1pfCandidates"+label+":TK", makeRespSplit = False, makeJets=False, makeMET=False)
-    monitorPerf("L1TKV"+label, "l1pfCandidates"+label+":TKVtx", makeRespSplit = False, makeJets=False, makeMET=False)
-    monitorPerf("L1PF"+label, "l1pfCandidates"+label+":PF")
-    monitorPerf("L1Puppi"+label, "l1pfCandidates"+label+":Puppi")
-    # and finally go regional
-    goRegional(label, relativeCoordinates=relativeCoordinates)
-def firmwareLike():
-    ## Make a copy called "CMSSW", and then configure the setup to be close ro firmware
-    for det in "Barrel", "HGCal", "HGCalNoTK", "HF":
-        l1pf = getattr(process, 'l1pfProducer'+det).clone()
-        setattr(process, 'l1pfProducerCMSSW'+det, l1pf)
-        process.extraPFStuff.add(l1pf)
-    process.l1pfCandidatesCMSSW = cms.EDProducer("L1TPFCandMultiMerger",
-            pfProducers = cms.VInputTag(
-                cms.InputTag("l1pfProducerCMSSWBarrel"), 
-                cms.InputTag("l1pfProducerCMSSWHGCal"),
-                cms.InputTag("l1pfProducerCMSSWHGCalNoTK"),
-                cms.InputTag("l1pfProducerCMSSWHF")
-                ),
-            labelsToMerge = cms.vstring("PF","Puppi"),
-    )
-    process.extraPFStuff.add(process.l1pfCandidatesCMSSW)
-    monitorPerf("L1CMSSWPF", "l1pfCandidatesCMSSW:PF")        
-    monitorPerf("L1CMSSWPuppi", "l1pfCandidatesCMSSW:Puppi")        
-    process.l1pfProducerBarrel.linking.ecalPriority = False # FIXME (was never implemented)
-    process.l1pfProducerBarrel.linking.trackEmMayUseCaloMomenta = False # FIXME (was never implemented)
-    process.l1pfProducerBarrel.linking.emCaloUseAlsoCaloSigma = False # FIXME (was never implemented, but could be)
-    process.l1pfProducerBarrel.linking.emCaloSubtractionPtSlope = 1.0 # FIXME (could be implemented)
-    for det in "Barrel", "HGCal", "HGCalNoTK", "HF":
-        l1pf = getattr(process, 'l1pfProducer'+det)
-        l1pf.linking.trackMuMatch = "drBestByPtDiff" # FIXME (could be implemented, but expensive)
-        l1pf.linking.trackCaloLinkMetric = "bestByDR2Pt2" # FIXME (could be implemented, but very expensive - needs sqrt)
-def addBitwise(label="Bitwise",alsoPuppi="linpuppi"):
-    if not hasattr(process, "l1pfCandidatesRegional"):
-        addRegional(relativeCoordinates=True)
-    barrel = process.l1pfProducerRegionalBarrel.clone(pfAlgo = "BitwisePFAlgo",
-            bitwiseAlgo = cms.string("pfalgo3"),
-            bitwiseConfig = cms.PSet(
-                NTRACK = cms.uint32(99),
-                NEMCALO = cms.uint32(99),
-                NCALO = cms.uint32(99),
-                NMU = cms.uint32(9),
-                NPHOTON = cms.uint32(99),
-                NSELCALO = cms.uint32(99),
-                NALLNEUTRAL = cms.uint32(199),
-                DR2MAX_TK_MU = cms.uint32(2101),
-                DR2MAX_TK_EM = cms.uint32(84),
-                DR2MAX_EM_CALO = cms.uint32(525),
-                DR2MAX_TK_CALO = cms.uint32(1182),
-                TK_MAXINVPT_LOOSE = cms.uint32(40),
-                TK_MAXINVPT_TIGHT = cms.uint32(80),
-            ))
-    hgcal = process.l1pfProducerRegionalHGCal.clone(pfAlgo = "BitwisePFAlgo",
-            bitwiseAlgo = cms.string("pfalgo2hgc"),
-            bitwiseConfig = cms.PSet(
-                NTRACK = cms.uint32(99),
-                NCALO = cms.uint32(99),
-                NMU = cms.uint32(9),
-                NSELCALO = cms.uint32(99),
-                DR2MAX_TK_MU = cms.uint32(2101),
-                DR2MAX_TK_CALO = cms.uint32(525),
-                TK_MAXINVPT_LOOSE = cms.uint32(40),
-                TK_MAXINVPT_TIGHT = cms.uint32(80),
-            ))
-    setattr(process, "l1pfProducer%sBarrel" % label, barrel)
-    setattr(process, "l1pfProducer%sHGCal" % label, hgcal)
-    process.extraPFStuff.add(barrel, hgcal)
-    if alsoPuppi:
-        barrel.puAlgo = "BitwisePuppiAlgo"
-        #barrel.debugPuppi = cms.untracked.int32(1)
-        barrel.bitwisePUAlgo = cms.string("linpuppi_flt" if alsoPuppi == "flt" else "linpuppi")
-        barrel.bitwisePUConfig = cms.PSet(
-                nTrack = cms.uint32(99),
-                nIn = cms.uint32(99),
-                nOut = cms.uint32(99),
-                dR2Max = cms.uint32(4727),
-                dR2Min = cms.uint32(257),
-                ptMax  = cms.uint32(200),
-                dzCut  = cms.uint32(10),
-                absEtaBins = cms.vint32(),
-                ptSlopeNe  = cms.vdouble(0.3),
-                ptSlopePh  = cms.vdouble(0.3),
-                ptZeroNe   = cms.vdouble(4.0),
-                ptZeroPh   = cms.vdouble(2.5),
-                alphaSlope = cms.vdouble(0.7),
-                alphaZero  = cms.vdouble(6.0),
-                alphaCrop  = cms.vdouble(4.0),
-                priorNe    = cms.vdouble(5.0),
-                priorPh    = cms.vdouble(1.0),
-                ptCut      = cms.vuint32(4),
-                )
-        hgcal.puAlgo = "BitwisePuppiAlgo"
-        #hgcal.debugPuppi = cms.untracked.int32(1)
-        hgcal.bitwisePUAlgo = cms.string("linpuppi_flt" if alsoPuppi == "flt" else "linpuppi")
-        hgcal.bitwisePUConfig = cms.PSet(
-                nTrack = cms.uint32(99),
-                nIn = cms.uint32(99),
-                nOut = cms.uint32(99),
-                dR2Max = cms.uint32(4727),
-                dR2Min = cms.uint32(84),
-                ptMax  = cms.uint32(200),
-                dzCut  = cms.uint32(40),
-                absEtaBins = cms.vint32(0),
-                ptSlopeNe  = cms.vdouble(0.3,0.3),
-                ptSlopePh  = cms.vdouble(0.4,0.4),
-                ptZeroNe   = cms.vdouble(5.0,7.0),
-                ptZeroPh   = cms.vdouble(3.0,4.0),
-                alphaSlope = cms.vdouble(1.5,1.5),
-                alphaZero  = cms.vdouble(6.0,6.0),
-                alphaCrop  = cms.vdouble(3.0,3.0),
-                priorNe    = cms.vdouble(5.0,5.0),
-                priorPh    = cms.vdouble(1.5,1.5),
-                ptCut      = cms.vuint32(4, 8),
-                )
-        hgcalNoTK = process.l1pfProducerRegionalHGCalNoTK.clone(puAlgo = "BitwisePuppiAlgo")
-        #hgcalNoTK.debugPuppi = cms.untracked.int32(1)
-        hgcalNoTK.bitwisePUAlgo = cms.string("fwdlinpuppi_flt" if alsoPuppi == "flt" else "fwdlinpuppi")
-        hgcalNoTK.bitwisePUConfig = cms.PSet(
-                nTrack = cms.uint32(99),
-                nIn = cms.uint32(99),
-                nOut = cms.uint32(99),
-                dR2Max = cms.uint32(4727),
-                dR2Min = cms.uint32(84),
-                ptMax  = cms.uint32(200),
-                dzCut  = cms.uint32(40),
-                absEtaBins = cms.vint32(),
-                ptSlopeNe  = cms.vdouble(0.3),
-                ptSlopePh  = cms.vdouble(0.4),
-                ptZeroNe   = cms.vdouble(9.0),
-                ptZeroPh   = cms.vdouble(5.0),
-                alphaSlope = cms.vdouble(2.2),
-                alphaZero  = cms.vdouble(9.0),
-                alphaCrop  = cms.vdouble(4.0),
-                priorNe    = cms.vdouble(7.0),
-                priorPh    = cms.vdouble(5.0),
-                ptCut      = cms.vuint32(16),
-                )
-        hf = process.l1pfProducerRegionalHF.clone(puAlgo = "BitwisePuppiAlgo")
-        #hf.debugPuppi = cms.untracked.int32(1)
-        hf.bitwisePUAlgo = cms.string("fwdlinpuppi_flt" if alsoPuppi == "flt" else "fwdlinpuppi")
-        hf.bitwisePUConfig = cms.PSet(
-                nTrack = cms.uint32(99),
-                nIn = cms.uint32(99),
-                nOut = cms.uint32(99),
-                dR2Max = cms.uint32(4727),
-                dR2Min = cms.uint32(525),
-                ptMax  = cms.uint32(400),
-                dzCut  = cms.uint32(40),
-                absEtaBins = cms.vint32(),
-                ptSlopeNe  = cms.vdouble(0.25),
-                ptSlopePh  = cms.vdouble(0.25),
-                ptZeroNe   = cms.vdouble(14. ),
-                ptZeroPh   = cms.vdouble(14. ),
-                alphaSlope = cms.vdouble(0.6 ),
-                alphaZero  = cms.vdouble(9.0 ),
-                alphaCrop  = cms.vdouble(4.0 ),
-                priorNe    = cms.vdouble(6.0 ),
-                priorPh    = cms.vdouble(6.0 ),
-                ptCut      = cms.vuint32(40),
-                )
-        setattr(process, "l1pfProducer%sHGCalNoTK" % label, hgcalNoTK)
-        setattr(process, "l1pfProducer%sHF" % label, hf)
-        process.extraPFStuff.add(hgcalNoTK, hf)
-        pfcands = cms.EDProducer("L1TPFCandMultiMerger",
-                pfProducers = cms.VInputTag(
-                    cms.InputTag("l1pfProducer%sBarrel" % label), 
-                    cms.InputTag("l1pfProducer%sHGCal" % label),
-                    cms.InputTag("l1pfProducer%sHGCalNoTK" % label),
-                    cms.InputTag("l1pfProducer%sHF" % label)
-                    ),
-                labelsToMerge = cms.vstring("PF", "Puppi"),
-        )
-    else:
-        pfcands = cms.EDProducer("L1TPFCandMultiMerger",
-                pfProducers = cms.VInputTag(
-                    cms.InputTag("l1pfProducer%sBarrel" % label), 
-                    cms.InputTag("l1pfProducer%sHGCal" % label),
-                    cms.InputTag("l1pfProducerRegionalHGCalNoTK"),
-                    cms.InputTag("l1pfProducerRegionalHF")
-                    ),
-                labelsToMerge = cms.vstring("PF", "Puppi"),
-        ) 
-    setattr(process, "l1pfCandidates%s" % label, pfcands)
-    process.extraPFStuff.add(pfcands)
-    monitorPerf("L1PF%s" % label, "l1pfCandidates%s:PF" % label)
-    monitorPerf("L1Puppi%s" % label, "l1pfCandidates%s:Puppi"% label)
-
-
-def addSeededConeJets(what="Puppi",src="l1pfCandidates:Puppi"):
+def addSeededConeJets(what="Puppi",src="l1ctLayer1:Puppi"):
     process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
     scModule = process.L1SeedConePFJetProducer.clone(L1PFObjects = src)
     setattr(process, 'sc'+what, scModule)
@@ -586,7 +257,7 @@ def addSeededConeJets(what="Puppi",src="l1pfCandidates:Puppi"):
 
 def addRefs(calo=True,tk=True):
     process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
-    process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1pfCandidates", "Puppi") # make sure the process name is not pre-encoded
+    process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1ctLayer1", "Puppi") # make sure the process name is not pre-encoded
     process.extraPFStuff.add(process.Phase1L1TJetProducer,process.Phase1L1TJetCalibrator)
     process.l1pfjetTable.jets.RefPhase1PuppiJets = cms.InputTag("Phase1L1TJetCalibrator", "Phase1L1TJetFromPfCandidates")
     if calo:
@@ -598,25 +269,127 @@ def addRefs(calo=True,tk=True):
         process.l1pfmetCentralTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
 
 def addTkPtCut(ptCut):
-    process.l1pfProducerBarrelTkPt3 = process.l1pfProducerBarrel.clone(trkPtCut = ptCut)
-    process.l1pfProducerHGCalTkPt3 = process.l1pfProducerHGCal.clone(trkPtCut = ptCut)
-    process.l1pfCandidatesTkPt3 = cms.EDProducer("L1TPFCandMultiMerger",
+    process.l1ctLayer1BarrelTkPt3 = process.l1ctLayer1Barrel.clone(trkPtCut = ptCut)
+    process.l1ctLayer1HGCalTkPt3 = process.l1ctLayer1HGCal.clone(trkPtCut = ptCut)
+    process.l1ctLayer1TkPt3 = cms.EDProducer("L1TPFCandMultiMerger",
         pfProducers = cms.VInputTag(
-            cms.InputTag("l1pfProducerBarrelTkPt3"), 
-            cms.InputTag("l1pfProducerHGCalTkPt3"),
-            cms.InputTag("l1pfProducerHGCalNoTK"),
-            cms.InputTag("l1pfProducerHF")
+            cms.InputTag("l1ctLayer1BarrelTkPt3"), 
+            cms.InputTag("l1ctLayer1HGCalTkPt3"),
+            cms.InputTag("l1ctLayer1HGCalNoTK"),
+            cms.InputTag("l1ctLayer1HF")
             ),
-        labelsToMerge = cms.vstring("PF", "Puppi"),
+        labelsToMerge = cms.vstring("TK", "PF", "Puppi"),
+        regionalLabelsToMerge = cms.vstring(),
     )
-    process.extraPFStuff.add(process.l1pfProducerBarrelTkPt3, process.l1pfProducerHGCalTkPt3, process.l1pfCandidatesTkPt3)
-    monitorPerf("L1PFTkPt3", "l1pfCandidatesTkPt3:PF")
-    monitorPerf("L1PuppiTkPt3", "l1pfCandidatesTkPt3:Puppi")
-    if hasattr(process, "l1tkv5Stubs"):
-        process.l1tkv5StubsTkPt3 = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5 && pt > 3"))
-        process.extraPFStuff.add(process.l1tkv5StubsTkPt3)
-        monitorPerf("L1TKV5TkPt3", "l1tkv5StubsTkPt3", makeRespSplit = False)
- 
+    process.extraPFStuff.add(process.l1ctLayer1BarrelTkPt3, process.l1ctLayer1HGCalTkPt3, process.l1ctLayer1TkPt3)
+    monitorPerf("L1PFTkPt3", "l1ctLayer1TkPt3:PF")
+    monitorPerf("L1PuppiTkPt3", "l1ctLayer1TkPt3:Puppi")
+    #if hasattr(process, "l1tkv5Stubs"):
+    #    process.l1tkv5StubsTkPt3 = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5 && pt > 3"))
+    #    process.extraPFStuff.add(process.l1tkv5StubsTkPt3)
+    #    monitorPerf("L1TKV5TkPt3", "l1tkv5StubsTkPt3", makeRespSplit = False)
+
+def addGenLep(pdgs=[11,13,22]):
+    genLepTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                src = cms.InputTag("genParticles"),
+                doc = cms.string("gen leptons"),
+                singleton = cms.bool(False), # the number of entries is variable
+                extension = cms.bool(False), # this is the main table
+                variables = cms.PSet(
+                    pt  = Var("pt",  float,precision=8),
+                    phi = Var("phi", float,precision=8),
+                    eta  = Var("eta", float,precision=8),
+                    vz   = Var("vz",  float,precision=8),
+                    charge  = Var("charge", int, doc="charge id"),
+                    prompt  = Var("2*statusFlags().isPrompt() + statusFlags().isDirectPromptTauDecayProduct()", int, doc="Particle status."),
+                )
+            )
+    for pdgId in pdgs:
+        if pdgId == 13:
+            process.genMuTable = genLepTable.clone(
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
+                        name = cms.string("GenMu"))
+            process.extraPFStuff.add(process.genMuTable)
+        elif pdgId == 11:
+            process.genElTable = genLepTable.clone(
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
+                        name = cms.string("GenEl"))
+            process.extraPFStuff.add(process.genElTable)
+        elif pdgId == 22:
+            process.genPhTable = genLepTable.clone(
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 8 && statusFlags().isPrompt()" % pdgId),
+                        name = cms.string("GenPh"))
+            process.extraPFStuff.add(process.genPhTable)
+
+def addStaMu():
+    process.staMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                        src = cms.InputTag('simGmtStage2Digis'),
+                        cut = cms.string(""),
+                        name = cms.string("StaMu"),
+                        doc = cms.string("reco leptons"),
+                        singleton = cms.bool(False), # the number of entries is variable
+                        extension = cms.bool(False), # this is the main table
+                        variables = cms.PSet(
+                            pt  = Var("pt",  float,precision=8),
+                            phi = Var("phi", float,precision=8),
+                            eta  = Var("eta", float,precision=8),
+                            charge  = Var("charge", int, doc="charge id"),
+                            quality  = Var("hwQual", int, doc="charge id"),
+                        )
+    )
+    process.extraPFStuff.add(process.staMuTable)
+
+def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
+    for w in opts:
+        pfLepTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                        src = cms.InputTag("l1ctLayer1:"+w),
+                        doc = cms.string("reco leptons"),
+                        singleton = cms.bool(False), # the number of entries is variable
+                        extension = cms.bool(False), # this is the main table
+                        variables = cms.PSet(
+                            pt  = Var("pt",  float,precision=8),
+                            phi = Var("phi", float,precision=8),
+                            eta  = Var("eta", float,precision=8),
+                            vz   = Var("vz",  float,precision=8),
+                            charge  = Var("charge", int, doc="charge id"),
+                        )
+                    )
+        if "Old" in w:
+            pfLepTable.src = "l1pfCandidates:"+w.replace("Old","")
+        for pdgId in pdgs:
+            if pdgId == 13:
+                muTable = pfLepTable.clone(
+                            cut  = cms.string("abs(pdgId) == %d && pt > 2" % pdgId),
+                            name = cms.string(w+"Mu"))
+                setattr(process, w+"MuTable", muTable)
+                process.extraPFStuff.add(muTable)
+                muTable.variables.quality = Var("? muon.isNonnull ? muon.hwQual : -1", int, doc="Quality")
+            elif pdgId == 11:
+                elTable = pfLepTable.clone(
+                            cut  = cms.string("abs(pdgId) == %d && pt > 2" % pdgId),
+                            name = cms.string(w+"El"))
+                setattr(process, w+"ElTable", elTable)
+                process.extraPFStuff.add(elTable)
+                elTable.variables.hwEmID = Var("? pfCluster.isNonnull ? pfCluster.hwEmID : -1", int, doc="Quality")
+                elTable.variables.pfEmID = Var("? pfCluster.isNonnull ? pfCluster.egVsPionMVAOut : -1", float, precision=8)
+                elTable.variables.pfPuID = Var("? pfCluster.isNonnull ? pfCluster.egVsPUMVAOut : -1", float, precision=8)
+                elTable.variables.clPt   = Var("? pfCluster.isNonnull ? pfCluster.pt : -1", float, precision=8)
+                elTable.variables.clEmEt = Var("? pfCluster.isNonnull ? pfCluster.emEt : -1", float, precision=8)
+            elif pdgId == 22:
+                phTable = pfLepTable.clone(
+                            cut  = cms.string("abs(pdgId) == %d && pt > 8" % pdgId),
+                            name = cms.string(w+"Ph"))
+                phTable.variables.hwEmID = Var("hwEmID", int)
+                phTable.variables.pfPuID = Var("? pfCluster.isNonnull ? pfCluster.egVsPUMVAOut : -1", float, precision=8)
+                elTable.variables.pfEmID = Var("? pfCluster.isNonnull ? pfCluster.egVsPionMVAOut : -1", float, precision=8)
+                elTable.variables.clPt   = Var("? pfCluster.isNonnull ? pfCluster.pt : -1", float, precision=8)
+                elTable.variables.clEmEt = Var("? pfCluster.isNonnull ? pfCluster.emEt : -1", float, precision=8)
+                if w == "Puppi":
+                    phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
+                setattr(process, w+"PhTable", phTable)
+                process.extraPFStuff.add(phTable)
+    
+
 def goGun(calib=1):
     process.ntuple.isParticleGun = True
     respOnly()
@@ -639,9 +412,57 @@ def addEDMOutput():
     process.end = cms.EndPath(process.out)
     process.maxEvents.input = 10
 
-def addCTL1():
-    process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
-    process.extraPFStuff.add(process.l1ctLayer1Barrel, process.l1ctLayer1HGCal, process.l1ctLayer1HGCalNoTK, process.l1ctLayer1HF, process.l1ctLayer1)
-    monitorPerf("L1CTPF", "l1ctLayer1:PF")
-    monitorPerf("L1CTPuppi", "l1ctLayer1:Puppi")
+def addCrops():
+    process.l1ctLayer1HGCalIdealCrop = process.l1ctLayer1HGCal.clone()
+    #process.l1ctLayer1HGCalIdealCrop.regionizerAlgoParameters.useAlsoVtxCoords = False
+    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nTrack = 30
+    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nCalo = 20
+    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nMu = 4
+    process.l1ctLayer1HGCalIdealCrop.puAlgoParameters.nFinalSort = 18
+    process.l1ctLayer1HGCalRealCrop = process.l1ctLayer1HGCalIdealCrop.clone()
+    process.l1ctLayer1HGCalRealCrop.regionizerAlgo = "Multififo"
+    process.l1ctLayer1HGCalRealCrop.regionizerAlgoParameters = cms.PSet(
+                useAlsoVtxCoords = cms.bool(True),
+                nClocks = cms.uint32(54),
+                nTrack = cms.uint32(30),
+                nCalo = cms.uint32(20),
+                nEmCalo = cms.uint32(0),
+                nMu = cms.uint32(4),
+            )
+    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nTrack = 30
+    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nCalo = 20
+    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nMu = 4
+    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nSelCalo = 20
+    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nTrack = 30
+    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nIn = 20
+    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nOut = 20
+    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nFinalSort = 18
+    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.finalSortAlgo = "Hybrid"
+    for X in "IdealCrop", "RealCrop":
+        setattr(process, "l1ctLayer1"+X, process.l1ctLayer1.clone(
+            pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal"+X), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ]))
+        process.extraPFStuff.add( getattr(process, "l1ctLayer1HGCal"+X), getattr(process, "l1ctLayer1"+X) )
+        monitorPerf("L1PF"+X,    "l1ctLayer1"+X+":PF")
+        monitorPerf("L1Puppi"+X, "l1ctLayer1"+X+":Puppi")
 
+if False:
+    #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
+    #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,2,3)] #3,7,8,9) ]
+    process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
+    addOld()
+    #goMT(4)
+    addStaMu()
+    addGenLep([13])
+    addPFLep([13],["PF","OldPF"])
+
+    if True:
+        #process.source.eventsToProcess = cms.untracked.VEventRange("1:1376:240626","1:1376:240627","1:1376:240628","1:1376:240642","1:1376:240638")
+        process.source.eventsToProcess = cms.untracked.VEventRange("1:1376:240656", "1:1376:240742", "1:1108:193756", "1:1108:193762", "1:1108:193772")
+        #process.source.eventsToProcess = cms.untracked.VEventRange()
+        #process.maxEvents.input = 10
+        addEDMOutput()
+        R='HGCal'
+        getattr(process, 'l1ctLayer1'  +R).trkPtCut = 10
+        getattr(process, 'l1pfProducer'+R).trkPtCut = 10
+        getattr(process, 'l1pfProducer'+R).debug = 2
+        getattr(process, 'l1ctLayer1'  +R).pfAlgoParameters.debug = True

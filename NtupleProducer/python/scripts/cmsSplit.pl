@@ -8,7 +8,7 @@ use File::Basename;
 use Cwd;
 
 my $verbose = 1; my $label = ''; 
-my ($dataset,$dbsql,$filelist,$filedir,$castor,$filesperjob,$jobs,$pretend,$args,$evjob,$triangular,$customize,$inlinecustomize,$maxfiles,$maxevents,$skipfiles,$json,$fnal,$AAA,$addparents,$randomize);
+my ($dataset,$dbsql,$filelist,$filedir,$castor,$filesperjob,$jobs,$pretend,$args,$evjob,$triangular,$rrb,$customize,$inlinecustomize,$maxfiles,$maxevents,$skipfiles,$json,$fnal,$AAA,$addparents,$randomize);
 my ($bash,$lsf,$help,$byrun,$bysize,$nomerge,$evperfilejob,$evperfile,$eosoutdir);
 my $monitor="/afs/cern.ch/user/g/gpetrucc/pl/cmsTop.pl";#"wc -l";
 my $report= "/afs/cern.ch/user/g/gpetrucc/sh/report";   #"grep 'Events total'";
@@ -39,6 +39,7 @@ GetOptions(
     'lsf=s'=>\$lsf,
     'label=s'=>\$label,
     'triangular'=>\$triangular,
+    'round-robin|rrb'=>\$rrb,
     'events-per-job|ej=i'=>\$evjob,
     'events-per-file-job|efj=i'=>\$evperfilejob,
     'events-per-file|ef=i'=>\$evperfile,
@@ -355,6 +356,18 @@ sub split_even {
     }
     return [@ret];
 }
+sub split_rrb {
+    my @x = @files;
+    my @ret = ();
+    foreach my $j ( 1 .. $jobs ) {
+        push @ret, [];
+    }
+    foreach my $i ( 0 .. $#files ) {
+        my $j = ($i % $jobs);
+        push @{$ret[$j]}, shift(@x);
+    }
+    return [@ret];
+}
 sub split_triang {
     my @x = @files;
     my $scale = scalar(@x)/($jobs*($jobs+1)/2);
@@ -423,7 +436,8 @@ if ($byrun) {
         # it's an eos file
         if ($f =~ m{^(/eos/cms)?/store/.*.root}) {
             my $dir = dirname($f);
-            my @eosls = qx{/afs/cern.ch/project/eos/installation/cms/bin/eos.select ls -l $dir};
+            $dir =~ s{^(/eos/cms)}{};
+            my @eosls = qx{ls -l /eos/cms$dir};
             foreach (@eosls) {
                 my (undef,undef,undef,undef,$size,undef,undef,undef,$base) = split(/\s+/) or next;
                 $file2size{"$dir/$base"} = $size;
@@ -519,13 +533,16 @@ if ($byrun) {
     }
     $splits = \@alljobs;
     $jobs = scalar(@alljobs);
+} elsif ($triangular) {
+    $splits = split_triang(); 
+} elsif ($rrb) {
+    $splits = split_rrb(); 
+} elsif ($evjob) {  # in this case, put all files in all jobs
+    $splits = [ map [@files], ( 1 .. $jobs ) ];
 } else {
-    $splits = ($triangular ? split_triang() : split_even());
+    $splits = split_even();
 }
 
-if ($evjob) {  # in this case, put all files in all jobs
-    $splits = [ map [@files], ( 1 .. $jobs ) ];
-}
 if ($json) {
     if ($json =~ /^https?:.*/) {
         system("wget -N $json");
@@ -582,8 +599,9 @@ foreach my $j (1 .. $jobs) {
     foreach (@outputModules) {
         my ($n,$f) = @$_;
         $f =~ s/\.root$/$label ."_job$j.root"/e;
+        if ($jobs == 1) { $f =~ s/_job1//; }
         $postamble .= "$THEPROCESS.$n.fileName = '$f'\n";
-        unless($nomerge) {
+        unless($nomerge or ($jobs == 1)) {
             push @{$mergeList{$n}->{'infiles'}}, $f;
             push @cleanup, $f;
         }
@@ -591,8 +609,9 @@ foreach my $j (1 .. $jobs) {
     foreach (@nanoModules) {
         my ($n,$f) = @$_;
         $f =~ s/\.root$/$label ."_job$j.root"/e;
+        if ($jobs == 1) { $f =~ s/_job1//; }
         $postamble .= "$THEPROCESS.$n.fileName = '$f'\n";
-        unless($nomerge) {
+        unless($nomerge or ($jobs == 1)) {
             push @{$mergeNano{$n}->{'infiles'}}, $f;
             push @cleanup, $f;
         }
@@ -600,8 +619,9 @@ foreach my $j (1 .. $jobs) {
     if ($tfsFile) {
         my $f = $tfsFile; 
         $f =~ s/\.root$/$label ."_job$j.root"/e;
+        if ($jobs == 1) { $f =~ s/_job1//; }
         $postamble .= "$THEPROCESS.TFileService.fileName = '$f'\n";
-        unless($nomerge) {
+        unless($nomerge or ($jobs == 1)) {
             push @tfsMerge, $f;
             push @cleanup, $f;
         }
