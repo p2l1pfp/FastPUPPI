@@ -11,33 +11,32 @@ W=$1; shift;
 while [[ "$W" != "" ]]; do
   case $W in
     run-pgun)
-         [[ "$V" == "v1" ]] && SAMPLES="--v1_fat"
-         python runRespNTupler.py || exit 1;
+         python runPerformanceNTuple.py || exit 1;
          PU=PU0 
-         for X in {DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}; do 
-             ./scripts/prun.sh  runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU()'; 
-             grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && exit 2;
+         for X in {DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,MultiPion0_PT0to120_gun,K0Long_PT0to200_gun}_${PU}; do 
+             ./scripts/prun.sh  runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU()' ; 
+             grep -q '^JOBS:.*, 0 passed' perfTuple_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && exit 2;
          done
+         ;;
+    run-pgun-pu)
+         python runRespNTupler.py || exit 1;
          PU=PU200 
-         for X in {DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,SinglePion_PT0to200}_${PU}; do 
-             ./scripts/prun.sh  runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun()'; 
-             grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && exit 2;
+         for X in {DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion0_PT0to120_gun,MultiPion_PT0to120_gun}_${PU}; do 
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun()'; 
+             grep -q '^JOBS:.*, 0 passed' perfTuple_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && exit 2;
          done
          ;;
     plot-pgun)
-         for PU in PU0 PU200; do
-             if [[ "$PU" == "PU0" ]]; then
-                 NTUPLES=$(ls respTupleNew_{DoubleElectron_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.root);
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon,pizero -g  --ymaxRes 0.35 --ptmax 150 -E 3.0
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,klong,pimix       -g  --ymaxRes 1.2  --ptmax 150 -E 3.0
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion,pizero,pimix      -g  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
-             else
-                 NTUPLES=$(ls respTupleNew_{DoubleElectron_FlatPt-1To100,SinglePion_PT0to200}_${PU}.${V}.root);
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion    -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
-                 python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf -p pion    -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
-             fi;
-         done
+         PU=PU0; NTUPLES=$(ls perfTuple_{DoubleElectron_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.root);
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p electron,photon,pizero -G  --ymaxRes 0.35 --ptmax 150 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p pion,klong,pimix       -G  --ymaxRes 1.2  --ptmax 150 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p pion,pizero,pimix      -G  --eta 3.0 5.0  --ymax 3 --ymaxRes 1.5 --label hf  --no-fit 
+         ;;
+    plot-pgun-pu)
+         PU=PU200; NTUPLES=$(ls perfTuple_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion0_PT0to120_gun,MultiPion_PT0to120_gun}_${PU}.${V}.root);
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p electron,photon,pizero -g  --ymax 2.5 --ymaxRes 0.6 --ptmax 80 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p pion    -g  --ymax 2.5 --ymaxRes 1.5 --ptmax 80 -E 3.0
+         python scripts/respPlots.py $NTUPLES $PLOTDIR/ParticleGun_${PU} -w l1pf_newemu_gun -p pion    -g  --ymax 3.0 --ymaxRes 1.5 --ptmax 80 --eta 3.0 5.0 --label hf  --no-fit 
          ;;
     stack-pgun-nopu)
          X=ParticleGun_PU0
@@ -64,15 +63,14 @@ while [[ "$W" != "" ]]; do
     run-jets-nopu)
          python runPerformanceNTuple.py || exit 1;
          for X in TTbar_PU0; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addSeededConeJets("PF","l1pfCandidates:PF");noPU()'; 
-             #./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addTKs();addCTL1();noPU();firmwareLike()'; 
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  --inline-customize 'noPU()' 
          done
          ;;
     plot-jets-nopu)
          for X in TTbar_PU0; do
-            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g
-            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g --eta 3.0 5.0 --ptmax 150 --no-eta
-            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf -p jet -g --eta 3.5 4.5 --ptmax 150 --no-eta
+            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf_newemu -p jet -g
+            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf_newemu -p jet -g --eta 3.0 5.0 --ptmax 150 --no-eta
+            python scripts/respPlots.py perfTuple_${X}.${V}.root $PLOTDIR/${X} -w l1pf_newemu -p jet -g --eta 3.5 4.5 --ptmax 150 --no-eta
          done
          ;;
     stack-jets-nopu)
@@ -87,8 +85,8 @@ while [[ "$W" != "" ]]; do
          ;;
     run-jets)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible}_PU200; do
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addSeededConeJets()' --max-files 60;
+         for X in VBF_HToInvisible_PU200; do
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  --inline-customize 'addOld();'
              #break 
          done
          ;;
@@ -117,9 +115,13 @@ while [[ "$W" != "" ]]; do
           ;;
     run-rates)
          python runPerformanceNTuple.py || exit 1;
-         for X in {TTbar,VBF_HToInvisible,SingleNeutrino}_PU200; do  
-             ./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addCHS();addTKs();addRefs(calo=False,tk=False);addSeededConeJets()' ;
-             #./scripts/prun.sh runPerformanceNTuple.py  $SAMPLES $X ${X}.${V}  --inline-customize 'addTKs();firmwareLike();addCTL1()' ;
+         #for X in SMS_T1tttt_mGluino-2100_mLSP-400_PU{200,300} TTTT_PU{200,300} TTbar_PU200; do  
+         for X in {TTbar,VBF_HToInvisible}_PU200; do  
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  
+             #break
+         done
+         for X in SingleNeutrino_PU200; do  
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}  --inline-customize 'noResp();'
          done
          ;;
     make-jecs)

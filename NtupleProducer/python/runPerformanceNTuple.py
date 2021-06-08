@@ -31,12 +31,21 @@ from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 from RecoMET.METProducers.pfMet_cfi import pfMet
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_Candidate_2020_12_09_15_46_46', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_T15_v3', '')
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
 process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
+process.load('L1Trigger.L1TTrackMatch.L1GTTInputProducer_cfi')
+process.load('L1Trigger.VertexFinder.VertexProducer_cff')
 
-process.extraPFStuff = cms.Task(process.l1ParticleFlowTask, process.l1ctLayer1Task)
+process.VertexProducerEmulator = process.VertexProducer.clone()
+process.VertexProducerEmulator.l1TracksInputTag = cms.InputTag("L1GTTInputProducer", "Level1TTTracksConverted")
+process.VertexProducerEmulator.VertexReconstruction.Algorithm = cms.string("FastHistoEmulation")
+for l1ctbrd in [process.l1ctLayer1Barrel, process.l1ctLayer1HGCal, process.l1ctLayer1HGCalNoTK, process.l1ctLayer1HF]:
+    l1ctbrd.vtxCollection = cms.InputTag("VertexProducerEmulator", "l1verticesEmulation")
+    l1ctbrd.vtxCollectionEmulation = True
+
+process.extraPFStuff = cms.Task(process.L1GTTInputProducer, process.VertexProducerEmulator, process.l1ParticleFlowTask, process.l1ctLayer1Task)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -148,15 +157,6 @@ monitorPerf("L1Calo", "l1ctLayer1:Calo")
 monitorPerf("L1TK",   "l1ctLayer1:TK")
 monitorPerf("L1PF",    "l1ctLayer1:PF")
 monitorPerf("L1Puppi", "l1ctLayer1:Puppi")
-# Multiplicities
-for D in ['Barrel','HF','HGCal','HGCalNoTK']:
-    monitorPerf("L1%sCalo"%D,  "l1ctLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-    monitorPerf("L1%sEmCalo"%D,"l1ctLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-    monitorPerf("L1%sTK"%D,    "l1ctLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-    monitorPerf("L1%sMu"%D,    "l1ctLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-    monitorPerf("L1%sPF"%D,    "l1ctLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
-    monitorPerf("L1%sPuppi"%D, "l1ctLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
-
 
 # to check available tags:
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")
@@ -207,6 +207,16 @@ def respOnly():
     process.end.remove(process.outnano)
 def noResp():
     process.p.remove(process.ntuple)
+
+def addMult():
+    for D in ['Barrel','HF','HGCal','HGCalNoTK']:
+        monitorPerf("L1%sCalo"%D,  "l1ctLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sEmCalo"%D,"l1ctLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sTK"%D,    "l1ctLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sMu"%D,    "l1ctLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sPF"%D,    "l1ctLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+        monitorPerf("L1%sPuppi"%D, "l1ctLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+
 
 def addOld(addMultiplicities = False):
     monitorPerf("L1OldCalo", "l1pfCandidates:Calo", makeRespSplit = False)
@@ -388,7 +398,34 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
                     phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
                 setattr(process, w+"PhTable", phTable)
                 process.extraPFStuff.add(phTable)
-    
+def addTkEG():
+    for w in "EB","EE":
+        tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                        name = cms.string("TkEm"+w),
+                        src = cms.InputTag("l1ctLayer1EG:L1TkEm"+w),
+                        cut = cms.string(""),
+                        doc = cms.string(""),
+                        singleton = cms.bool(False), # the number of entries is variable
+                        extension = cms.bool(False), # this is the main table
+                        variables = cms.PSet(
+                            pt  = Var("pt",  float,precision=8),
+                            phi = Var("phi", float,precision=8),
+                            eta  = Var("eta", float,precision=8),
+                            charge  = Var("charge", int, doc="charge"),
+                            emid    = Var("EGRef.hwQual", int, doc="id"),
+                            tkIso   = Var("trkIsol", float, precision=8),
+                            tkIsoV  = Var("trkIsolPV", float, precision=8),
+                        )
+                    )
+        tkEleTable = tkEmTable.clone(
+                        name = cms.string("TkEle"+w),
+                        src = cms.InputTag("l1ctLayer1EG:L1TkEle"+w),
+                    )
+        tkEleTable.variables.charge = Var("charge", int, doc="charge")
+        tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
+        setattr(process, "TkEm%sTable" % w, tkEmTable)
+        setattr(process, "TkEle%sTable" % w, tkEleTable)
+        process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 def goGun(calib=1):
     process.ntuple.isParticleGun = True
@@ -445,6 +482,45 @@ def addCrops():
         monitorPerf("L1PF"+X,    "l1ctLayer1"+X+":PF")
         monitorPerf("L1Puppi"+X, "l1ctLayer1"+X+":Puppi")
 
+def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
+    process.pfTracksFromL1Tracks.redigitizeTrackWord = newTrackWord
+    if postfix:
+        prodhgcal = process.l1ctLayer1HGCal.clone()
+        setattr(process, 'l1ctLayer1HGCal' + postfix, prodhgcal)
+        merger = process.l1ctLayer1.clone(
+            pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ])
+        setattr(process, 'l1ctLayer1' + postfix, merger)
+        process.extraPFStuff.add(prodhgcal, merger)
+        monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
+        monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
+    else:
+        prodhgcal = process.l1ctLayer1HGCal
+    prodhgcal.trackInputConversionAlgo = "Emulator"
+    prodhgcal.trackInputConversionParameters = cms.PSet(
+            region = cms.string("endcap"),
+            trackWordEncoding = cms.string("biased" if newTrackWord else "stepping"),
+            bitwiseAccurate = cms.bool(bitwise),
+            ptLUTBits = cms.uint32(11),
+            etaLUTBits = cms.uint32(11),
+            etaPreOffs = cms.int32(0),
+            etaShift = cms.uint32(15-11),
+            etaPostOffs = cms.int32(150),
+            phiBits = cms.uint32(10),
+            z0Bits = cms.uint32(12),
+            dEtaHGCalBits = cms.uint32(12),
+            dEtaHGCalZ0PreShift = cms.uint32(6),
+            dEtaHGCalRInvPreShift = cms.uint32(8),
+            dEtaHGCalRInvPostShift = cms.uint32(2),
+            dEtaHGCalRInvLUTBits = cms.uint32(10),
+            dEtaHGCalFloatOffs = cms.double(-0.2),
+            dPhiHGCalBits = cms.uint32(4),
+            dPhiHGCalZ0PreShift = cms.uint32(4),
+            dPhiHGCalZ0PostShift = cms.uint32(6),
+            dPhiHGCalRInvShift = cms.uint32(4),
+            dPhiHGCalTanlInvShift = cms.uint32(22),
+            dPhiHGCalTanlLUTBits = cms.uint32(10),
+            dPhiHGCalFloatOffs = cms.double(0.0)
+            )
 if False:
     #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
     #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,2,3)] #3,7,8,9) ]

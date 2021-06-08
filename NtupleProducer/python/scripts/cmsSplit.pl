@@ -9,7 +9,7 @@ use Cwd;
 
 my $verbose = 1; my $label = ''; 
 my ($dataset,$dbsql,$filelist,$filedir,$castor,$filesperjob,$jobs,$pretend,$args,$evjob,$triangular,$rrb,$customize,$inlinecustomize,$maxfiles,$maxevents,$skipfiles,$json,$fnal,$AAA,$addparents,$randomize);
-my ($bash,$lsf,$help,$byrun,$bysize,$nomerge,$evperfilejob,$evperfile,$eosoutdir);
+my ($bash,$lsf,$help,$byrun,$bysize,$nomerge,$evperfilejob,$evperfile,$eosoutdir,$outdir);
 my $monitor="/afs/cern.ch/user/g/gpetrucc/pl/cmsTop.pl";#"wc -l";
 my $report= "/afs/cern.ch/user/g/gpetrucc/sh/report";   #"grep 'Events total'";
 my $maxsyncjobs = 99;
@@ -58,6 +58,7 @@ GetOptions(
     'randomize'=>\$randomize,
     'first-lumi-block|flb=i'=>\$firstlumiblock,
     'eosoutdir=s'=>\$eosoutdir,
+    'outdir=s'=>\$outdir,
     'condor-memory=s'=>\$condormem
 );
 
@@ -600,6 +601,7 @@ foreach my $j (1 .. $jobs) {
         my ($n,$f) = @$_;
         $f =~ s/\.root$/$label ."_job$j.root"/e;
         if ($jobs == 1) { $f =~ s/_job1//; }
+        if (defined($outdir)) { $f = $outdir . "/" . basename($f); }
         $postamble .= "$THEPROCESS.$n.fileName = '$f'\n";
         unless($nomerge or ($jobs == 1)) {
             push @{$mergeList{$n}->{'infiles'}}, $f;
@@ -610,6 +612,7 @@ foreach my $j (1 .. $jobs) {
         my ($n,$f) = @$_;
         $f =~ s/\.root$/$label ."_job$j.root"/e;
         if ($jobs == 1) { $f =~ s/_job1//; }
+        if (defined($outdir)) { $f = $outdir . "/" . basename($f); }
         $postamble .= "$THEPROCESS.$n.fileName = '$f'\n";
         unless($nomerge or ($jobs == 1)) {
             push @{$mergeNano{$n}->{'infiles'}}, $f;
@@ -620,6 +623,7 @@ foreach my $j (1 .. $jobs) {
         my $f = $tfsFile; 
         $f =~ s/\.root$/$label ."_job$j.root"/e;
         if ($jobs == 1) { $f =~ s/_job1//; }
+        if (defined($outdir)) { $f = $outdir . "/" . basename($f); }
         $postamble .= "$THEPROCESS.TFileService.fileName = '$f'\n";
         unless($nomerge or ($jobs == 1)) {
             push @tfsMerge, $f;
@@ -665,6 +669,7 @@ foreach my $m (sort(keys(%mergeList))) {
     next if $pretend;
     open OUT, "> $pyfile" or die "Can't write to $pyfile\n";  push @cleanup, $pyfile;
     my $out = $mergeList{$m}->{'outfile'};
+    if (defined($outdir)) { $out = $outdir . "/" . basename($out); }
     my $in  = join("\n",map("\t'file:$_',",@{$mergeList{$m}->{'infiles'}}));
     print OUT <<EOF;
 import FWCore.ParameterSet.Config as cms
@@ -716,6 +721,7 @@ if ($tfsFile and not($nomerge)) {
     my $pyfile = $basename . $label . "_merge_TFileService.sh";
     print "Will create TFileService merge job, source $pyfile\n" if $verbose;
     my $tfsOut = $tfsFile; $tfsOut =~ s/\.root$/$label.root/;
+    if (defined($outdir)) { $tfsOut = $outdir . "/" . basename($tfsOut); }
 
     if (!$pretend) {
         open OUT, "> $pyfile" or die "Can't write to $pyfile\n";  push @cleanup, $pyfile;
