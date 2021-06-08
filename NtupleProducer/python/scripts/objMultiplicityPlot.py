@@ -15,7 +15,11 @@ SAMPLE_LABEL = dict(
     TTbar_PU200 = "t#bar{t}",
     VBF_HToInvisible_PU200 = "VBF H #rightarrow inv",
     VBFHToBB_PU200 = "VBF H #rightarrow b#bar{b}",
+    TTTT_PU200 = "t#bar{t}t#bar{t}",
+    TTTT_PU300 = "t#bar{t}t#bar{t}",
 )
+SAMPLE_LABEL["SMS_T1tttt_mGluino-2100_mLSP-400_PU200"] = "SUSY tttt"
+SAMPLE_LABEL["SMS_T1tttt_mGluino-2100_mLSP-400_PU300"] = "SUSY tttt"
 ALL_SUBDETECTORS = ["Barrel","HF","HGCal","HGCalNoTK"]
         
 parser = OptionParser("%(prog) infile [ src [ dst ] ]")
@@ -25,6 +29,8 @@ parser.add_option("-d", type="string", dest="detectors", action='append', defaul
 parser.add_option("-s", dest="sample", choices=SAMPLE_LABEL.keys(), default='TTbar_PU200', help="choice of sample: "+", ".join(SAMPLE_LABEL.keys()))
 parser.add_option("--CE", dest="hgcalName", default="HGCal", action="store_const", const="CE", help="Label HGCal as CE in the plots")
 parser.add_option("--HGCAL", dest="hgcalName", default="HGCal", action="store_const", const="HGCAL", help="Label HGCal as HGCAL in the plots")
+parser.add_option("-w", dest="what", choices=["Old","Sec","Reg"], default='Old', help="What to count: Old, Sec (input objs per sector), Ref (new objs per sector)")
+parser.add_option("--nmax", dest="nmax", default=None, type=int, help="Fixed range up to nmax")
 options, args = parser.parse_args()
 
 # flatten in case commas are used
@@ -47,10 +53,18 @@ for Algo in "PF", "Puppi":
 
 tfile = ROOT.TFile.Open(args[0])
 tree = tfile.Get("ntuple/tree")
+if options.what == "Old":
+    producer, defprefix = 'l1pfProducer', 'L1'
+elif options.what in ("Sec", "Reg"):
+    producer, defprefix = 'l1ctLayer1', options.what
+    if options.what == "Sec":
+        particles = [ p for p in particles if ("PF" not in p and "Puppi" not in p) ]
+
+
 for detector in detectors:
     if options.detectors and (detector not in options.detectors): continue
     detectorLabel = detector
-    detectorFull = 'l1pfProducer' + detectorLabel
+    detectorFull = producer + detectorLabel
     detectorLabelPlot = "%s" % detectorLabel
     detectorLabelRegionPlot = "%s region" % detectorLabel
     detectorLabelFName = detectorLabel
@@ -62,11 +76,12 @@ for detector in detectors:
         detectorLabelFName = detectorLabelFName.replace("HGCal",options.hgcalName)
     for particle in particles:
         if options.particles and (particle not in options.particles): continue
+        prefix = "" if (options.what == "Reg" and ("PF" in particle or "Puppi" in particle)) else defprefix;
         if options.cl > 0:
             if detectorLabel!='All':
-                variable = "%smaxNL1%s"% (detectorFull,particle)
+                variable = "%smaxN%s%s"% (detectorFull,prefix,particle)
             else:
-                variable = '+'.join("%stotNL1%s" % ('l1pfProducer' + subdetectorLabel, particle) for subdetectorLabel in ALL_SUBDETECTORS)
+                variable = '+'.join("%stotN%s%s" % (producer + subdetectorLabel, prefix, particle) for subdetectorLabel in ALL_SUBDETECTORS)
             n = tree.Draw("min(%s,999)>>htemp(1000,-0.5,999.5)" % (variable), "mc_id == 998", "")
             if not n: continue
             h = ROOT.gROOT.FindObject("htemp")
@@ -82,15 +97,16 @@ for detector in detectors:
             max_plot_bin = max(3,(min_bin*3/2)); acc = 0;
             for b in xrange(h.GetNbinsX()+1,0,-1):
                 acc += h.GetBinContent(b)
-                if acc >= 1e-6*n or (acc > 0 and b <= max(3,max_plot_bin)):
+                if acc >= 1e-3*n or (acc > 0 and b <= max(3,max_plot_bin)):
                     max_plot_bin = b 
                     break
+            if options.nmax: max_plot_bin = options.nmax
         for x in "max","tot","vec": # IMPORTANT: max must be the first
             if detectorLabel=='All':
                 if x != 'tot': continue
-                variable = '+'.join("%stotNL1%s" % ('l1pfProducer' + subdetectorLabel, particle) for subdetectorLabel in ALL_SUBDETECTORS)
+                variable = '+'.join("%stotN%s%s" % (producer + subdetectorLabel, prefix, particle) for subdetectorLabel in ALL_SUBDETECTORS)
             else:
-                variable = "%s%sNL1%s"% (detectorFull,x,particle)
+                variable = "%s%sN%s%s"% (detectorFull,x,prefix,particle)
             print "plotting %s" %(variable)
             if x == "max": # we already have the histogram
                 if ROOT.gROOT.FindObject("htemp2"): ROOT.gROOT.FindObject("htemp2").Delete()
@@ -124,5 +140,5 @@ for detector in detectors:
                 h.SetMaximum(1.4*h.GetMaximum())
                 plotter.addSpam(0.25, 0.87, SAMPLE_LABEL[options.sample], textSize=0.045)
                 plotter.addSpam(0.25, 0.81, "Min. objects (%.0f%% no trunc.): %i"%(options.cl*100., min_obj), textSize=0.045)
-            plotter.decorations()
+            plotter.decorations(pu=(300 if "PU300" in options.sample else 200))
             plotter.Print(particle+"_"+detectorLabelFName+"_"+x, exts=["png","pdf","eps","root"])

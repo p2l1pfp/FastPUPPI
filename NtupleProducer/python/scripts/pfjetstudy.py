@@ -19,8 +19,9 @@ parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("-n", "--events", type=int, nargs=1, default=3, help="Number of events to consider")
 parser.add_option("-E", "--select-events", type=str, nargs=1, action="append", default=[], help="Specific event to select (run:lumi:event)")
 parser.add_option("-g", "--global", dest="ged", action="store_true", default=False, help="Look at the global event description instead of individual PFJets")
-parser.add_option("--min-pt", dest="minPt", type=float, default=20, help="Number of events to consider")
-parser.add_option("--max-eta", dest="maxEta", type=float, default=5, help="Number of events to consider")
+parser.add_option("--min-pt", dest="minPt", type=float, default=20, help="Minimum jet p")
+parser.add_option("--min-eta", dest="minEta", type=float, default=-1, help="Minimum jet |eta|")
+parser.add_option("--max-eta", dest="maxEta", type=float, default=5, help="Maximum jet |eta|")
 parser.add_option("--ld", "--link-debug", dest="linkDebug", default=None, help="show linking information")
 parser.add_option("-J", "--jet", dest="jets", type=str, action="append", default=[], help="Specific jet to select eta,phi")
 options, args = parser.parse_args()
@@ -49,6 +50,7 @@ hhgt = getHandle("BXVector<l1t::HGCalTower>")
 genj  = Handle("std::vector<reco::GenJet>")
 genp  = Handle("std::vector<reco::GenParticle>")
 geno  = Handle("math::XYZPointF")
+hrecv  = Handle("std::vector<l1t::TkPrimaryVertex>")
 recf  = Handle("float")
 
 for iev,event in enumerate(events):
@@ -59,7 +61,7 @@ for iev,event in enumerate(events):
     print "Event %s" % idev
  
     event.getByLabel("ak4GenJetsNoNu", genj)
-    allGenJ = [ g for g in genj.product() ]
+    allGenJ = [ g for g in genj.product() if options.minEta <= abs(g.eta()) and abs(g.eta()) <= options.maxEta ]
     event.getByLabel("genParticles", genp)
     genLeptons = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) in (11,13,211) and (p.isPromptFinalState() or p.isDirectPromptTauDecayProductFinalState()) and p.pt() > 5 ]
     genTau     = [ p for p in genp.product() if abs(p.pdgId()) == 15 and p.isLastCopy() and p.isPromptDecayed() and p.pt() > 5 ]
@@ -73,22 +75,14 @@ for iev,event in enumerate(events):
             j.mcId = abs(incone[0].pdgId())
         else:
             j.mcId = 99
-        if abs(j.eta()) > options.maxEta: continue
-        #daus = [ j.daughter(i) for i in xrange(j.numberOfDaughters()) ]
-        #chall = sum(d.pt() for d in daus if d.charge() != 0)
-        #chacc = sum(d.pt() for d in daus if d.charge() != 0 and d.pt() > 2 and abs(d.eta()) < 2.5)
-        #phall = sum(d.pt() for d in daus if d.pdgId() == 22)
-        #phpt1 = sum(d.pt() for d in daus if d.pdgId() == 22 and d.pt() > 1)
-        #nhall = sum(d.pt() for d in daus if d.charge() ==0 and d.pdgId() != 22)
-        #nhpt1 = sum(d.pt() for d in daus if d.charge() ==0 and d.pdgId() != 22)
     allGenJ.sort(key = lambda j : - j.pt())
     event.getByLabel("genParticles:xyz0", geno)
     gen_Z0 = geno.product().Z()
    
     rec_Z0 = 0;
-    event.getByLabel("InfoOut:z0", recf)
-    if recf.isValid():
-        rec_Z0 = recf.product()[0];
+    event.getByLabel("L1TkPrimaryVertex", hrecv)
+    if hrecv.isValid() and not(hrecv.product().empty()):
+        rec_Z0 = hrecv.product().front().zvertex();
         print "PV  generated %+7.3f  reconstructed %+7.3f  diff %+5.3f " % (gen_Z0, rec_Z0, rec_Z0-gen_Z0)
 
     if options.ged:
@@ -111,7 +105,7 @@ for iev,event in enumerate(events):
             for d in daus: d.dr = deltaR(d,j)
             daus.sort(key = lambda p : p.dr)
         else:
-            daus = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) not in (12,14,16) and p.pt() > 0.5 and abs(p.eta()) < options.maxEta ]
+            daus = [ p for p in genp.product() if p.status() == 1 and abs(p.pdgId()) not in (12,14,16) and p.pt() > 0.5 and options.minEta <= abs(p.eta()) and abs(p.eta()) <= options.maxEta ]
             daus.sort(key = lambda p : -p.pt())
             for d in daus: d.dr = 0
         ptsum = 0

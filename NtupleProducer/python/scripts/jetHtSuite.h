@@ -42,6 +42,25 @@ void fillTEffFast(TEfficiency *eff, const std::vector<float> & refArr, const std
         eff->Fill(corrArr[i] > corrThr, refArr[i]);
     }
 }
+std::pair<unsigned,unsigned> inclusiveEffFastGenCut(const std::vector<float> & refArr, float refThr, const std::vector<float> & corrArr, float corrThr) {
+    assert(refArr.size() == corrArr.size());
+    std::pair<unsigned,unsigned> ret = std::pair<unsigned,unsigned>(0,0);
+    for (unsigned int i = 0, n = refArr.size(); i < n; ++i) {
+        if (refArr[i] > refThr) {
+            ret.second++;
+            if (corrArr[i] > corrThr) ret.first++;
+        }
+    }
+    return ret;
+}
+std::pair<unsigned,unsigned> inclusiveEffFast(const std::vector<float> & corrArr, float corrThr) {
+    std::pair<unsigned,unsigned> ret = std::pair<unsigned,unsigned>(0,0);
+    for (unsigned int i = 0, n = corrArr.size(); i < n; ++i) {
+        ret.second++;
+        if (corrArr[i] > corrThr) ret.first++;
+    }
+    return ret;
+}
 
 TGraph *makeROCFast(TH1 *effsig, TH1 *effbkg) {
     TGraph *graph = new TGraph(effsig->GetNbinsX());
@@ -126,9 +145,6 @@ class CalcJ2_MJJcut : public JetCalcBase {
         float mjj_;
 };
 
-
-
-
 std::vector<float> makeJetArray(TTree *tree, const std::string & obj, float ptCut, float etaCut, const JetCalcBase &calc, const l1tpf::corrector *jetcorr = nullptr) {
     std::vector<float> ret; 
     ret.reserve(tree->GetEntries());
@@ -158,6 +174,86 @@ std::vector<float> makeJetArray(TTree *tree, const std::string & obj, float ptCu
     }
     return ret;
 }
+
+
+class LepCalcBase {
+    public:
+        class Lep : public ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>> {
+            public:
+                Lep(float pt, float eta, float phi, int charge, float iso, float id) :
+                     ROOT::Math::LorentzVector<ROOT::Math::PtEtaPhiM4D<float>>(pt,eta,phi,0.),
+                     charge_(charge), iso_(iso), id_(id) {}
+                int charge() const { return charge_; }
+                float iso() const { return iso_; }
+                float id() const { return id_; }
+            private:
+                int charge_;
+                float id_, iso_;
+        };
+        LepCalcBase() {}
+        virtual ~LepCalcBase() {}
+        virtual float operator()(const std::vector<Lep> & leps) const = 0;
+};
+class CalcL : public LepCalcBase {
+    public:
+        enum RetType { RetPt=0, RetIso=1, RetId=2 };
+        CalcL(unsigned int n=1, RetType ret = RetPt) : 
+            LepCalcBase(), n_(n), ret_(ret) {} 
+        virtual float operator()(const std::vector<Lep> & leps) const {
+            if (leps.size() < n_) return 0.;
+            pts.clear();
+            switch(ret_) {
+                case RetPt: 
+                    for (const auto & l : leps) pts.push_back(-l.pt());
+                    break;
+                case RetIso: 
+                    for (const auto & l : leps) pts.push_back(-l.iso());
+                    break;
+                case RetId: 
+                    for (const auto & l : leps) pts.push_back(l.id());
+                    break;
+            }
+            std::sort(pts.begin(), pts.end());
+            return (ret_ == RetId ? +1 : -1)*pts[n_-1];
+        }
+    protected:
+        unsigned int n_; RetType ret_;
+        mutable std::vector<float> pts;
+};
+
+
+std::vector<float> makeLepArray(TTree *tree, const std::string & obj, float ptCut, float etaCut, const LepCalcBase &calc, 
+                                const std::string & idName, float idCut, bool idIsFloat, const std::string & isoName, float isoCut, bool makeIsoRel) {
+    std::vector<float> ret; 
+    ret.reserve(tree->GetEntries());
+
+    bool hasId = !idName.empty(), hasIso = !isoName.empty();
+    std::string idf = (hasId && idIsFloat ? idName : "pt"), idi = (hasId && !idIsFloat ? idName : "charge");
+    std::string isof = hasIso ? isoName : "pt";
+    TTreeReader reader(tree);
+    TTreeReaderArray<float> lep_pt(reader, (obj+"_pt").c_str()), lep_eta(reader, (obj+"_eta").c_str()), lep_phi(reader, (obj+"_phi").c_str());
+    TTreeReaderArray<int> lep_charge(reader, (obj+"_charge").c_str()), lep_idi(reader, (obj+"_"+idi).c_str());
+    TTreeReaderArray<float> lep_iso(reader, (obj+"_"+isof).c_str()), lep_idf(reader, (obj+"_"+idf).c_str());
+
+    std::vector<LepCalcBase::Lep> leps;
+    //unsigned int iev = 0;
+    while (reader.Next()) {
+        leps.clear();
+        unsigned int nleps = lep_pt.GetSize();
+        for (unsigned int i = 0; i < nleps; ++i) {
+            float pt = lep_pt[i], eta = lep_eta[i];
+            if (pt < ptCut || std::abs(eta) > etaCut) continue;
+            float id = hasId ? (idIsFloat ? lep_idf[i] : lep_idi[i]) : 1, iso = hasIso ? lep_iso[i] : 0;
+            if (makeIsoRel) iso /= pt;
+            if (hasId && id < idCut) continue;
+            if (hasIso && iso > isoCut) continue;
+            leps.emplace_back(pt, eta, lep_phi[i], lep_charge[i], iso, id); 
+        }
+        ret.push_back(calc(leps));
+    }
+    return ret;
+}
+
 
 std::vector<float> makeMetArray(TTree *tree, const std::string & obj) {
     std::vector<float> ret; 

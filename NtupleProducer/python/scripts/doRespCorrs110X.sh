@@ -18,10 +18,10 @@ fi
 
 
 if [[ "$1" == "--backup" ]]; then # ,DoublePhoton_FlatPt-1To100
-    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.0.root); 
+    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,MultiPion0_PT0to120_gun,K0Long_PT0to200_gun}_${PU}.${V}.0.root); 
     shift;
 else
-    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,K0Long_PT0to200_gun}_${PU}.${V}.root); 
+    NTUPLES=$(ls ${TUPLE}_{DoubleElectron_FlatPt-1To100,DoublePhoton_FlatPt-1To100,MultiPion_PT0to200,MultiPion0_PT0to120_gun,K0Long_PT0to200_gun}_${PU}.${V}.root); 
 fi;
 
 W=$1; shift;
@@ -74,8 +74,8 @@ case $W in
     rerun)
          python runRespNTupler.py || exit 1;
          for f in $NTUPLES; do test -f $f && mv -v $f ${f/$V/$V.0}; done
-         for X in {MultiPion_PT0to200,DoublePhoton_FlatPt-1To100,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,K0Long_PT0to200_gun}_${PU}; do
-             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU();' ;  # --maxfiles 999;
+         for X in {MultiPion_PT0to200,MultiPion0_PT0to120_gun,DoublePhoton_FlatPt-1To100,DoubleElectron_FlatPt-1To100,K0Long_PT0to200_gun}_${PU}; do
+             ./scripts/prun.sh runRespNTupler.py $SAMPLES $X ${X}.${V}  --inline-customize 'goGun();noPU();';
              grep -q '^JOBS:.*, 0 passed' respTupleNew_${X}.${V}.report.txt && echo " === ERROR. Will stop here === " && break || true;
          done
          ;;

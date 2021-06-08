@@ -32,8 +32,7 @@ process.load("L1Trigger.Phase2L1ParticleFlow.pfClustersFromHGC3DClustersEM_cfi")
 
 process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
 process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
-process.pfClustersFromHGC3DClustersEM    = process.pfClustersFromHGC3DClusters.clone(emOnly = True, etMin = 0.)
-process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersRaw.clone(emOnly = True, etMin = 0.)
+process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
 process.pfClustersFromCombinedCaloHFOnly = process.pfClustersFromCombinedCaloHF.clone(hcalCandidates =[])
 
 

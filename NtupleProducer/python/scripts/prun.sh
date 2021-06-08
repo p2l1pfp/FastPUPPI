@@ -47,12 +47,12 @@ if [[ "$1" == "--noclean" ]]; then
 fi
 
 PSCRIPT=$CMSSW_BASE/src/FastPUPPI/NtupleProducer/python/scripts/
-$PSCRIPT/cmsSplit.pl --files "$MAIN/${PREFIX}*root" --label ${OUTPUT} ${CODE}.py --bash --n $N $* && bash ${CODE}_${OUTPUT}_local.sh 
+$PSCRIPT/cmsSplit.pl --files "$MAIN/${PREFIX}*root" --label ${OUTPUT} ${CODE}.py --bash --n $N --rrb $* && bash ${CODE}_${OUTPUT}_local.sh 
 
 if $clean; then
     REPORT=$(grep -o "tee \S\+_${OUTPUT}.report.txt" ${CODE}_${OUTPUT}_local.sh  | awk '{print $2}');
     if [[ "$REPORT" != "" ]] && test -f ${REPORT}; then
-        if grep -q ', 0 failed' $REPORT; then
+        if [[ "$N" == "1" ]] && grep -q "Job completed without exceptions" ${REPORT} || grep -q ', 0 failed' $REPORT; then
            bash ${CODE}_${OUTPUT}_cleanup.sh
         else
            echo "Failed jobs... will not delete anything."

@@ -29,6 +29,7 @@
 #include "DataFormats/JetReco/interface/GenJet.h"
 
 #include "DataFormats/Math/interface/deltaR.h"
+#include "DataFormats/Math/interface/libminifloat.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/Framework/interface/ConsumesCollector.h"
@@ -165,10 +166,14 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
       }
       virtual void endRun(edm::Run const&, edm::EventSetup const& iSetup) override { } // framework wants this to be implemented
 
+      template<unsigned int bits=10>
+      static float zip(float f) {
+          return MiniFloatConverter::reduceMantissaToNbitsRounding<bits>(f);
+      }
 
       edm::EDGetTokenT<std::vector<reco::GenJet>> genjets_;
       edm::EDGetTokenT<std::vector<reco::GenParticle>> genparticles_;
-      bool isParticleGun_;
+      bool isParticleGun_, writeExtraInfo_;
       std::unique_ptr<TRandom> random_;
       bool doRandom_;
       TTree *tree_;
@@ -177,54 +182,70 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
          float pt, pt02, eta, phi, iso02, iso04, iso08;
          int charge; float caloeta, calophi;
          int   id;
-         void makeBranches(TTree *tree) {
+         void makeBranches(TTree *tree, bool gun, bool extra) {
             tree->Branch("mc_pt", &pt, "mc_pt/F");
-            tree->Branch("mc_pt02", &pt02, "mc_pt02/F");
+            if (gun && extra) tree->Branch("mc_pt02", &pt02, "mc_pt02/F");
             tree->Branch("mc_eta", &eta, "mc_eta/F");
             tree->Branch("mc_phi", &phi, "mc_phi/F");
-            tree->Branch("mc_iso02", &iso02, "mc_iso02/F");
-            tree->Branch("mc_iso04", &iso04, "mc_iso04/F");
-            tree->Branch("mc_iso08", &iso08, "mc_iso08/F");
+            if (gun && extra) tree->Branch("mc_iso02", &iso02, "mc_iso02/F");
+            if (gun) tree->Branch("mc_iso04", &iso04, "mc_iso04/F");
+            if (extra) tree->Branch("mc_iso08", &iso08, "mc_iso08/F");
             tree->Branch("mc_id", &id, "mc_id/I");
-            tree->Branch("mc_q", &charge, "mc_q/I");
-            tree->Branch("mc_caloeta", &caloeta, "mc_caloeta/F");
-            tree->Branch("mc_calophi", &calophi, "mc_calophi/F");
+            if (gun) {
+                tree->Branch("mc_q", &charge, "mc_q/I");
+                tree->Branch("mc_caloeta", &caloeta, "mc_caloeta/F");
+                tree->Branch("mc_calophi", &calophi, "mc_calophi/F");
+            }
          }
          void fillP4(const reco::Candidate &c) {
-             pt = c.pt(); eta = c.eta(); phi = c.phi();
-             caloeta = eta; calophi = phi; charge = 0;
+             pt = zip(c.pt()); eta = zip(c.eta()); phi = zip(c.phi());
+             caloeta = zip(eta); calophi = zip(phi); charge = 0;
          }
          void fillPropagated(const reco::Candidate &c, float bz) {
              if (c.charge() != 0) {
                 math::XYZTLorentzVector vertex(c.vx(),c.vy(),c.vz(),0.);
                 auto caloetaphi = l1tpf::propagateToCalo(c.p4(),vertex,c.charge(),bz);
-                caloeta = caloetaphi.first; calophi = caloetaphi.second;
+                caloeta = zip(caloetaphi.first); calophi = zip(caloetaphi.second);
             }
          }
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, pt08, ptbest, pthighest, mindr025; int n025, n010;
-         void makeBranches(const std::string &prefix, TTree *tree) {
+         float pt, pt02, pt08, ptbest, pthighest, mindr025; int n025, n010; bool isgun, hasextra;
+         void makeBranches(const std::string &prefix, TTree *tree, bool gun, bool extra) {
+             isgun = gun; hasextra = extra;
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
-             tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
-             tree->Branch((prefix+"_pt08").c_str(), &pt08, (prefix+"_pt08/F").c_str());
-             tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
-             tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
-             tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
-             tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
-             tree->Branch((prefix+"_n010").c_str(), &n010, (prefix+"_n010/I").c_str());
+             if (isgun) {
+                 tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
+                 tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
+                 tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
+                 if (hasextra) {
+                     tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
+                     tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
+                     tree->Branch((prefix+"_n010").c_str(), &n010, (prefix+"_n010/I").c_str());
+                 }
+             } else {
+                 if (hasextra) tree->Branch((prefix+"_pt08").c_str(), &pt08, (prefix+"_pt08/F").c_str());
+             }
          }
          void fill(const std::vector<::SimpleObject> & objects, float eta, float phi) {
              ::InCone incone(objects, eta, phi, 0.8);
-             pt = incone.sum();
-             pt02 = incone.sum(0.2);
-             pt08 = incone.sum(0.8);
-             ptbest = incone.nearest();
-             pthighest = incone.max();
-             mindr025 =  incone.mindr(0.25);
-             n025 = incone.number(0.2, 0.25);
-             n010 = incone.number(0.2, 0.10);
+             pt = zip(incone.sum());
+             if (isgun) {
+                 pt02 = zip(incone.sum(0.2));
+                 ptbest = zip(incone.nearest());
+                 pthighest = zip(incone.max());
+                 if (hasextra) {
+                     mindr025 = zip( incone.mindr(0.25));
+                     n025 = incone.number(0.2, 0.25);
+                     n010 = incone.number(0.2, 0.10);
+                 }
+             } else {
+                 if (hasextra) {
+                    pt08 = zip(incone.sum(0.8));
+                 }
+             }
+             
          }
       };
       std::vector<std::pair<::MultiCollection,RecoVars>> reco_;
@@ -277,6 +298,7 @@ ResponseNTuplizer::ResponseNTuplizer(const edm::ParameterSet& iConfig) :
     genjets_(consumes<std::vector<reco::GenJet>>(iConfig.getParameter<edm::InputTag>("genJets"))),
     genparticles_(consumes<std::vector<reco::GenParticle>>(iConfig.getParameter<edm::InputTag>("genParticles"))),
     isParticleGun_(iConfig.getParameter<bool>("isParticleGun")),
+    writeExtraInfo_(iConfig.getParameter<bool>("writeExtraInfo")),
     random_(new TRandom3()), doRandom_(iConfig.getParameter<bool>("doRandom"))
 {
     usesResource("TFileService");
@@ -308,13 +330,15 @@ ResponseNTuplizer::~ResponseNTuplizer() { }
 void 
 ResponseNTuplizer::beginJob()
 {
-    mc_.makeBranches(tree_);
+    mc_.makeBranches(tree_,  isParticleGun_, writeExtraInfo_);
     for (auto & pair : reco_) {
-        pair.second.makeBranches(pair.first.name(), tree_);
+        pair.second.makeBranches(pair.first.name(), tree_, isParticleGun_, writeExtraInfo_);
     }
-    for (auto & c : copyUInts_) c.makeBranches(tree_);
-    for (auto & c : copyFloats_) c.makeBranches(tree_);
-    for (auto & c : copyVecUInts_) c.makeBranches(tree_);
+    if (!isParticleGun_) {
+        for (auto & c : copyUInts_) c.makeBranches(tree_);
+        for (auto & c : copyFloats_) c.makeBranches(tree_);
+        for (auto & c : copyVecUInts_) c.makeBranches(tree_);
+    }
 }
 
 
@@ -334,12 +358,12 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     std::vector<const reco::GenParticle *> prompts, taus;
     bool justNeutrinos = true;
     for (const reco::GenParticle &gen : *genparticles) {
+        if (std::abs(gen.pdgId()) < 12 || std::abs(gen.pdgId()) > 16 || gen.charge() != 0) {
+            justNeutrinos = false;
+        }
         if (isParticleGun_) {
             if (gen.statusFlags().isPrompt() == 1) prompts.push_back(&gen);
             continue;
-        }
-        if (std::abs(gen.pdgId()) < 12 || std::abs(gen.pdgId()) > 16 || gen.charge() != 0) {
-            justNeutrinos = false;
         }
         if ((gen.isPromptFinalState() || gen.isDirectPromptTauDecayProductFinalState()) && (std::abs(gen.pdgId()) == 11 || std::abs(gen.pdgId()) == 13) && gen.pt() > 5) {
             prompts.push_back(&gen);
@@ -353,10 +377,12 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
     for (auto & recopair : reco_) {
         recopair.first.get(iEvent);
     }
-    for (auto & c : copyUInts_) c.get(iEvent);
-    for (auto & c : copyFloats_) c.get(iEvent);
-    for (auto & c : copyVecUInts_) c.get(iEvent);
-    mc_.id = 998; tree_->Fill(); // so that we write only one per event
+    if (!isParticleGun_) {
+        for (auto & c : copyUInts_) c.get(iEvent);
+        for (auto & c : copyFloats_) c.get(iEvent);
+        for (auto & c : copyVecUInts_) c.get(iEvent);
+        mc_.id = 998; tree_->Fill(); // so that we write only one per event
+    }
 
 
     for (const reco::GenJet & j : *genjets) {
@@ -401,14 +427,14 @@ ResponseNTuplizer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSet
                 mc_.fillPropagated(*match, bZ_);
             }
             mc_.id = std::abs(match->pdgId());
-            mc_.iso04 = j.pt()/mc_.pt - 1;
+            mc_.iso04 = zip(j.pt()/mc_.pt - 1);
             mc_.iso02 = 0;
             for (const auto &dptr : j.daughterPtrVector()) {
                 if (::deltaR2(*dptr, *match) < 0.04f) {
                     mc_.iso02 += dptr->pt();
                 }
             }
-            mc_.iso02 = mc_.iso02/mc_.pt - 1;
+            mc_.iso02 = zip(mc_.iso02/mc_.pt - 1);
         } else {
             if (j.pt() < 20) continue;
             mc_.fillP4(j);
