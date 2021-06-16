@@ -58,7 +58,7 @@ process.extraPFStuff.add(
 )
 
 def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True,
-                makeInputMultiplicities=False, makeOutputMultiplicities=False):
+                makeInputMultiplicities=False, makeOutputMultiplicities=False, saveCands=False):
     def _add(name, what):
         setattr(process, name, what)
         process.extraPFStuff.add(what)
@@ -79,6 +79,8 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
     if makeJets:
         _add('ak4'+label, ak4PFJets.clone(src = tag, doAreaFastjet = False))
         setattr(process.l1pfjetTable.jets, label, cms.InputTag('ak4'+label))
+    if saveCands:
+        setattr(process.l1pfcandTable.cands, label, cms.InputTag(tag))
     if makeMET:
         _add('met'+label, pfMet.clone(src = tag, calculateSignificance = False))
         setattr(process.l1pfmetTable.mets, label, cms.InputTag('met'+label))
@@ -542,3 +544,18 @@ if False:
         getattr(process, 'l1pfProducer'+R).trkPtCut = 10
         getattr(process, 'l1pfProducer'+R).debug = 2
         getattr(process, 'l1ctLayer1'  +R).pfAlgoParameters.debug = True
+
+def saveCands():
+    process.l1pfcandTable = cms.EDProducer("L1PFCandTableProducer",
+                                           commonSel = cms.string("pt > 0.0 && abs(eta) < 10.0"),
+                                           cands = cms.PSet(
+                                           ),
+                                           moreVariables = cms.PSet(
+                                               puppiWeight = cms.string("puppiWeight"),
+                                               pdgId = cms.string("pdgId"),
+                                               charge = cms.string("charge")
+                                           ),
+                                       )
+    monitorPerf("L1PF", "l1pfCandidates:PF", saveCands=True)
+    monitorPerf("L1Puppi", "l1pfCandidates:Puppi", saveCands=True)
+    process.p += process.l1pfcandTable
