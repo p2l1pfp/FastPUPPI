@@ -558,9 +558,4 @@ def saveCands():
                                        )
     monitorPerf("L1PF", "l1pfCandidates:PF", saveCands=True)
     monitorPerf("L1Puppi", "l1pfCandidates:Puppi", saveCands=True)
-    process.p = cms.Path(
-        process.runPF +
-        process.ntuple +
-        process.l1pfjetTable + process.l1pfcandTable +
-        process.l1pfmetTable + process.l1pfmetCentralTable + process.l1pfmetBarrelTable
-    )
+    process.p += process.l1pfcandTable
