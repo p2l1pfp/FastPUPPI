@@ -423,6 +423,8 @@ def addTkEG():
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
+        tkEleTable.variables.caloEta = Var("EGRef.eta", float,precision=8)
+        tkEleTable.variables.caloPhi = Var("EGRef.phi", float,precision=8)
         setattr(process, "TkEm%sTable" % w, tkEmTable)
         setattr(process, "TkEle%sTable" % w, tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)

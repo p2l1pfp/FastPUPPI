@@ -25,9 +25,10 @@ def makeCalcCpp(what):
     raise RuntimeError("CalcCpp: can't parse "+what)
 
 def makeLepCalcCpp(what):
-    if re.match(r"lep\d+_(pt|iso|id)", what): 
+    if re.match(r"lep\d*_(pt|iso|id|eta|abseta)", what): 
         (a,b) = what.split("_")
-        return ROOT.CalcL(int(a[3:]), {"pt":0,"iso":1,"id":2}[b])
+        if a == "lep": a = "lep0"
+        return ROOT.CalcL(int(a[3:]), {"pt":0,"iso":1,"id":2,"eta":3,"abseta":4}[b])
     raise RuntimeError("LepCalcCpp: can't parse "+what)
 
 def makeGenArray(tree, what, ptCut, etaCut):
@@ -72,15 +73,49 @@ def makeMETArray(tree, what, obj, etaCut):
 def makeGenLepArray(tree, what, genobj, ptCut, etaCut, prompt=True):
     return makeRecoLepArray(tree, what, genobj, ptCut, etaCut, lepid=("prompt", 2 if prompt else 0, False))
 
+def parseLepRequirement(obj,ptCut,lepid,lepiso):
+    if ":" not in obj: return (obj,ptCut,lepid,lepiso)
+    obj, reqs = obj.split(":")
+    for req in reqs.split(";"):
+        m = re.match(r"id=(\w+),([0-9.+-]+)([if]?)", req)
+        if m:
+            lepid = (m.group(1), float(m.group(2)), m.group(3) == "f")
+            continue
+        m = re.match(r"pt>=([0-9.]+)", req)
+        if m:
+            ptCut = float(m.group(1))
+            continue
+        raise RuntimeError("Can't parse requirement %r in obj %r" % (obj,req))
+    return (obj,ptCut,lepid,lepiso)
+
 def makeRecoLepArray(tree, what, obj, ptCut, etaCut, lepid=("",-1.,True), lepiso=("", -1., False), _cache={}):
-    _key = (id(tree),what,obj,int(ptCut*100),int(etaCut*1000),lepid[0],int(lepid[1]*1000),lepiso[0],int(lepiso[1]*1000))
+    (obj,ptCut,lepid,lepiso) = parseLepRequirement(obj,ptCut,lepid,lepiso)
+    _key = (id(tree),what,obj,int(ptCut*100),int(etaCut[0]*1000),int(etaCut[1]*1000),lepid[0],int(lepid[1]*1000),lepiso[0],int(lepiso[1]*1000))
     if _key in _cache: return _cache[_key]
     if not tree.GetBranch("n"+obj):
         if "Gen" in obj: raise RuntimeError("Missing "+obj+"!");
         return None
     cppcalc = makeLepCalcCpp(what)
     progress = _progress("  Reading "+obj+" in C++...")
-    ret = ROOT.makeLepArray(tree, obj, ptCut, etaCut, cppcalc, lepid[0], lepid[1], lepid[2], lepiso[0], lepiso[1], lepiso[2]);
+    ret = ROOT.makeLepArray(tree, obj, ptCut, etaCut[0], etaCut[1], cppcalc, lepid[0], lepid[1], lepid[2], lepiso[0], lepiso[1], lepiso[2]);
+    _cache[_key] = ret
+    progress.done("done, %d entries" % len(ret))
+    return ret
+
+def makeMatchedRecoLepArray(tree, what, 
+                            obj, ptCut, etaCut, lepid, lepiso,
+                            genObj, genPtCut, genEtaCut, genPrompt, genDr, _cache={}):
+    (obj,ptCut,lepid,lepiso) = parseLepRequirement(obj,ptCut,lepid,lepiso)
+    _key = (id(tree),what,obj,int(ptCut*100),int(etaCut[0]*1000),int(etaCut[1]*1000),lepid[0],int(lepid[1]*1000),lepiso[0],int(lepiso[1]*1000))
+    if _key in _cache: return _cache[_key]
+    if not tree.GetBranch("n"+obj):
+        if "Gen" in obj: raise RuntimeError("Missing "+obj+"!");
+        return None
+    cppcalc = makeLepCalcCpp(what)
+    progress = _progress("  Reading "+obj+" in C++...")
+    ret = ROOT.makeMatchedLepArray(tree, cppcalc, 
+                            obj, ptCut, etaCut[0], etaCut[1], lepid[0], lepid[1], lepid[2], lepiso[0], lepiso[1], lepiso[2],
+                            genObj, genPtCut, genEtaCut[0], genEtaCut[1], 2 if genPrompt else 0, genDr);
     _cache[_key] = ret
     progress.done("done, %d entries" % len(ret))
     return ret
@@ -192,6 +227,30 @@ whats = WHATS + [
         ("BitwisePF",   "L1PuppiBitwisePF$",  ROOT.kAzure+1, 20, 1.1),
         ("BitwisePuppi","L1PuppiBitwise$",    ROOT.kGreen+2, 20, 0.8),
     ]),
+    ('l1pfmu_test',[
+        ("Gen",  "GenMu",   ROOT.kGray+2, 20, 2.0),
+        ("Sta",  "StaMu",   ROOT.kRed+1,  20, 1.8),
+        ("PF",   "PFMu",    ROOT.kGreen+1, 20, 1.5),
+        #("PF q12", "PFMu:id=quality,12",    ROOT.kBlue+1, 20, 1.2), # example of quality requirement
+        #("PFpt30", "PFMu:pt>=30",    ROOT.kRed+1, 20, 1.0),
+    ]),
+    ('l1tkeg_test_both',[
+        ("Gen",      "GenEl",   ROOT.kGray+2, 20, 2.0),
+        ("TkEM EB",  "TkEmEB",   ROOT.kRed+0,  20, 1.7),
+        ("TkEM EE",  "TkEmEE",   ROOT.kRed+2,  20, 1.7),
+        ("TkEle EB",  "TkEleEB",   ROOT.kGreen+0,  20, 1.3),
+        ("TkEle EE",  "TkEleEE",   ROOT.kGreen+2,  20, 1.3),
+    ]),
+    ('l1tkeg_test_EB',[
+        ("Gen",      "GenEl",   ROOT.kGray+2, 20, 2.0),
+        ("TkEM EB",  "TkEmEB",   ROOT.kRed+0,  20, 1.7),
+        ("TkEle EB",  "TkEleEB",   ROOT.kGreen+0,  20, 1.3),
+    ]),
+    ('l1tkeg_test_EE',[
+        ("Gen",      "GenEl",   ROOT.kGray+2, 20, 2.0),
+        ("TkEM EE",  "TkEmEE",   ROOT.kRed+2,  20, 1.7),
+        ("TkEle EE",  "TkEleEE",   ROOT.kGreen+2,  20, 1.3),
+    ]),
 ]
 
 from optparse import OptionParser
@@ -207,10 +266,14 @@ parser.add_option("-E", dest="eff",  default=None, type="string", help="Choose p
 parser.add_option("-r", dest="rate",  default="10,20,50", type="string", help="Choose rate [kHz] (for isorate plots, can specify more than one)")
 parser.add_option("-l","--label", dest="label",  default=None, type="string", help="Extra label for plots")
 parser.add_option("-p", "--pt", dest="pt",  default=30, type="float", help="Choose pt cut")
-parser.add_option("-e", "--eta", dest="eta",  default=2.4, type="float", help="Choose eta")
+parser.add_option("-e", "--eta", "--etamax", dest="eta",  default=2.4, type="float", help="Choose max |eta|")
+parser.add_option("--etamin", dest="etamin",  default=0, type="float", help="Choose minimum |eta|")
+parser.add_option("--genprompt", dest="genprompt",  default=2, type="int", help="Gen prompt: 2 = direct, 1 = also tau, 0 = any")
+parser.add_option("--gendr", dest="gendr",  default=0.1, type="float", help="Delta(R) match between gen and reco")
 parser.add_option("--lepid", dest="lepid",  default=None, help="Choose lep id")
 parser.add_option("--lepiso", dest="lepiso",  default=None, help="Choose lep iso")
 parser.add_option("-v", dest="var",  default="ht", help="Choose variable (ht, met, metCentral, mht, jet<N>, mjj, ptj-mjj<M>)")
+parser.add_option("--xv", dest="xvar",  default=None, help="Choose a gen variable for the x axis in lepton efficiency plots)")
 parser.add_option("--xlabel","--varlabel", dest="varlabel", default=None, help="X axis label for the variable")
 parser.add_option("--xmax", dest="xmax",  default=None, type=float, help="X axis maximum")
 parser.add_option("--ymin", dest="ymin",  default=None, type=float, help="Y axis minimum vale")
@@ -285,19 +348,33 @@ elif options.var.startswith("met"):
 elif options.var.startswith("lep"):
     isJetMet = False
     what = options.var
-    if options.var.endswith("pt"):
-        options.pt = 0
+    if options.xvar is None: 
+        options.xvar = options.var
+    if options.xvar.endswith("pt"):
         if options.varlabel is None: options.varlabel = "p_{T}"
         if options.genht    is None: options.genht    = 18
         if options.xmax     is None: options.xmax     = 80
         if options.eff      is None: options.eff      = "0.95"
+        options.genleppt = 0
         qualif = "|#eta| < %.1f" % options.eta
+    elif options.xvar.endswith("abseta"):
+        options.eta = 3.2
+        if options.varlabel is None: options.varlabel = "|#eta|"
+        if options.genht    is None: options.genht    = 25
+        if options.xmax     is None: options.xmax     = options.eta
+        if options.eff      is None: options.eff      = "0.95"
+        options.genleppt = options.genht
+        qualif = "p_{T}^{L1} > %.1f, p_{T}^{gen} > %.1f" % (options.pt, options.genht)
     else:
         raise RuntimeError("Unknown variable "+options.var)
+    if options.var.endswith("pt"):
+        options.pt = 0
     if options.lepid is None:
         options.lepid_ = ("", -1., True)
     if options.lepiso is None:
         options.lepiso_ = ("", -1., False)
+    # finally, convert this into a tuple for convenience
+    options.etas = (options.etamin, options.eta)
 
 else:
     raise RuntimeError("Unknown variable "+options.var)
@@ -444,14 +521,20 @@ for plotkind in options.plots.split(","):
     if isJetMet:
         genArray = makeGenArray(signal, what, options.pt, options.eta)
     else:
-        genArray = False
+        genArray = False; genObjName = None
         for objset,things in whats:
+          if options.what and (objset not in options.what.split(",")): continue
+          if options.what_reg:
+              if not any(re.match(p+"$",objset) for p in options.what_reg.split(",")): 
+                  continue
           for name,obj,col,msty,msiz in things:
+            obj = obj.rstrip("$")
             if name == "Gen":
-                genArray = makeGenLepArray(signal, what, obj, options.pt, options.eta)
-                break
-          if genArray: break
-  if plotkind in ("isorate", "incleff","inclrate") :
+                if obj == genObjName: continue
+                if genObjName != None: raise RuntimeError("Duplicate gen definition: %s, %s" % (genObjName, obj))
+                genObjName = obj
+                genArray = makeGenLepArray(signal, options.xvar, obj, options.genleppt, options.etas)
+  if plotkind in ("isorate", "incleff","inclrate","lepeff") :
       plotparams = map(float, options.rate.split(","))
   elif plotkind in ("platroc", "plateff"):
       plotparams = map(float, options.eff.split(","))
@@ -465,8 +548,8 @@ for plotkind in options.plots.split(","):
                   continue
           plots = []
           for name,obj,col,msty,msiz in things:
-              if (name == "Gen") or ("GenAcc$" in obj): continue
-              obj = obj.replace("$","")
+              obj = obj.rstrip("$")
+              if (name == "Gen") or ("GenAcc" in obj): continue
               if options.var.startswith("met") or obj.startswith("Ref") or not isJetMet:
                   jecs = None
               else:
@@ -483,20 +566,38 @@ for plotkind in options.plots.split(","):
                   if isJetMet:
                       recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
                   else:
-                      recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.eta, lepid=options.lepid_, lepiso=options.lepiso_) 
+                      recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_) 
                   if not recoArrayB: continue
                   plot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
               elif plotkind == "effc":
                   if isJetMet:
                       recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
                   else:
-                      recoArrayS = makeRecoLepArray(signal, what, obj, ptcut, options.eta, lepid=options.lepid_, lepiso=options.lepiso_)
+                      recoArrayS = makeRecoLepArray(signal, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_)
                   if not recoArrayS: continue
                   plot = makeCumulativeHTEffGenCut(name, recoArrayS, genArray, options.genht, options.xmax, norm=1)
+              elif plotkind == "lepeff":
+                  if isJetMet: raise RuntimeError()
+                  #print "Lepeff vs %s for %s %s > %s ptCut %s gen %s ptCut %s eta %s" % (options.xvar, obj, what, plotparam, ptcut, genObjName, options.genleppt, options.eta)
+                  recoArrayS = makeMatchedRecoLepArray(signal, what, 
+                                obj, ptcut, options.etas, options.lepid_, options.lepiso_,
+                                genObjName, options.genleppt, options.etas, options.genprompt, options.gendr)
+                  plot = makeEffHist(name, genArray, recoArrayS, plotparam, options.xmax, logxbins=options.logxbins)
               elif plotkind == "isorate":
                   targetrate = plotparam
-                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
-                  if not recoArrayB: continue
+                  if isJetMet:
+                      recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                      if not recoArrayB: continue
+                      recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
+                      if not recoArrayS: continue
+                  else:
+                      recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_) 
+                      if not recoArrayB: continue
+                      #print "Lepeff %s %s > %s ptCut %s gen %s ptCut %s" % (obj, what, plotparam, ptcut, genObjName, options.genleppt)
+                      recoArrayS = makeMatchedRecoLepArray(signal, what, 
+                                    obj, ptcut, options.etas, options.lepid_, options.lepiso_,
+                                    genObjName, options.genleppt, options.etas, options.genprompt, options.gendr)
+                      if not recoArrayS: continue
                   rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
                   if not rateplot: continue
                   cut = 9999
@@ -504,15 +605,22 @@ for plotkind in options.plots.split(","):
                       if rateplot.GetBinContent(ix) <= targetrate:
                           cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                           break
-                  recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
-                  if not recoArrayS: continue
                   plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
                   label = "%s(%s) > %.0f" % (options.varlabel, name,cut)
               elif plotkind == "roc":
-                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
-                  if not recoArrayB: continue
-                  recoArrayS = makeCorrArray(signal,     what, obj, ptcut, options.eta, jecs)
-                  if not recoArrayS: continue
+                  if isJetMet:
+                      recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                      if not recoArrayB: continue
+                      recoArrayS = makeCorrArray(signal,     what, obj, ptcut, options.eta, jecs)
+                      if not recoArrayS: continue
+                  else:
+                      recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_) 
+                      if not recoArrayB: continue
+                      #print "Lepeff %s %s > %s ptCut %s gen %s ptCut %s" % (obj, what, plotparam, ptcut, genObjName, options.genleppt)
+                      recoArrayS = makeMatchedRecoLepArray(signal, what, 
+                                    obj, ptcut, options.etas, options.lepid_, options.lepiso_,
+                                    genObjName, options.genleppt, options.etas, options.genprompt, options.gendr)
+                      if not recoArrayS: continue
                   effsig  = makeCumulativeHTEffGenCut(name+"_s", recoArrayS, genArray, options.genht, options.xmax, norm=1)
                   ratebkg = makeCumulativeHTEff(name+"_b", recoArrayB, options.xmax)
                   if not effsig or not ratebkg: continue
@@ -526,18 +634,18 @@ for plotkind in options.plots.split(","):
                   if isJetMet:
                       recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
                   else:
-                      recoArrayS = makeRecoLepArray(signal, what, obj, ptcut, options.eta, lepid=options.lepid_, lepiso=options.lepiso_)
-                      for i in xrange(min(500,genArray.size())):
-                          if genArray[i] < options.genht: continue
-                          if recoArrayS[i] > plotparam: continue
-                          signal.GetEntry(i)
-                          print "%3d  %8.3f  %8.3f   %d %u" % (i, genArray[i], recoArrayS[i], signal.luminosityBlock, signal.event)
+                      recoArrayS = makeMatchedRecoLepArray(signal, what, 
+                                obj, ptcut, options.etas, options.lepid_, options.lepiso_,
+                                genObjName, options.genleppt, options.etas, options.genprompt, options.gendr)
 
                   if not recoArrayS: continue
                   makeInclusiveEffGenHTCut(name, recoArrayS, plotparam, genArray, options.genht)
                   continue
               elif plotkind == "inclrate":
-                  recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                  if isJetMet:
+                    recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+                  else:
+                    recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_) 
                   if not recoArrayB: continue
                   makeInclusiveEffRate(name, recoArrayB, plotparam)
                   continue
@@ -550,6 +658,8 @@ for plotkind in options.plots.split(","):
               print "   nothing to plot!"
               continue
           plotter.SetLogy(False)
+          plotstyle = "PCX"
+          ROOT.gStyle.SetErrorX(0)
           if plotkind == "rate":
               plotter.SetLogy(True)
               frame = ROOT.TH1D("",";L1 %s cut (%s); Minbias rate @ PU200 [kHz]" % (options.varlabel, qualif), 100, 0, options.xmax)
@@ -591,6 +701,7 @@ for plotkind in options.plots.split(","):
               frame.GetYaxis().SetRangeUser(options.ymin if options.ymin else 0.5, 100e3)
               leg = ROOT.TLegend(0.2,0.93,0.55,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d%s' % (options.var, plotkind, objset, options.eta, options.pt, genpost)
+              plotstyle = "PLX"
           elif plotkind == "platroc":
               plotter.SetLogy(True)
               xtit = "Gen threshold at %g%% eff" % (plotparam*100)
@@ -600,6 +711,18 @@ for plotkind in options.plots.split(","):
               frame.GetYaxis().SetRangeUser(options.ymin if options.ymin else 0.5, 100e3)
               leg = ROOT.TLegend(0.6,0.93,0.93,0.93-0.055*len(things))
               plotname = '%s%s-%s_eta%s_pt%d_eff%.3f' % (options.var, plotkind, objset, options.eta, options.pt, plotparam)
+          elif plotkind == "lepeff":
+              gentext, genpost = "iciency", "" 
+              if options.genprompt != 2: genpost = "_id%d" % options.genprompt
+              xmin = options.etamin*0.8 if "eta" in options.xvar else 0
+              frame = ROOT.TH1D("",";Gen %s; Eff%s" % (options.varlabel, gentext), 100, xmin, options.xmax)
+              frame.GetYaxis().SetRangeUser(options.ymin if options.ymin else 0.0, 1.05)
+              leg = ROOT.TLegend(0.57,0.18,0.93,0.18+0.055*len(things))
+              streta = ("%s_%s" % options.etas) if options.etamin > 0 else str(options.eta)
+              plotname = '%s%s-%s_eta%s_genpt%s%s_recpt%s_%s%s' % (options.xvar, plotkind, objset, streta, options.genleppt, genpost, options.pt, options.var, plotparam)
+              if "eta" in options.xvar:
+                  ROOT.gStyle.SetErrorX(0.5)
+                  plotstyle = "PE"
           frame.Draw()
           if plotkind in ("rate","roc","platroc"):
               line = ROOT.TLine()
@@ -607,10 +730,9 @@ for plotkind in options.plots.split(","):
               for y in 40e3, 100, 10:
                   line.DrawLine(frame.GetXaxis().GetXmin(),y,frame.GetXaxis().GetXmax(),y)
           for n,p in plots: 
-              if plotkind == "platroc":
-                  p.Draw("PLX SAME")
-              else:
-                  p.Draw("PCX SAME" if ("TH1" not in p.ClassName()) else "C SAME")
+              if ("TH1" not in p.ClassName()): 
+                  plotstyle = plotstyle.lstrip("R").replace("X","")
+              p.Draw(plotstyle+" SAME")
           for n,p in plots: 
               leg.AddEntry(p, n, "L" if plotkind in ("rate","roc") else "LP")
           leg.Draw()
