@@ -168,6 +168,26 @@ while [[ "$W" != "" ]]; do
              python scripts/stackPlotsFromFiles.py --legend="TR" $me/${plot}-comp-${W}.png ${W}_eff  L1TDR=$v0/${plot/l1pfpu/l1pfpu_tkpt3}.root,Gray+2 1112=$v1/${plot/l1pfpu/l1pfpu_jetnoref}.root,Azure+2 Now=$me/${plot/l1pfpu/l1pfpu_jetnoref}.root,Green+2;
          done
          ;;
+    run-leps)
+         python runPerformanceNTuple.py || exit 1;
+         for X in DYToLL_PU200 SingleNeutrino_PU200; do  
+             ./scripts/prun.sh runPerformanceNTuple.py $SAMPLES $X ${X}.${V}.lep --inline-customize 'noResp();addGenLep();addPFLep([13],["PF"]);addStaMu();addTkEG()' --maxfiles 16 
+         done
+         ;;
+    plot-leps)
+         python runPerformanceNTuple.py || exit 1;
+         BKG=perfNano_SingleNeutrino_PU200.${V}.lep.root
+         for X in DYToLL_PU200; do  
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1pfmu_test -v lep_pt --xv lep_pt     -P lepeff -r 12,18,30 --xmax 70
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1pfmu_test -v lep_pt --xv lep_abseta -P lepeff -s 25 -r 18 --xmax 2.8
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1pfmu_test -v lep1_pt --xv lep1_pt     -P rate,isorate -r 40 
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1tkeg_test_both -v lep_pt --xv lep_abseta -P lepeff -s 30 -r 15 --xmax 2.8
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1tkeg_test_both -v lep1_pt --xv lep1_pt     -P rate 
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1tkeg_test_EB   -v lep_pt --xv lep_pt  -P lepeff -r 15,25,40 --etamin 0.0 --etamax 1.4
+             python scripts/jetHtSuite.py perfNano_${X}.${V}.lep.root $BKG $PLOTDIR/leps/$X -w l1tkeg_test_EE   -v lep_pt --xv lep_pt  -P lepeff -r 15,25,40 --etamin 1.5 --etamax 2.4
+         done
+         ;;
+ 
     run-mult)
          python runPerformanceNTuple.py || exit 1;
          for X in {TTbar,VBF_HToInvisible,VBFHToBB}_PU200; do 

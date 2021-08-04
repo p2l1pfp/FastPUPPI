@@ -80,12 +80,21 @@ python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_P
 python scripts/jetHtSuite.py perfNano_TTbar_PU200.root perfNano_SingleNeutrino_PU200.root plots_dir -w l1pfpu -v jet4
 ```
 
-3) For object multiplicitly studies:
+3) For object multiplicitly studies (this may need to be updated):
 
 Plot the number of elements in all subdetectors: 
 ```
 python scripts/objMultiplicityPlot.py perfTuple_TTbar_PU200.root  plotdir -s TTbar_PU200  
 ```
 Notes:
- * you should add `goRegional()` to the options in `runPerformanceNTuple.py` if you want to get meaningful numbers per region and not just overall
  * you can select only some subdetector with `-d`, or some kind of object with `-c`.
+
+4) For lepton efficiency studies (preliminary)
+
+* produce the perfNano file switching on gen and reco leptons, e.g. adding `addGenLep();addPFLep([13],["PF"]);addStaMu();addTkEG()`.
+* `jetHtSuite.py` can be used to make lepton efficiency and rate plots:
+  * `-P lepeff -v lep_V --xvar lep_X` can make a plot of efficiency vs generated X (e.g. `pt`, `abseta`) for a cut on reconstructed V (normally `pt`)
+  * `-P rate -v lepN_V` can make a rate plot for a trigger requiring at least `N` leptons with a cut on V (normally `pt`)
+  * `-P isorate -v lepN_V --xvar lep_X`  can make an isorate plot of efficiency vs X (e.g. `pt`) for a trigger requiring at least `N` leptons with a cut on V (normally `pt`)
+
+See examples in `scripts/valSuite.sh` for `run-leps` and `plots-leps` 
