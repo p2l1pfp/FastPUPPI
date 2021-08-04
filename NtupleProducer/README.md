@@ -5,6 +5,10 @@ cmsrel CMSSW_11_1_7
 cd CMSSW_11_1_7/src
 cmsenv
 git cms-checkout-topic -u p2l1pfp:L1PF_11_1_7_X_newfirmware
+git cms-addpkg  L1Trigger/TrackTrigger
+git cms-addpkg SimTracker/TrackTriggerAssociation
+git cms-addpkg L1Trigger/L1TMuon
+git clone -u official-cmssw:phase2-l1t-integration-CMSSW_11_1_7 https://github.com/cms-l1t-offline/L1Trigger-L1TMuon.git L1Trigger/L1TMuon/data
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
@@ -17,9 +21,8 @@ The first step is to produce the inputs:
 cd FastPUPPI/NtupleProducer/python/
 cmsRun runInputs110X.py 
 ```
-Currently only these kind of samples are supported:
- * `11_0_X` : HLT TDR, Phase2C9, Geometry D49, HGCal v11.
-The older `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported. Support for `10_6_X` (L1T TDR) could be recovered if requested.
+Currently only  `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) are supported.
+The older `10_6_X` (L1T TDR), `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported. 
 
 By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
 This however takes up a substantial disk space especially at PU 200. 

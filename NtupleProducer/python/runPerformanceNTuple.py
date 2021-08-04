@@ -263,9 +263,20 @@ def addCalib():
 def addSeededConeJets(what="Puppi",src="l1ctLayer1:Puppi"):
     process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
     scModule = process.L1SeedConePFJetProducer.clone(L1PFObjects = src)
+    scEmuModule = process.L1SeedConePFJetEmulatorProducer.clone(L1PFObjects = src)
     setattr(process, 'sc'+what, scModule)
-    process.extraPFStuff.add(scModule)
+    setattr(process, 'scEmu'+what, scEmuModule)
+    process.extraPFStuff.add(scModule, scEmuModule)
     setattr(process.l1pfjetTable.jets, 'sc'+what, cms.InputTag('sc'+what))
+    setattr(process.l1pfjetTable.jets, 'scEmu'+what, cms.InputTag('scEmu'+what))
+def addDeregSeededConeJets():
+    process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
+    process.load('L1Trigger.Phase2L1ParticleFlow.DeregionizerProducer_cfi')
+    process.scDeregPuppiJets = process.L1SeedConePFJetEmulatorProducer.clone(L1PFObjects = "DeregionizerProducer:Puppi")
+    process.extraPFStuff.add(process.scDeregPuppiJets, process.DeregionizerProducer)
+    setattr(process.l1pfjetTable.jets, 'scDeregPuppi', cms.InputTag('scDeregPuppiJets'))
+
+
 
 def addRefs(calo=True,tk=True):
     process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
