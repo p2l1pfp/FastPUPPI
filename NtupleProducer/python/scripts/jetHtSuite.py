@@ -251,6 +251,12 @@ whats = WHATS + [
         ("TkEM EE",  "TkEmEE",   ROOT.kRed+2,  20, 1.7),
         ("TkEle EE",  "TkEleEE",   ROOT.kGreen+2,  20, 1.3),
     ]),
+    ('l1pfpu_scjetemu',[
+        ("Ak4",       "L1Puppi$",      ROOT.kGray+2, 20, 2.0),
+        ("scPuppi",   "scPuppi$",      ROOT.kRed+1, 20, 1.7),
+        ("scEmu",     "scEmuPuppi$",   ROOT.kViolet+1, 20, 1.4),
+        ("scDereg",   "scDeregPuppi$", ROOT.kAzure+1, 20, 1.1),
+    ]),
 ]
 
 from optparse import OptionParser
