@@ -227,6 +227,11 @@ whats = WHATS + [
         ("BitwisePF",   "L1PuppiBitwisePF$",  ROOT.kAzure+1, 20, 1.1),
         ("BitwisePuppi","L1PuppiBitwise$",    ROOT.kGreen+2, 20, 0.8),
     ]),
+    ('l1pfpu_tkemu',[
+        ("Default",    "L1Puppi$",       ROOT.kGray+2, 20, 2.0),
+        ("Emu Flt",    "L1PuppiTkFlt$",  ROOT.kRed+1, 20, 1.7),
+        ("Emu Int",    "L1PuppiTkEmu$",  ROOT.kAzure+1, 20, 1.4),
+    ]),
     ('l1pfmu_test',[
         ("Gen",  "GenMu",   ROOT.kGray+2, 20, 2.0),
         ("Sta",  "StaMu",   ROOT.kRed+1,  20, 1.8),
@@ -250,6 +255,27 @@ whats = WHATS + [
         ("Gen",      "GenEl",   ROOT.kGray+2, 20, 2.0),
         ("TkEM EE",  "TkEmEE",   ROOT.kRed+2,  20, 1.7),
         ("TkEle EE",  "TkEleEE",   ROOT.kGreen+2,  20, 1.3),
+    ]),
+    ('l1tkeg_test_both_tkemu',[
+        ("Gen",      "GenEl",   ROOT.kGreen+0, 20, 2.0),
+        ("EleEB Sim",  "TkEleEB",        ROOT.kGray+1,    20, 1.8),
+        ("EleEB Flt",  "TkEleEBTkFlt",   ROOT.kRed+0,     20, 1.4),
+        ("EleEB Emu",  "TkEleEBTkEmu",   ROOT.kAzure+10,  20, 1.0),
+        ("EleEE Sim",  "TkEleEE",        ROOT.kGray+3,    20, 1.8),
+        ("EleEE Flt",  "TkEleEETkFlt",   ROOT.kRed+2,     20, 1.4),
+        ("EleEE Emu",  "TkEleEETkEmu",   ROOT.kAzure+2,   20, 1.0),
+    ]),
+    ('l1tkeg_test_EB_tkemu',[
+        ("Gen",      "GenEl",   ROOT.kGreen+0, 20, 2.0),
+        ("EleEB Sim",  "TkEleEB",        ROOT.kGray+1,    20, 1.8),
+        ("EleEB Flt",  "TkEleEBTkFlt",   ROOT.kRed+0,     20, 1.4),
+        ("EleEB Emu",  "TkEleEBTkEmu",   ROOT.kAzure+10,  20, 1.0),
+    ]),
+    ('l1tkeg_test_EE_tkemu',[
+        ("Gen",      "GenEl",   ROOT.kGreen+0, 20, 2.0),
+        ("EleEE Sim",  "TkEleEE",        ROOT.kGray+3,    20, 1.8),
+        ("EleEE Flt",  "TkEleEETkFlt",   ROOT.kRed+2,     20, 1.4),
+        ("EleEE Emu",  "TkEleEETkEmu",   ROOT.kAzure+2,   20, 1.0),
     ]),
     ('l1pfpu_scjetemu',[
         ("Ak4",       "L1Puppi$",      ROOT.kGray+2, 20, 2.0),

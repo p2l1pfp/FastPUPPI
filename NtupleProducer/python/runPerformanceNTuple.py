@@ -411,11 +411,11 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
                     phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
                 setattr(process, w+"PhTable", phTable)
                 process.extraPFStuff.add(phTable)
-def addTkEG():
+def addTkEG(postfix=""):
     for w in "EB","EE":
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        name = cms.string("TkEm"+w),
-                        src = cms.InputTag("l1ctLayer1EG:L1TkEm"+w),
+                        name = cms.string("TkEm"+w+postfix),
+                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEm%s" % (postfix, w)),
                         cut = cms.string(""),
                         doc = cms.string(""),
                         singleton = cms.bool(False), # the number of entries is variable
@@ -431,15 +431,15 @@ def addTkEG():
                         )
                     )
         tkEleTable = tkEmTable.clone(
-                        name = cms.string("TkEle"+w),
-                        src = cms.InputTag("l1ctLayer1EG:L1TkEle"+w),
+                        name = cms.string("TkEle"+w+postfix),
+                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEle%s" % (postfix, w)),
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
         tkEleTable.variables.caloEta = Var("EGRef.eta", float,precision=8)
         tkEleTable.variables.caloPhi = Var("EGRef.phi", float,precision=8)
-        setattr(process, "TkEm%sTable" % w, tkEmTable)
-        setattr(process, "TkEle%sTable" % w, tkEleTable)
+        setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
+        setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 def goGun(calib=1):
@@ -505,9 +505,14 @@ def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
         merger = process.l1ctLayer1.clone(
             pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ])
         setattr(process, 'l1ctLayer1' + postfix, merger)
-        process.extraPFStuff.add(prodhgcal, merger)
         monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
         monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
+        egmerger = process.l1ctLayer1EG.clone()
+        egmerger.tkElectrons[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEle") ]
+        egmerger.tkEms[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEm"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1TkEm")  ]
+        egmerger.tkEgs[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1Eg"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1Eg")  ]
+        setattr(process, 'l1ctLayer1EG' + postfix, egmerger)
+        process.extraPFStuff.add(prodhgcal, merger, egmerger)
     else:
         prodhgcal = process.l1ctLayer1HGCal
     prodhgcal.trackInputConversionAlgo = "Emulator"
@@ -522,12 +527,12 @@ def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
             etaPostOffs = cms.int32(150),
             phiBits = cms.uint32(10),
             z0Bits = cms.uint32(12),
-            dEtaHGCalBits = cms.uint32(12),
-            dEtaHGCalZ0PreShift = cms.uint32(6),
-            dEtaHGCalRInvPreShift = cms.uint32(8),
-            dEtaHGCalRInvPostShift = cms.uint32(2),
-            dEtaHGCalRInvLUTBits = cms.uint32(10),
-            dEtaHGCalFloatOffs = cms.double(-0.2),
+            dEtaHGCalBits = cms.uint32(10),
+            dEtaHGCalZ0PreShift = cms.uint32(2),
+            dEtaHGCalRInvPreShift = cms.uint32(6),
+            dEtaHGCalLUTBits = cms.uint32(10),
+            dEtaHGCalLUTShift = cms.uint32(2),
+            dEtaHGCalFloatOffs = cms.double(0.0),
             dPhiHGCalBits = cms.uint32(4),
             dPhiHGCalZ0PreShift = cms.uint32(4),
             dPhiHGCalZ0PostShift = cms.uint32(6),
