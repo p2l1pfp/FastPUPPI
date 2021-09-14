@@ -35,6 +35,7 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_T15_v3',
 
 process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
 process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
+process.load('L1Trigger.Phase2L1GMT.gmt_cfi')
 process.load('L1Trigger.L1TTrackMatch.L1GTTInputProducer_cfi')
 process.load('L1Trigger.VertexFinder.VertexProducer_cff')
 
@@ -45,7 +46,7 @@ for l1ctbrd in [process.l1ctLayer1Barrel, process.l1ctLayer1HGCal, process.l1ctL
     l1ctbrd.vtxCollection = cms.InputTag("VertexProducerEmulator", "l1verticesEmulation")
     l1ctbrd.vtxCollectionEmulation = True
 
-process.extraPFStuff = cms.Task(process.L1GTTInputProducer, process.VertexProducerEmulator, process.l1ParticleFlowTask, process.l1ctLayer1Task)
+process.extraPFStuff = cms.Task(process.standaloneMuons, process.L1GTTInputProducer, process.VertexProducerEmulator, process.l1ParticleFlowTask, process.l1ctLayer1Task)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -362,10 +363,10 @@ def addStaMu():
     )
     process.extraPFStuff.add(process.staMuTable)
 
-def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
+def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
     for w in opts:
         pfLepTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        src = cms.InputTag("l1ctLayer1:"+w),
+                        src = cms.InputTag("l1ctLayer1%s:%s"%(postfix,w)),
                         doc = cms.string("reco leptons"),
                         singleton = cms.bool(False), # the number of entries is variable
                         extension = cms.bool(False), # this is the main table
@@ -378,20 +379,20 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
                         )
                     )
         if "Old" in w:
-            pfLepTable.src = "l1pfCandidates:"+w.replace("Old","")
+            pfLepTable.src = "l1pfCandidates%s:%s" % (postfix,w.replace("Old",""))
         for pdgId in pdgs:
             if pdgId == 13:
                 muTable = pfLepTable.clone(
                             cut  = cms.string("abs(pdgId) == %d && pt > 2" % pdgId),
-                            name = cms.string(w+"Mu"))
-                setattr(process, w+"MuTable", muTable)
+                            name = cms.string(w+"Mu"+postfix))
+                setattr(process, w+"Mu"+postfix+"Table", muTable)
                 process.extraPFStuff.add(muTable)
                 muTable.variables.quality = Var("? muon.isNonnull ? muon.hwQual : -1", int, doc="Quality")
             elif pdgId == 11:
                 elTable = pfLepTable.clone(
                             cut  = cms.string("abs(pdgId) == %d && pt > 2" % pdgId),
-                            name = cms.string(w+"El"))
-                setattr(process, w+"ElTable", elTable)
+                            name = cms.string(w+"El"+postfix))
+                setattr(process, w+"El"+postfix+"Table", elTable)
                 process.extraPFStuff.add(elTable)
                 elTable.variables.hwEmID = Var("? pfCluster.isNonnull ? pfCluster.hwEmID : -1", int, doc="Quality")
                 elTable.variables.pfEmID = Var("? pfCluster.isNonnull ? pfCluster.egVsPionMVAOut : -1", float, precision=8)
@@ -401,7 +402,7 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
             elif pdgId == 22:
                 phTable = pfLepTable.clone(
                             cut  = cms.string("abs(pdgId) == %d && pt > 8" % pdgId),
-                            name = cms.string(w+"Ph"))
+                            name = cms.string(w+"Ph"+postfix))
                 phTable.variables.hwEmID = Var("hwEmID", int)
                 phTable.variables.pfPuID = Var("? pfCluster.isNonnull ? pfCluster.egVsPUMVAOut : -1", float, precision=8)
                 elTable.variables.pfEmID = Var("? pfCluster.isNonnull ? pfCluster.egVsPionMVAOut : -1", float, precision=8)
@@ -409,13 +410,13 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"]):
                 elTable.variables.clEmEt = Var("? pfCluster.isNonnull ? pfCluster.emEt : -1", float, precision=8)
                 if w == "Puppi":
                     phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
-                setattr(process, w+"PhTable", phTable)
+                setattr(process, w+"Ph"+postfix+"Table", phTable)
                 process.extraPFStuff.add(phTable)
-def addTkEG():
+def addTkEG(postfix=""):
     for w in "EB","EE":
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        name = cms.string("TkEm"+w),
-                        src = cms.InputTag("l1ctLayer1EG:L1TkEm"+w),
+                        name = cms.string("TkEm"+w+postfix),
+                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEm%s" % (postfix, w)),
                         cut = cms.string(""),
                         doc = cms.string(""),
                         singleton = cms.bool(False), # the number of entries is variable
@@ -431,15 +432,15 @@ def addTkEG():
                         )
                     )
         tkEleTable = tkEmTable.clone(
-                        name = cms.string("TkEle"+w),
-                        src = cms.InputTag("l1ctLayer1EG:L1TkEle"+w),
+                        name = cms.string("TkEle"+w+postfix),
+                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEle%s" % (postfix, w)),
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
         tkEleTable.variables.caloEta = Var("EGRef.eta", float,precision=8)
         tkEleTable.variables.caloPhi = Var("EGRef.phi", float,precision=8)
-        setattr(process, "TkEm%sTable" % w, tkEmTable)
-        setattr(process, "TkEle%sTable" % w, tkEleTable)
+        setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
+        setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 def goGun(calib=1):
@@ -505,9 +506,14 @@ def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
         merger = process.l1ctLayer1.clone(
             pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ])
         setattr(process, 'l1ctLayer1' + postfix, merger)
-        process.extraPFStuff.add(prodhgcal, merger)
         monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
         monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
+        egmerger = process.l1ctLayer1EG.clone()
+        egmerger.tkElectrons[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEle") ]
+        egmerger.tkEms[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEm"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1TkEm")  ]
+        egmerger.tkEgs[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1Eg"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1Eg")  ]
+        setattr(process, 'l1ctLayer1EG' + postfix, egmerger)
+        process.extraPFStuff.add(prodhgcal, merger, egmerger)
     else:
         prodhgcal = process.l1ctLayer1HGCal
     prodhgcal.trackInputConversionAlgo = "Emulator"
@@ -522,12 +528,12 @@ def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
             etaPostOffs = cms.int32(150),
             phiBits = cms.uint32(10),
             z0Bits = cms.uint32(12),
-            dEtaHGCalBits = cms.uint32(12),
-            dEtaHGCalZ0PreShift = cms.uint32(6),
-            dEtaHGCalRInvPreShift = cms.uint32(8),
-            dEtaHGCalRInvPostShift = cms.uint32(2),
-            dEtaHGCalRInvLUTBits = cms.uint32(10),
-            dEtaHGCalFloatOffs = cms.double(-0.2),
+            dEtaHGCalBits = cms.uint32(10),
+            dEtaHGCalZ0PreShift = cms.uint32(2),
+            dEtaHGCalRInvPreShift = cms.uint32(6),
+            dEtaHGCalLUTBits = cms.uint32(10),
+            dEtaHGCalLUTShift = cms.uint32(2),
+            dEtaHGCalFloatOffs = cms.double(0.0),
             dPhiHGCalBits = cms.uint32(4),
             dPhiHGCalZ0PreShift = cms.uint32(4),
             dPhiHGCalZ0PostShift = cms.uint32(6),
@@ -536,6 +542,27 @@ def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
             dPhiHGCalTanlLUTBits = cms.uint32(10),
             dPhiHGCalFloatOffs = cms.double(0.0)
             )
+def useMuInputEmulator(postfix=""):
+    for reg in "Barrel", "HGCal", "HGCalNoTK":
+        if postfix:
+            prod = getattr(process, 'l1ctLayer1'+reg).clone()
+            setattr(process, 'l1ctLayer1' + reg + postfix, prod)
+            process.extraPFStuff.add(prod)
+        else:
+            prod = getattr(process, 'l1ctLayer1'+reg)
+        prod.muonInputConversionAlgo = "Emulator"
+        prod.muonInputConversionParameters = cms.PSet(
+                z0Scale = cms.double(1.8),
+                dxyScale = cms.double(3.0)
+                )
+    if postfix:
+        merger = process.l1ctLayer1.clone(
+            pfProducers = [  cms.InputTag("l1ctLayer1Barrel" + postfix), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK" + postfix), cms.InputTag("l1ctLayer1HF") ])
+        setattr(process, 'l1ctLayer1' + postfix, merger)
+        monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
+        monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
+        process.extraPFStuff.add(merger)
+
 if False:
     #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
     #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,2,3)] #3,7,8,9) ]
