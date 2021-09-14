@@ -491,10 +491,19 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
         return _cache[_key]
     # ok there we go
     #platprogress = _progress("  making platroc for %s, %s, %s" % (what, obj, plotparam))
-    recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
-    if not recoArrayB: return (None,None)
-    recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
-    if not recoArrayS: return (None,None)
+    if isJetMet:
+        recoArrayB = makeCorrArray(background, what, obj, ptcut, options.eta, jecs)
+        if not recoArrayB: return (None,None)
+        recoArrayS = makeCorrArray(signal, what, obj, ptcut, options.eta, jecs)
+        if not recoArrayS: return (None,None)
+    else:
+        recoArrayB = makeRecoLepArray(background, what, obj, ptcut, options.etas, lepid=options.lepid_, lepiso=options.lepiso_) 
+        if not recoArrayB: return (None,None)
+        #print "Lepeff %s %s > %s ptCut %s gen %s ptCut %s" % (obj, what, plotparam, ptcut, genObjName, options.genleppt)
+        recoArrayS = makeMatchedRecoLepArray(signal, what, 
+                      obj, ptcut, options.etas, options.lepid_, options.lepiso_,
+                      genObjName, options.genleppt, options.etas, options.genprompt, options.gendr)
+        if not recoArrayS: return (None,None)
     rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
     def platForRate(rate):
       cut = None

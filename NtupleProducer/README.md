@@ -8,7 +8,7 @@ git cms-checkout-topic -u p2l1pfp:L1PF_11_1_7_X_newfirmware
 git cms-addpkg  L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/L1TMuon
-git clone -u official-cmssw:phase2-l1t-integration-CMSSW_11_1_7 https://github.com/cms-l1t-offline/L1Trigger-L1TMuon.git L1Trigger/L1TMuon/data
+git clone https://github.com/cms-l1t-offline/L1Trigger-L1TMuon.git L1Trigger/L1TMuon/data
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
