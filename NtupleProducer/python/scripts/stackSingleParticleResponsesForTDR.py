@@ -67,7 +67,7 @@ for (R,G) in ("",""), ("_res","_gauss"):
     plotter.decorations(pu=0)
     if pions: 
         plotter.Print("pions_stack%s%s" % (R,G))
-        print "Made pions"
+        print("Made pions")
     else:
         plotter.Print("hadrons_stack%s%s" % (R,G))
-        print "Made hadrons"
+        print("Made hadrons")

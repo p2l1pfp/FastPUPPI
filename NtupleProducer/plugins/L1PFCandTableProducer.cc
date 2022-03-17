@@ -102,17 +102,17 @@ L1PFCandTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::
             vals_phi[i] = selected[i]->phi();
             vals_mass[i] = selected[i]->mass();
         }
-        out->addColumn<float>("pt", vals_pt, "pt of cand", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("eta", vals_eta, "eta of cand", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("phi", vals_phi, "phi of cand", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("mass", vals_mass, "mass of cand", nanoaod::FlatTable::FloatColumn);
+        out->addColumn<float>("pt", vals_pt, "pt of cand");
+        out->addColumn<float>("eta", vals_eta, "eta of cand");
+        out->addColumn<float>("phi", vals_phi, "phi of cand");
+        out->addColumn<float>("mass", vals_mass, "mass of cand");
 
         // fill extra vars
         for (const auto & evar : extraVars_) {
             for (unsigned int i = 0; i < ncands; ++i) {
                 vals_pt[i] = evar.func(*selected[i]);
             }
-            out->addColumn<float>(evar.name, vals_pt, evar.expr, nanoaod::FlatTable::FloatColumn);
+            out->addColumn<float>(evar.name, vals_pt, evar.expr);
         }
         
         // save to the event branches

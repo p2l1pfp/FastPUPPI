@@ -26,7 +26,7 @@ parser = OptionParser("%(prog) infile [ src [ dst ] ]")
 parser.add_option("--cl", type=float, dest="cl", default=0.95, help="Compute number to avoid truncations at this CL")
 parser.add_option("-p", type="string", dest="particles", action="append", default=[], help="objects to count: Calo, EmCalo, Mu, TK, PF, Puppi [PF,Puppi]Charged, [PF,Puppi]Neutral, [PF,Puppi]ChargedHadron, [PF,Puppi]NeutralHadron, [PF,Puppi]Photon, [PF,Puppi]Electron, [PF,Puppi]Muon; default is all")
 parser.add_option("-d", type="string", dest="detectors", action='append', default=[], help="choice of detector: %s, All (sum of everything); default is all" % (", ".join(ALL_SUBDETECTORS)))
-parser.add_option("-s", dest="sample", choices=SAMPLE_LABEL.keys(), default='TTbar_PU200', help="choice of sample: "+", ".join(SAMPLE_LABEL.keys()))
+parser.add_option("-s", dest="sample", choices=list(SAMPLE_LABEL.keys()), default='TTbar_PU200', help="choice of sample: "+", ".join(list(SAMPLE_LABEL.keys())))
 parser.add_option("--CE", dest="hgcalName", default="HGCal", action="store_const", const="CE", help="Label HGCal as CE in the plots")
 parser.add_option("--HGCAL", dest="hgcalName", default="HGCal", action="store_const", const="HGCAL", help="Label HGCal as HGCAL in the plots")
 parser.add_option("-w", dest="what", choices=["Old","Sec","Reg"], default='Old', help="What to count: Old, Sec (input objs per sector), Ref (new objs per sector)")
@@ -87,15 +87,15 @@ for detector in detectors:
             h = ROOT.gROOT.FindObject("htemp")
             acc = 0
             min_obj, min_bin = -1, -1
-            for b in xrange(0,h.GetNbinsX()+2):
+            for b in range(0,h.GetNbinsX()+2):
                 acc += h.GetBinContent(b)
                 if acc > n * options.cl: 
                     min_obj = h.GetBinCenter(b)
-                    print "%-20s %3.0f" % (particle, min_obj)
+                    print("%-20s %3.0f" % (particle, min_obj))
                     break
             ## Do some optimized setting of the x range and rebinning
             max_plot_bin = max(3,(min_bin*3/2)); acc = 0;
-            for b in xrange(h.GetNbinsX()+1,0,-1):
+            for b in range(h.GetNbinsX()+1,0,-1):
                 acc += h.GetBinContent(b)
                 if acc >= 1e-3*n or (acc > 0 and b <= max(3,max_plot_bin)):
                     max_plot_bin = b 
@@ -107,15 +107,15 @@ for detector in detectors:
                 variable = '+'.join("%stotN%s%s" % (producer + subdetectorLabel, prefix, particle) for subdetectorLabel in ALL_SUBDETECTORS)
             else:
                 variable = "%s%sN%s%s"% (detectorFull,x,prefix,particle)
-            print "plotting %s" %(variable)
+            print("plotting %s" %(variable))
             if x == "max": # we already have the histogram
                 if ROOT.gROOT.FindObject("htemp2"): ROOT.gROOT.FindObject("htemp2").Delete()
                 h_rebin = ROOT.TH1F("htemp2","htemp2", max_plot_bin+1, -0.5, max_plot_bin+0.5)
                 # copy bins
-                for b in xrange(1,max_plot_bin):
+                for b in range(1,max_plot_bin):
                     h_rebin.SetBinContent(b, h.GetBinContent(b))
                 # fix overflow
-                h_rebin.SetBinContent(max_plot_bin+1, n - sum(h.GetBinContent(b) for b in xrange(1,max_plot_bin))) 
+                h_rebin.SetBinContent(max_plot_bin+1, n - sum(h.GetBinContent(b) for b in range(1,max_plot_bin))) 
                 h = h_rebin
             else:
                 if x == "vec":

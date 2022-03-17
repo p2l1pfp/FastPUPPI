@@ -15,7 +15,7 @@ class AbsCollectionDrawer(object):
     def tobjForLegend(self):
         return None
     def clone(self, name):
-        raise RuntimeError, "Not implemented"
+        raise RuntimeError("Not implemented")
 
 class MultiGraphMarkerDrawerVsPt(AbsCollectionDrawer):
     def __init__(self,markerStyle=20,markerColor=1,markerSizes=[2],ptEdges=[0,9e9],maxItems=99999,filter=None,label="",getcoord=lambda o : (o.eta(),o.phi())):
@@ -133,7 +133,7 @@ class CanvasMaker(object):
     def write(self,event,template):
         fname = string.Formatter().vformat(template,[],{'run':event.eventAuxiliary().run(), 'lumi':event.eventAuxiliary().luminosityBlock(), 'evt':event.eventAuxiliary().event()})
         self._canvas.Print(fname)
-        print fname
+        print(fname)
 
 
 cMaker  = CanvasMaker(maxEta=5, vlines=[-4,-3,-1.5,1.5,3,4])

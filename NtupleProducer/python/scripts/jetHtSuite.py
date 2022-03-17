@@ -133,7 +133,7 @@ def makeCumulativeHTEffGenCut(name, corrArray, genArray, genThr, xmax, norm):
         nsel = ROOT.fillTH1Fast(ret, corrArray)
     if nsel == 0: return None
     tot, msum = float(norm)/nsel, 0
-    for ib in xrange(0, nbins):
+    for ib in range(0, nbins):
         msum += ret.GetBinContent(nbins-ib) * tot
         ret.SetBinContent(nbins-ib, msum)
     ret.SetDirectory(ROOT.nullptr)
@@ -144,14 +144,14 @@ def makeInclusiveEffGenHTCut(name, corrArray, corrThr, genArray, genThr):
     pair = ROOT.inclusiveEffFastGenCut(genArray, genThr, corrArray, corrThr)
     num, den = pair.first, pair.second
     eff = num/float(den); err = sqrt(eff*(1-eff)/den)
-    print "%s, L1 cut > %g (gen cut > %g) --> %d/%d = %.4f +/- %.4f\n" % (name, corrThr, genThr, num, den, eff, err)
+    print("%s, L1 cut > %g (gen cut > %g) --> %d/%d = %.4f +/- %.4f\n" % (name, corrThr, genThr, num, den, eff, err))
 
 def makeInclusiveEffRate(name, corrArray, corrThr, norm=2760.0*11246/1000):
     if len(corrArray) == 0: return None
     pair = ROOT.inclusiveEffFast(corrArray, corrThr)
     num, den = pair.first, pair.second
     eff = num/float(den); err = sqrt(eff*(1-eff)/den)
-    print "%s, L1 cut > %g --> %d/%d = %.4f +/- %.4f, rate %.2f +/- %.2f kHz\n" % (name, corrThr, num, den, eff, err, norm*eff, norm*err)
+    print("%s, L1 cut > %g --> %d/%d = %.4f +/- %.4f, rate %.2f +/- %.2f kHz\n" % (name, corrThr, num, den, eff, err, norm*eff, norm*err))
 
 def makeEffHist(name, refArr, corrArr, corrThr, xmax, logxbins=None):
     if logxbins:
@@ -162,7 +162,7 @@ def makeEffHist(name, refArr, corrArr, corrThr, xmax, logxbins=None):
             step = pow(nratio, 1.0/nbins)
             base = xmax*(step-1)/(nratio - 1)
             edges = [0]
-            for i in xrange(nbins+1):
+            for i in range(nbins+1):
                 edges.append(edges[-1] + base * pow(step, i))
             ret = ROOT.TEfficiency(name.replace(" ","_")+"_eff","",nbins,array('d',edges))
     else:
@@ -429,7 +429,7 @@ def makePlatEffPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
     #platprogress = _progress("  making plateff for %s, %s, %s" % (what, obj, plotparam))
     def effForRate(rate):
       cut = 9999
-      for ix in xrange(1,rateplot.GetNbinsX()+1):
+      for ix in range(1,rateplot.GetNbinsX()+1):
           if rateplot.GetBinContent(ix) <= rate:
               cut = rateplot.GetXaxis().GetBinLowEdge(ix)
               break
@@ -507,7 +507,7 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
     rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
     def platForRate(rate):
       cut = None
-      for ix in xrange(1,rateplot.GetNbinsX()+1):
+      for ix in range(1,rateplot.GetNbinsX()+1):
           if rateplot.GetBinContent(ix) <= rate:
               cut = rateplot.GetXaxis().GetBinLowEdge(ix)
               break
@@ -516,7 +516,7 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
       #print "Cut for %s @ rate %g: %g" % (what+obj, rate, cut)
       plot = makeEffHist(name, genArray, recoArrayS, cut, options.xmax, logxbins=options.logxbins)
       hist = plot.GetTotalHistogram(); xaxis = hist.GetXaxis()
-      for i in xrange(2,hist.GetNbinsX()+1):
+      for i in range(2,hist.GetNbinsX()+1):
           if plot.GetEfficiency(i) > plotparam:
               graph = plot.CreateGraph()
               xmin, xmax = xaxis.GetBinLowEdge(i-1), xaxis.GetBinCenter(i)
@@ -555,7 +555,7 @@ def makePlatRocPlot(signal, background, what, obj, ptcut, jecs, plotparam, _cach
     _cache[_key] = (plot,label)
     return (plot,label)
 
-print "Plotting for %s (%s)" % (options.var, options.varlabel)
+print("Plotting for %s (%s)" % (options.var, options.varlabel))
 for plotkind in options.plots.split(","):
   progress = _progress("Make plot %s: \n" % plotkind)
   if plotkind not in ("rate","inclrate"):
@@ -576,9 +576,9 @@ for plotkind in options.plots.split(","):
                 genObjName = obj
                 genArray = makeGenLepArray(signal, options.xvar, obj, options.genleppt, options.etas)
   if plotkind in ("isorate", "incleff","inclrate","lepeff") :
-      plotparams = map(float, options.rate.split(","))
+      plotparams = list(map(float, options.rate.split(",")))
   elif plotkind in ("platroc", "plateff"):
-      plotparams = map(float, options.eff.split(","))
+      plotparams = list(map(float, options.eff.split(",")))
   else:
       plotparams = [None]
   for plotparam in plotparams:
@@ -597,7 +597,7 @@ for plotkind in options.plots.split(","):
                   jecdirname = obj+"Jets"+( "_"+options.jecMethod if options.jecMethod else "")
                   jecdir = jecfile.GetDirectory(jecdirname)
                   if not jecdir: 
-                      print "Missing JECs "+jecdirname+" in "+options.jecs
+                      print("Missing JECs "+jecdirname+" in "+options.jecs)
                       continue
                   jecs = ROOT.l1tpf.corrector(jecdir)
               label = name
@@ -642,7 +642,7 @@ for plotkind in options.plots.split(","):
                   rateplot = makeCumulativeHTEff(name, recoArrayB, options.xmax)
                   if not rateplot: continue
                   cut = 9999
-                  for ix in xrange(1,rateplot.GetNbinsX()+1):
+                  for ix in range(1,rateplot.GetNbinsX()+1):
                       if rateplot.GetBinContent(ix) <= targetrate:
                           cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                           break
@@ -696,7 +696,7 @@ for plotkind in options.plots.split(","):
               plot.SetMarkerStyle(msty); plot.SetMarkerSize(msiz)
               plots.append((label,plot))
           if not plots: 
-              print "   nothing to plot!"
+              print("   nothing to plot!")
               continue
           plotter.SetLogy(False)
           plotstyle = "PCX"
@@ -789,6 +789,6 @@ for plotkind in options.plots.split(","):
           del frame
           #printprogress.done()
   progress.done("  Done plot %s" % plotkind)
-  print ""
+  print("")
 
 

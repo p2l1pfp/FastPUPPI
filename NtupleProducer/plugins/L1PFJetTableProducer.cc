@@ -139,10 +139,10 @@ L1PFJetTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::E
             vals_phi[i] = selected[i]->phi();
             vals_mass[i] = selected[i]->mass();
         }
-        out->addColumn<float>("pt", vals_pt, "pt of jet", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("eta", vals_eta, "eta of jet", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("phi", vals_phi, "phi of jet", nanoaod::FlatTable::FloatColumn);
-        out->addColumn<float>("mass", vals_mass, "mass of jet", nanoaod::FlatTable::FloatColumn);
+        out->addColumn<float>("pt", vals_pt, "pt of jet");
+        out->addColumn<float>("eta", vals_eta, "eta of jet");
+        out->addColumn<float>("phi", vals_phi, "phi of jet");
+        out->addColumn<float>("mass", vals_mass, "mass of jet");
 
         // fill gen match (if this is not the gen selection)
         if (src.id() != gens.id()) {
@@ -155,8 +155,8 @@ L1PFJetTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::E
                     vals_eta[i] = 99.9;
                 }
             }
-            out->addColumn<float>("genpt", vals_pt, "pt of matched gen jet", nanoaod::FlatTable::FloatColumn);
-            out->addColumn<float>("gendr", vals_eta, "dr of matched gen jet", nanoaod::FlatTable::FloatColumn);
+            out->addColumn<float>("genpt", vals_pt, "pt of matched gen jet");
+            out->addColumn<float>("gendr", vals_eta, "dr of matched gen jet");
         }
 
         // fill extra vars
@@ -164,7 +164,7 @@ L1PFJetTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::E
             for (unsigned int i = 0; i < njets; ++i) {
                 vals_pt[i] = evar.func(*selected[i]);
             }
-            out->addColumn<float>(evar.name, vals_pt, evar.expr, nanoaod::FlatTable::FloatColumn);
+            out->addColumn<float>(evar.name, vals_pt, evar.expr);
         }
         
         // save to the event branches

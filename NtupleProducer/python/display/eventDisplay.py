@@ -25,13 +25,13 @@ parser.add_option("-s","--scenario", type=str, nargs=1, default="Spring17D", hel
 options, args = parser.parse_args()
 
 if len(args) <= 1:
-    print """
+    print("""
         usage: python eventDisplay.py file.root output_directory/    [event number]
            or: python eventDisplay.py file.root --sec-file secondaryfile.root output_directory/
-"""
+""")
 
 if options.sec_file:
-    print "Primary: %s, Secondary: %s" % (args[0], options.sec_file)
+    print("Primary: %s, Secondary: %s" % (args[0], options.sec_file))
     events = Events(options=Opts(files=[args[0]], secFiles=[options.sec_file]))
 else:
     events = Events(args[0])
@@ -56,7 +56,7 @@ for iev,event in enumerate(events):
     idev = "%d:%d:%d" % ( event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
     if options.select_events:
        if idev not in options.select_events: continue
-    print "Event %s" % idev
+    print("Event %s" % idev)
  
     phystruth = []
     physobj  = []

@@ -96,7 +96,7 @@ if __name__ == "__main__":
         tfout = ROOT.TFile.Open(options.rootfile, "RECREATE");
     if options.emfSlices:
         definition, strbounds = options.emfSlices
-        emfbins = map(float, strbounds.split(","))
+        emfbins = list(map(float, strbounds.split(",")))
         for i,emfmax in enumerate(emfbins):
             emfmin = emfbins[i-1] if i > 0 else 0
             emfs.append((emfmax, "emf_%04.0f_%04.0f" % (emfmin*1000,emfmax*1000), "%g <= %s && min(%s,.99999) <= %g" % (emfmin, definition, definition, emfmax)))
@@ -120,19 +120,19 @@ if __name__ == "__main__":
             etas = [ options.eta ]
         elif options.coarseEta:
             etas = [ 1.5, 3.0, 5.0 ]
-            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         elif options.semiCoarseEta:
 	    etas = [1.5, 3.0, 3.2, 3.5, 4.0, 4.5, 5.0]
-            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         elif options.barrelEta:
 	    etas = [ 0.7, 1.2, 1.6 ]
-            etas = [ (etas[i-1] if i else 0.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 0.0, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         elif options.hgcalEta:
 	    etas = [ 1.7, 1.9, 2.2, 2.5, 2.8, 2.9 ]
-            etas = [ (etas[i-1] if i else 1.55, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 1.55, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         elif options.hfEta:
 	    etas = [ 3.1, 3.2, 3.3, 3.4, 3.5, 4.0, 4.5, 5.0]  if options.hfEta == "fine" else [ 3.5, 4.0, 4.5, 5.0 ]
-            etas = [ (etas[i-1] if i else 3.0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 3.0, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         elif options.resolution:
             if "TK" in options.expr:
                 etas = [ 0.8, 1.2, 1.5, 2.0, 2.5 ]
@@ -140,7 +140,7 @@ if __name__ == "__main__":
                 etas = [ 1.3, 1.7, 2.5, 3.0, 4.0, 5.0 ]
             else:
                 etas = [ 1.3, 1.7, 2.8, 3.2, 4.0, 5.0 ]
-            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in xrange(len(etas)) if etas[i] <= options.etaMax ]
+            etas = [ (etas[i-1] if i else 0, etas[i]) for  i in range(len(etas)) if etas[i] <= options.etaMax ]
         else: 
             for ieta in range(0,50,5):
                 if ieta*0.1 >= options.etaMax: break
@@ -195,13 +195,13 @@ if __name__ == "__main__":
     ROOT.gStyle.SetErrorX(0.5)
     c1 = ROOT.TCanvas("c1","c1")
     if options.ptbins:
-        ptedges = map(float,options.ptbins.split(","))
-        ptbins = [ (ptedges[i], ptedges[i+1]) for i in xrange(len(ptedges)-1) ]
+        ptedges = list(map(float,options.ptbins.split(",")))
+        ptbins = [ (ptedges[i], ptedges[i+1]) for i in range(len(ptedges)-1) ]
     else:
         ptbins = [ options.fitrange ]
     for iptbin,(ptmin,ptmax) in enumerate(ptbins):
       for ipoint,(oname,cut) in enumerate(sels):
-        print "Plotting ",oname
+        print("Plotting ",oname)
         if "jet" not in oname:
             cut += " && abs(mc_iso04) < 0.05" # isolated
         prof, pres = doRespPt(oname,tree,options.what,options.expr,cut,mcpt=options.mcpt,xpt=options.xpt[0],fitopt="WNQ0C EX0",fitrange=(ptmin,ptmax))
@@ -219,7 +219,7 @@ if __name__ == "__main__":
             if not prof or not getattr(prof,'fit',None):
                 offsets.append(0.)
                 scales.append(1.)
-                print " ---> Not found or not fitted"
+                print(" ---> Not found or not fitted")
                 continue
             else:
                 offsets.append(prof.fit.GetParameter(0))
@@ -284,7 +284,7 @@ if __name__ == "__main__":
                     points = []
                     fitstart = options.fitrange[0]
                     if options.noFitHF and etaval > 3: fitstart = 999
-                    for i in xrange(150,0,-1):
+                    for i in range(150,0,-1):
                         genpt = i+ 1.5
                         if genpt > fitstart:         corr = plot.fit.Eval(genpt)
                         elif genpt > plot.GetX()[0]: corr = plot.Eval(genpt)
@@ -298,9 +298,9 @@ if __name__ == "__main__":
                         pclone.SetPoint(i, recopt, genpt)
                     pclone.Sort()
                     tfout.WriteTObject(pclone)
-                    print " -> saved "+pclone.GetName()
+                    print(" -> saved "+pclone.GetName())
                     presp = pclone.Clone()
-                    for i in xrange(presp.GetN()):
+                    for i in range(presp.GetN()):
                         presp.SetPoint(i, presp.GetX()[i], min(presp.GetY()[i]/presp.GetX()[i] if presp.GetX()[i] > 0 else 1.0, 4));
                     frame.GetXaxis().SetTitle("p_{T}^{rec} (GeV)")
                     frame.GetYaxis().SetTitle("p_{T}^{corr}/p_{T}^{rec}")
@@ -316,7 +316,7 @@ if __name__ == "__main__":
                     frame.Draw() 
                     line.DrawLine(0.0,0,frame.GetXaxis().GetXmax(),frame.GetXaxis().GetXmax())
                     pextra = ROOT.TGraph(199)
-                    for i in xrange(200):
+                    for i in range(200):
                         pextra.SetPoint(i, 0.5*(i+1), pclone.Eval(0.5*(i+1)))
                     pextra.SetLineColor(ROOT.kGray+1); pextra.SetMarkerColor(ROOT.kGray+1) 
                     pextra.SetLineWidth(2); pextra.SetMarkerStyle(6); pextra.Draw("PXL SAME")
@@ -350,28 +350,28 @@ if __name__ == "__main__":
         if options.emfSlices:
             emfbins = [e for b in ptbins for e in emfbins]
     if options.rootfile:
-        print "Calibrations stored in %s" % options.rootfile
+        print("Calibrations stored in %s" % options.rootfile)
         tfout.ls()
         tfout.Close()
     elif options.emfSlices:
-        print "simpleCorrHad = cms.PSet( "
-        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas))
-        print "\t\t\temfBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in emfbins))
-        print "\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets))
-        print "\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales))
+        print("simpleCorrHad = cms.PSet( ")
+        print("\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas)))
+        print("\t\t\temfBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in emfbins)))
+        print("\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets)))
+        print("\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales)))
         if options.ptbins:
-            print "\t\t\tptMin   = cms.vdouble(%s),"  % (", ".join(sptMins))
-            print "\t\t\tptMax   = cms.vdouble(%s),"  % (", ".join(sptMaxs))
-        print ")"
+            print("\t\t\tptMin   = cms.vdouble(%s),"  % (", ".join(sptMins)))
+            print("\t\t\tptMax   = cms.vdouble(%s),"  % (", ".join(sptMaxs)))
+        print(")")
     else:
-        print "simpleCorrEm = cms.PSet( "
-        print "\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas))
-        print "\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets))
-        print "\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales))
+        print("simpleCorrEm = cms.PSet( ")
+        print("\t\t\tetaBins = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s[1] for s in etas)))
+        print("\t\t\toffset  = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in offsets)))
+        print("\t\t\tscale   = cms.vdouble(%s),"  % (", ".join("% 6.3f" % s for s in scales)))
         if options.ptbins:
-            print "\t\t\tptMin   = cms.vdouble(%s),"  % (", ".join(sptMins))
-            print "\t\t\tptMax   = cms.vdouble(%s),"  % (", ".join(sptMaxs))
+            print("\t\t\tptMin   = cms.vdouble(%s),"  % (", ".join(sptMins)))
+            print("\t\t\tptMax   = cms.vdouble(%s),"  % (", ".join(sptMaxs)))
         if options.resolution:
             kind = "track" if "TK" in options.expr and "ele" not in oname else "calo"
-            print "\t\t\tkind    = cms.string('%s'),"  % (kind)
-        print ")"
+            print("\t\t\tkind    = cms.string('%s'),"  % (kind))
+        print(")")

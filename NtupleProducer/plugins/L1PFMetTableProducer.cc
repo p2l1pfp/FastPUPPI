@@ -67,18 +67,18 @@ L1PFMetTableProducer::produce(edm::StreamID id, edm::Event& iEvent, const edm::E
     const reco::Candidate & gen = (*hgenMet)[0];
 
     auto outg = std::make_unique<nanoaod::FlatTable>(1, "genMet"+flavour_, true); 
-    outg->addColumnValue<float>("pt",  gen.pt(), "genMet pt", nanoaod::FlatTable::FloatColumn);
-    outg->addColumnValue<float>("phi", gen.phi(), "genMet phi", nanoaod::FlatTable::FloatColumn);
+    outg->addColumnValue<float>("pt",  gen.pt(), "genMet pt");
+    outg->addColumnValue<float>("phi", gen.phi(), "genMet phi");
     iEvent.put(std::move(outg), "genMet");
 
     for (auto & m : mets_) {
         auto out = std::make_unique<nanoaod::FlatTable>(1, m.name+"Met"+flavour_, true); 
         iEvent.getByToken(m.token, hmet);
         const reco::Candidate & rec = (*hmet)[0];
-        out->addColumnValue<float>("pt", rec.pt(), m.name + "Met pt", nanoaod::FlatTable::FloatColumn);
-        out->addColumnValue<float>("phi", rec.phi(), m.name + "Met phi", nanoaod::FlatTable::FloatColumn);
-        out->addColumnValue<float>("para", rec.pt() * std::cos(rec.phi() - gen.phi()), m.name + "Met component parallel to gen", nanoaod::FlatTable::FloatColumn);
-        out->addColumnValue<float>("perp", rec.pt() * std::sin(rec.phi() - gen.phi()), m.name + "Met component perpendicular to gen", nanoaod::FlatTable::FloatColumn);
+        out->addColumnValue<float>("pt", rec.pt(), m.name + "Met pt");
+        out->addColumnValue<float>("phi", rec.phi(), m.name + "Met phi");
+        out->addColumnValue<float>("para", rec.pt() * std::cos(rec.phi() - gen.phi()), m.name + "Met component parallel to gen");
+        out->addColumnValue<float>("perp", rec.pt() * std::sin(rec.phi() - gen.phi()), m.name + "Met component perpendicular to gen");
         iEvent.put(std::move(out), m.name+"Met");
     }
 

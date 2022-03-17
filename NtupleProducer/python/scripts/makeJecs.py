@@ -10,10 +10,10 @@ from FastPUPPI.NtupleProducer.scripts.respPlots import doRespPt
 class _progress:
     def __init__(self,statement):
         self._t0 = default_timer()
-        print statement,
+        print(statement, end=' ')
         sys.stdout.flush()
     def done(self, statement="done"):
-        print "%s (%.2f s)" % (statement, default_timer() - self._t0)
+        print("%s (%.2f s)" % (statement, default_timer() - self._t0))
 
 def _list2graph(datapoints):
     ret = ROOT.TGraph(len(datapoints))
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             bname = str(b.GetName())
             if bname.endswith("Jets_genpt"):
                 whats.append(bname.replace("_genpt",""))
-                print "Got branch "+whats[-1]
+                print("Got branch "+whats[-1])
 
     ROOT.gSystem.Load("libL1TriggerPhase2L1ParticleFlow")
     ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"')
@@ -64,7 +64,7 @@ if __name__ == "__main__":
         ROOT.gStyle.SetErrorX(0.5)
         c1 = ROOT.TCanvas("c1","c1")
 
-    etas = map(float,options.etabins.split(","))
+    etas = list(map(float,options.etabins.split(",")))
     indextemplate = ROOT.TH1F("indextemplate", "", len(etas)-1, array('f', etas))
     indextemplate.SetDirectory(ROOT.nullptr)
 
@@ -75,9 +75,9 @@ if __name__ == "__main__":
             h = ROOT.l1tpf.corrector(indextemplate)
             ptCorrs[(m,w)] = h
     for w in whats:
-        print "Processing "+w
+        print("Processing "+w)
         expr = w+"_pt"; mcpt = w + "_genpt"
-        for ieta in xrange(1,len(etas)):
+        for ieta in range(1,len(etas)):
             ptForResp = [20,25,30,35,40,45,50,55,60,70,80,90,100,120,140,160,200,250,320,400]
             if etas[ieta-1] > 3: ptForResp = [25,35,45,60,80,100,120,150,190,250]
             recoPtMin = 5 if etas[ieta-1] < 2.4 else 10
@@ -87,11 +87,11 @@ if __name__ == "__main__":
             perf.done()
             if prof and options.gauss: prof = getattr(prof,'gaus',None) 
             if not prof: 
-                print "No response plot for "+cut
+                print("No response plot for "+cut)
                 continue
-            responses = [ prof.GetY()[i] for i in xrange(prof.GetN()) ]
+            responses = [ prof.GetY()[i] for i in range(prof.GetN()) ]
             if len([r for r in responses if r > 0.2]) < 3:
-                print "Response too low for this bin. skipping"
+                print("Response too low for this bin. skipping")
                 continue
             for m in methods:
                 h = ptCorrs[(m,w)]
@@ -102,7 +102,7 @@ if __name__ == "__main__":
                     (scale,offs) = tf1.GetParameter(1), tf1.GetParameter(0) 
                     xmin, xmax, npoints = recoPtMin, min(500.,(400.-offs)/scale), 200
                     corrgraph = ROOT.TGraph(npoints)
-                    for i in xrange(npoints):
+                    for i in range(npoints):
                         pt = xmin + i*float((xmax-xmin)/(npoints-1))
                         corrgraph.SetPoint(i, pt, (pt-offs)/scale)
                     h.setGraph(corrgraph, ieta-1);
@@ -120,7 +120,7 @@ if __name__ == "__main__":
                 for m in methods:
                     corrgraph = ptCorrs[(m,w)].getGraph(ieta-1)
                     datapoints = []
-                    for i in xrange(prof.graph.GetN()):
+                    for i in range(prof.graph.GetN()):
                         ptrec = ptgen[i]*ratio[i]
                         if ptrec < recoPtMin: continue
                         datapoints.append((ptgen[i], corrgraph.Eval(ptrec)/ptgen[i]))
@@ -154,11 +154,11 @@ if __name__ == "__main__":
                 del frame
                 perf.done()
     tfout = ROOT.TFile.Open(options.rootfile, "RECREATE");
-    print "Saving to output file: "
-    for (m,w),h in ptCorrs.iteritems():
+    print("Saving to output file: ")
+    for (m,w),h in ptCorrs.items():
         dirname = ("%s_%s" % (w,m)) if len(methods) > 1 else w 
         h.writeToFile(tfout.mkdir(dirname))
-        print "  - ",dirname
+        print("  - ",dirname)
     tfout.Close()
-    print "Saved responses in %s" % options.rootfile
+    print("Saved responses in %s" % options.rootfile)
 

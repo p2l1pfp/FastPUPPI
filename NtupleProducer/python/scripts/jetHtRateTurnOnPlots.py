@@ -20,7 +20,7 @@ def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=2760.0*11246/1000):
     htemp = ROOT.gROOT.FindObject("htemp")
     tot, msum = norm/htemp.Integral(), 0
     nbins = htemp.GetNbinsX()
-    for ib in xrange(0, nbins):
+    for ib in range(0, nbins):
         msum += htemp.GetBinContent(nbins-ib) * tot
         htemp.SetBinContent(nbins-ib, msum)
     ret = htemp.Clone("ceff_"+name)
@@ -29,7 +29,7 @@ def makeCumulativeHTEff(name, tree, expr, xmax, cut="", norm=2760.0*11246/1000):
 
 def makeROC(effsig,effbkg):
     graph = ROOT.TGraph(effsig.GetNbinsX())
-    for i in xrange(1,graph.GetN()+1):
+    for i in range(1,graph.GetN()+1):
         graph.SetPoint(i-1, effsig.GetBinContent(i), effbkg.GetBinContent(i))
     return graph 
 
@@ -46,7 +46,7 @@ def makeEffHist(name, tree, expr, thr, gvar, xmax, cut="", logxbins=None):
             step = pow(nratio, 1.0/nbins)
             base = xmax*(step-1)/(nratio - 1)
             edges = [0]
-            for i in xrange(nbins+1):
+            for i in range(nbins+1):
                 edges.append(edges[-1] + base * pow(step, i))
             htemp = ROOT.TH2D("htemp","htemp",nbins,array('f',edges),2,array('f',[-0.5,0.5,1.5]))
             num, den = [ ROOT.TH1F(name+"_"+x,"",nbins,array('f',edges)) for x in ("pass","tot") ]
@@ -56,7 +56,7 @@ def makeEffHist(name, tree, expr, thr, gvar, xmax, cut="", logxbins=None):
     tree.Draw("(%s > %s):%s>>htemp" % (expr,thr,gvar), cut);
     htemp = ROOT.gROOT.FindObject("htemp")
     for iy,h in (2,num),(1,den):
-        for ix in xrange(1,htemp.GetNbinsX()+2):
+        for ix in range(1,htemp.GetNbinsX()+2):
             h.SetBinContent(ix, htemp.GetBinContent(ix,iy))
     den.Add(num)
     eff = ROOT.TEfficiency(num,den)
@@ -183,7 +183,7 @@ for kind,things in whats:
         elif args[3] == "isorate":
             rateplot = makeCumulativeHTEff(name, background, rexpr, options.xmax)
             cut = 9999
-            for ix in xrange(1,rateplot.GetNbinsX()+1):
+            for ix in range(1,rateplot.GetNbinsX()+1):
                 if rateplot.GetBinContent(ix) <= options.rate:
                     cut = rateplot.GetXaxis().GetBinLowEdge(ix)
                     break

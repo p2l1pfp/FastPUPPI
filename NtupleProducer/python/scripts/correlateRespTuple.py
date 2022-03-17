@@ -45,14 +45,14 @@ for ia, arg in enumerate(args):
             if pid not in events[evid]: continue
             events[evid][pid].append( [ getattr(e,x) for x in options.what ] )
 
-print "Found %d events" % len(events)
+print("Found %d events" % len(events))
 
 otree.fill("mc_id", options.mc_id)
-for evid, pids in sorted(events.iteritems()):
+for evid, pids in sorted(events.items()):
     otree.fill("run", evid[0])
     otree.fill("lumi", evid[1])
     otree.fill("event", evid[2])
-    for pid, data in pids.iteritems():
+    for pid, data in pids.items():
         otree.fill("mc_pt", 0.01*pid[0])
         otree.fill("mc_eta", 0.01*pid[1])
         otree.fill("mc_phi", 0.01*pid[2])
@@ -60,8 +60,8 @@ for evid, pids in sorted(events.iteritems()):
             for (x,v) in zip(options.what,row):
                 otree.fill("%s_%d" % (x,j), v)
         otree.tree.Fill()
-print ""
-print "Output entries: %d" % otree.tree.GetEntries()
+print("")
+print("Output entries: %d" % otree.tree.GetEntries())
 fout.cd()
 fout.WriteTObject(otree.tree)
 fout.Close()

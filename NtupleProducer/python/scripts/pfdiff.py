@@ -55,7 +55,7 @@ for iev,event in enumerate(events):
     idev = "%d:%d:%d" % ( event.eventAuxiliary().run(), event.eventAuxiliary().luminosityBlock(), event.eventAuxiliary().event())
     if options.select_events:
        if idev not in options.select_events: continue
-    print "Event %s" % idev
+    print("Event %s" % idev)
  
     if not args[1] or ("gen:" in args[2]):
         event.getByLabel("ak4GenJetsNoNu", genj)
@@ -75,20 +75,20 @@ for iev,event in enumerate(events):
                 j.mcId = 99
         allGenJ.sort(key = lambda j : - j.pt())
     if not args[1]:
-        print "Gen jets in the event:"
+        print("Gen jets in the event:")
         for j in allGenJ:
             if abs(j.eta()) > 5: continue
             if j.mcId in (0, 1, 99) and j.pt() < 5: continue
-            print "   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId) 
-        print ""
+            print("   pt %7.2f eta %+5.2f phi %+5.2f   id %d" % (j.pt(), j.eta(), j.phi(), j.mcId)) 
+        print("")
     elif not args[2]:
         event.getByLabel(args[1], pf1)
         o1 = [ o for o in sorted(pf1.product(), key = lambda p : -p.pt()) ]
         for p1 in o1:
-            print "pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f \n" % (p1.pdgId(), p1.pt(), p1.eta(), p1.phi()),
-        print ""
+            print("pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f \n" % (p1.pdgId(), p1.pt(), p1.eta(), p1.phi()), end=' ')
+        print("")
     else:
-        print "Comparing %s to %s" % (args[1], args[2])
+        print("Comparing %s to %s" % (args[1], args[2]))
         event.getByLabel(args[1], pf1)
         o1 = [ o for o in sorted(pf1.product(), key = lambda p : -p.pt()) ]
         if "gen:" in args[2]:
@@ -98,27 +98,27 @@ for iev,event in enumerate(events):
             elif gwhat == "pi":    o2 = [ g for g in genLeptons if abs(g.pdgId()) == 211 ]
             elif gwhat == "jet":   o2 = [ g for g in allGenJ if abs(g.eta()) < 5 and g.pt() > 20 ]
             elif gwhat == "gamma": o2 = genGamma
-            else: raise RuntimeError, "Not yet supported"
+            else: raise RuntimeError("Not yet supported")
         else:
             event.getByLabel(args[2], pf2)
             o2 = [ o for o in sorted(pf2.product(), key = lambda p : -p.pt()) ]
         match = matchObjectCollection3(o1, o2, deltaRMax=0.3)
         for p2 in o2: p2.seen = False
         for p1 in o1:
-            print "pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (p1.pdgId(), p1.pt(), p1.eta(), p1.phi()), 
+            print("pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (p1.pdgId(), p1.pt(), p1.eta(), p1.phi()), end=' ') 
             m1 = match[p1]
             if m1: 
-                print " -> pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (m1.pdgId(), m1.pt(), m1.eta(), m1.phi()),
+                print(" -> pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (m1.pdgId(), m1.pt(), m1.eta(), m1.phi()), end=' ')
                 if m1.pdgId() == p1.pdgId() and abs(p1.pt()-m1.pt())/max(m1.pt()+p1.pt(),2) < 0.005 and deltaR2(p1,m1) < 0.001:
-                    print "  [ same ]"
+                    print("  [ same ]")
                 elif m1.pdgId() == p1.pdgId() and abs(p1.pt()-m1.pt())/max(m1.pt()+p1.pt(),2) < 0.025 and deltaR2(p1,m1) < 0.03:
-                    print "  [ Similar ]"
+                    print("  [ Similar ]")
                 else:
-                    print "  [ DIFFERENT ]"
+                    print("  [ DIFFERENT ]")
                 m1.seen = True
             else:
-                print " -> ..."
+                print(" -> ...")
         for p2 in o2:
             if p2.seen: continue
-            print "                                        ... -> pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (p2.pdgId(), p2.pt(), p2.eta(), p2.phi()) 
-        print ""
+            print("                                        ... -> pdgId %+4d pt %7.2f eta %+5.2f phi %+5.2f " % (p2.pdgId(), p2.pt(), p2.eta(), p2.phi())) 
+        print("")

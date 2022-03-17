@@ -35,7 +35,7 @@ def doRespEta(oname, tree, name, expr, cut, mcpt="mc_pt", maxEntries=999999999):
         return doRespEtaProf(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
     return doRespEtaMedian(oname, tree, name, expr, cut, mcpt=mcpt, maxEntries=maxEntries)
 def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etamax=5.0, maxEntries=999999999):
-    etabins = [ (i+1)*0.1 for i in xrange(32) ] + [ 3.4 + 0.2*i for i in xrange((50-34)/2+1) ]
+    etabins = [ (i+1)*0.1 for i in range(32) ] + [ 3.4 + 0.2*i for i in range((50-34)/2+1) ]
     etabins = [ e for e in etabins if e <= etamax ]
     ys = [[] for ieta in etabins]
     npoints = tree.Draw("("+expr+")/"+mcpt+":abs(mc_eta)", cut, "", maxEntries);
@@ -43,7 +43,7 @@ def doRespEtaMedian(oname, tree, name, expr, cut, mcpt="mc_pt", etabins=25, etam
     if npoints <= 0: return None
     graph = ROOT.gROOT.FindObject("Graph");
     xi, yi = graph.GetX(), graph.GetY()
-    for i in xrange(graph.GetN()):
+    for i in range(graph.GetN()):
         #if yi[i] == 0: continue
         if (xi[i] > etamax): continue
         for ieta, etahi in enumerate(etabins):
@@ -95,7 +95,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
         graph = fromGraph
         npoints = graph.GetN()
     xi, yi = graph.GetX(), graph.GetY()
-    for i in xrange(graph.GetN()):
+    for i in range(graph.GetN()):
         if yi[i] == 0 and not zeroIsOk: continue
         for ipt,ptmax in enumerate(ptbins):
             if xi[i] < ptmax:
@@ -122,7 +122,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
         ret.SetPointError(ipoint, ptd, ptd, (median-lo)/sqrt(len(ys[ipt])),(hi-median)/sqrt(len(ys[ipt])))
         ## Now we also try an approximate Gaussian fit
         avg = median; rms2 = (hi - lo);
-        for niter in xrange(3):
+        for niter in range(3):
             truncated = [y for y in ys[ipt] if abs(y-avg) < rms2]
             if len(truncated) <= 2: break
             avg = sum(truncated)/len(truncated)
@@ -154,7 +154,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
     if respCorr in ("gen","exact","fit"):
         if respCorr == "exact":
             invret = ROOT.TGraph(ret.GetN())
-            for i in xrange(ret.GetN()):
+            for i in range(ret.GetN()):
                 ptgen = ret.GetX()[i]
                 ptrec = ret.GetY()[i]*ptgen
                 invret.SetPoint(i, ptrec, ptgen)
@@ -168,7 +168,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
                 raise RuntimeError("Only linear fits supported") 
         ycs = [[] for ipt in ptbins]
         #iprint = 3
-        for i in xrange(graph.GetN()):
+        for i in range(graph.GetN()):
             if yi[i] == 0: continue
             if respCorr == "gen":
                 yic = yi[i] / ret.Eval(xi[i]);
@@ -198,7 +198,7 @@ def doRespPt(oname, tree, name, expr, cut, mcpt="mc_pt", xpt="mc_pt", fitopt="WQ
             retc.SetPointError(ipoint, ptd, ptd, (median-lo)/sqrt(len(ycs[ipt])),(hi-median)/sqrt(len(ycs[ipt])))
             ## Now we also try an approximate Gaussian fit
             avg = median; rms2 = (hi - lo);
-            for niter in xrange(3):
+            for niter in range(3):
                 truncated = [y for y in ycs[ipt] if abs(y-avg) < rms2]
                 if len(truncated) <= 2: break
                 avg = sum(truncated)/len(truncated)
@@ -497,7 +497,7 @@ if __name__ == "__main__":
     odir = args[0] # "plots/910pre2/test"
     plotter = plotTemplate(odir)
     for oname,cut in sels:
-        print "Plotting ",oname
+        print("Plotting ",oname)
         isNeutrino = oname.startswith("null")
         if isNeutrino and options.mcpt == "mc_pt": options.mcpt = "1"
         if "jet" not in oname:
@@ -565,7 +565,7 @@ if __name__ == "__main__":
                     for (p,ps) in allplots:
                         if not p: continue
                         if p.InheritsFrom("TGraph") and p.GetN() == 0: 
-                            print "no points in non-null plot "+p.GetName()
+                            print("no points in non-null plot "+p.GetName())
                             continue
                         if getattr(p,'fit',None):
                             p.fit.SetLineWidth(2); p.fit.SetLineColor(col)
@@ -582,12 +582,12 @@ if __name__ == "__main__":
                     if "resolution" in ptype  and options.noResol: continue
                     if not plots: 
                         if "_pt" in oname and ("resolution" in ptype) and ptdef.startswith("pt"): continue # not implemented
-                        print "No ",ptype," plot for ", oname, ptdef 
+                        print("No ",ptype," plot for ", oname, ptdef) 
                         continue
                     if "pt" in oname:
                         if plots[0][1].InheritsFrom("TGraph") and not isNeutrino:
-                            minEta = min(min(p.GetX()[i] - p.GetErrorXlow(i)  for i in xrange(p.GetN())) for (n,p) in plots)
-                            maxEta = max(max(p.GetX()[i] + p.GetErrorXhigh(i) for i in xrange(p.GetN())) for (n,p) in plots)
+                            minEta = min(min(p.GetX()[i] - p.GetErrorXlow(i)  for i in range(p.GetN())) for (n,p) in plots)
+                            maxEta = max(max(p.GetX()[i] + p.GetErrorXhigh(i) for i in range(p.GetN())) for (n,p) in plots)
                             if abs(minEta-0) < 0.05: minEta = 0
                             if abs(maxEta-5) < 0.05: maxEta = 5
                         else:
@@ -606,7 +606,7 @@ if __name__ == "__main__":
                                 if "--ymax" in sys.argv:
                                     ymax = options.yMax
                                 elif "TGraph" in plots[0][1].ClassName():
-                                    ymax = 1.3*max(max(p.GetY(i) for i in xrange(p.GetN())) for (n,p) in plots)
+                                    ymax = 1.3*max(max(p.GetY(i) for i in range(p.GetN())) for (n,p) in plots)
                                 else:
                                     ymax = 1.3*max(p.GetMaximum() for (n,p) in plots)
                                 frame.GetYaxis().SetRangeUser(0,ymax)

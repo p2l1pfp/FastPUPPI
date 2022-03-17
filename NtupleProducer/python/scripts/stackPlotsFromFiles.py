@@ -55,21 +55,21 @@ for i,fname in enumerate(args[2:]):
     else: 
         name = fname.replace(".root","")
     if not os.path.isfile(fname):
-        print "File %s does not exist" % fname
+        print("File %s does not exist" % fname)
         sys.exit(1)
     tfile = ROOT.TFile.Open(fname)
     if not tfile: 
-        print "ERROR opening %s" % tfile
+        print("ERROR opening %s" % tfile)
         continue
     tobj = tfile.Get(obj_to_get)
     if not tobj:
-        print "ERROR fetching %r from %s" % (obj_to_get, tfile)
+        print("ERROR fetching %r from %s" % (obj_to_get, tfile))
         tfile.ls()
         continue
     if not frame:
         frame = tfile.Get("frame")
         if not frame:
-            print "ERROR fetching %r from %s" % ("frame", tfile)
+            print("ERROR fetching %r from %s" % ("frame", tfile))
             tfile.ls()
     tfiles.append(tfile)
     tobjs.append(tobj)
@@ -77,7 +77,7 @@ for i,fname in enumerate(args[2:]):
     tobj.SetLineColor(color)
     tobj.SetMarkerColor(color)
 if not tobjs:
-    print "Nothing to plot!"
+    print("Nothing to plot!")
     sys.exit(1)
 
 odir = os.path.dirname(args[0])
@@ -105,4 +105,4 @@ for n,p in zip(labels,tobjs):
 leg.Draw()
 
 c1.Print(args[0])
-print "Wrote %s" % args[0]
+print("Wrote %s" % args[0])
