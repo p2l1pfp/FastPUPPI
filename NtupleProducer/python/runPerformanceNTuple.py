@@ -22,7 +22,9 @@ process.source = cms.Source("PoolSource",
 process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
 process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
+process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
+process.load('SimCalorimetry.HGCalSimProducers.hgcalDigitizer_cfi') # needed for HGCAL_noise_fC
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 process.load('RecoMET.Configuration.GenMETParticles_cff')
 process.load('RecoMET.METProducers.genMetTrue_cfi')
@@ -31,22 +33,15 @@ from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 from RecoMET.METProducers.pfMet_cfi import pfMet
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '111X_mcRun4_realistic_T15_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '123X_mcRun4_realistic_v3', '')
 
-process.load("L1Trigger.Phase2L1ParticleFlow.l1ParticleFlow_cff")
-process.load('L1Trigger.Phase2L1ParticleFlow.l1ctLayer1_cff')
-process.load('L1Trigger.Phase2L1GMT.gmt_cfi')
-process.load('L1Trigger.L1TTrackMatch.L1GTTInputProducer_cfi')
-process.load('L1Trigger.VertexFinder.VertexProducer_cff')
 
-process.VertexProducerEmulator = process.VertexProducer.clone()
-process.VertexProducerEmulator.l1TracksInputTag = cms.InputTag("L1GTTInputProducer", "Level1TTTracksConverted")
-process.VertexProducerEmulator.VertexReconstruction.Algorithm = cms.string("FastHistoEmulation")
-for l1ctbrd in [process.l1ctLayer1Barrel, process.l1ctLayer1HGCal, process.l1ctLayer1HGCalNoTK, process.l1ctLayer1HF]:
-    l1ctbrd.vtxCollection = cms.InputTag("VertexProducerEmulator", "l1verticesEmulation")
-    l1ctbrd.vtxCollectionEmulation = True
-
-process.extraPFStuff = cms.Task(process.standaloneMuons, process.L1GTTInputProducer, process.VertexProducerEmulator, process.l1ParticleFlowTask, process.l1ctLayer1Task)
+process.extraPFStuff = cms.Task(
+        process.L1SAMuonsGmt,
+        process.L1GTTInputProducer,
+        process.L1VertexFinderEmulator,
+        process.l1ctLayer1TaskInputsTask,
+        process.l1ctLayer1Task)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -96,12 +91,6 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             for X in ("tot","max"):
                 process.ntuple.copyUInts.append( "%s:%sN%s%s" % (D,X,W,I))
             process.ntuple.copyVecUInts.append( "%s:vecN%s%s" % (D,W,I))
-    elif makeInputMultiplicities == "Old":
-        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
-        I = tag.split(":")[1] # Calo, EmCalo, TK, or Mu, usually
-        for X in ["tot","max"]:
-            process.ntuple.copyUInts.append( "%s:%sNL1%s" % (D,X,I))
-        process.ntuple.copyVecUInts.append( "%s:vecNL1%s" % (D,I))
     if makeOutputMultiplicities == "CTL1":
         D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
         P = tag.split(":")[1] # PF or Puppi, usually
@@ -109,13 +98,6 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             for X in ("tot","max"):
                 process.ntuple.copyUInts.append( "%s:%sN%s%s" % (D,X,P,O))
             process.ntuple.copyVecUInts.append( "%s:vecN%s%s" % (D,P,O))    
-    elif makeOutputMultiplicities == "Old":
-        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
-        P = tag.split(":")[1] # PF or Puppi, usually
-        for O in [""] + "Charged Neutral ChargedHadron NeutralHadron Photon Electron Muon".split():
-            for X in ["tot","max"]:
-                process.ntuple.copyUInts.append( "%s:%sNL1%s%s" % (D,X,P,O))
-            process.ntuple.copyVecUInts.append( "%s:vecNL1%s%s" % (D,P,O))
 
 process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     genJets = cms.InputTag("ak4GenJetsNoNu"),
@@ -221,15 +203,6 @@ def addMult():
         monitorPerf("L1%sPuppi"%D, "l1ctLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
 
 
-def addOld(addMultiplicities = False):
-    monitorPerf("L1OldCalo", "l1pfCandidates:Calo", makeRespSplit = False)
-    monitorPerf("L1OldTK", "l1pfCandidates:TK", makeRespSplit = False, makeJets=False, makeMET=False)
-    monitorPerf("L1OldPF", "l1pfCandidates:PF")
-    monitorPerf("L1OldPuppi", "l1pfCandidates:Puppi")
-    process.l1tkv5Stubs = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5"))
-    process.extraPFStuff.add(process.l1tkv5Stubs)
-    monitorPerf("L1OldTKV5", "l1tkv5Stubs", makeRespSplit = False)
-
 def addCHS():
     process.l1PuppiCharged = cms.EDFilter("L1TPFCandSelector",
         src = cms.InputTag("l1ctLayer1:Puppi"),
@@ -309,7 +282,7 @@ def addTkPtCut(ptCut):
     monitorPerf("L1PFTkPt3", "l1ctLayer1TkPt3:PF")
     monitorPerf("L1PuppiTkPt3", "l1ctLayer1TkPt3:Puppi")
     #if hasattr(process, "l1tkv5Stubs"):
-    #    process.l1tkv5StubsTkPt3 = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1pfCandidates:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5 && pt > 3"))
+    #    process.l1tkv5StubsTkPt3 = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1ctLayer1:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5 && pt > 3"))
     #    process.extraPFStuff.add(process.l1tkv5StubsTkPt3)
     #    monitorPerf("L1TKV5TkPt3", "l1tkv5StubsTkPt3", makeRespSplit = False)
 
@@ -378,8 +351,6 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
                             charge  = Var("charge", int, doc="charge id"),
                         )
                     )
-        if "Old" in w:
-            pfLepTable.src = "l1pfCandidates%s:%s" % (postfix,w.replace("Old",""))
         for pdgId in pdgs:
             if pdgId == 13:
                 muTable = pfLepTable.clone(
@@ -456,6 +427,9 @@ def noPU():
         pfc = getattr(process, 'pfClustersFromHGC3DClusters'+X, None)
         if not pfc: continue
         pfc.emVsPUID.wp = "-1.0"
+def oldInputs():
+    process.pfClustersFromCombinedCaloHCal.phase2barrelCaloTowers = [cms.InputTag("L1EGammaClusterEmuProducer",)]
+
 
 def addEDMOutput():
     process.out = cms.OutputModule("PoolOutputModule",

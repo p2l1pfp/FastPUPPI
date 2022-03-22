@@ -591,7 +591,7 @@ for plotkind in options.plots.split(","):
           for name,obj,col,msty,msiz in things:
               obj = obj.rstrip("$")
               if (name == "Gen") or ("GenAcc" in obj): continue
-              if options.var.startswith("met") or obj.startswith("Ref") or not isJetMet:
+              if options.var.startswith("met") or obj.startswith("Ref") or ("Corrected" in obj) or not isJetMet:
                   jecs = None
               else:
                   jecdirname = obj+"Jets"+( "_"+options.jecMethod if options.jecMethod else "")

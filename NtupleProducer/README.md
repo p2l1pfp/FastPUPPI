@@ -1,65 +1,55 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_11_1_7
-cd CMSSW_11_1_7/src
+cmsrel CMSSW_12_3_0_pre4
+cd CMSSW_12_3_0_pre4/src
 cmsenv
-git cms-checkout-topic -u p2l1pfp:L1PF_11_1_7_X_newfirmware
-git cms-addpkg  L1Trigger/TrackTrigger
+git cms-checkout-topic -u p2l1pfp:L1PF_12_3_X
+git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/L1TMuon
+mv L1Trigger/L1TMuon/data L1Trigger/L1TMuon/data.old
 git clone https://github.com/cms-l1t-offline/L1Trigger-L1TMuon.git L1Trigger/L1TMuon/data
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 11_1_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 12_3_X
 
 scram b -j8
 ```
 
-The first step is to produce the inputs:
+If you start from GEN-SIM-DIGI-RAW, the first step is to produce the inputs files containing the basic TPs:
 ```
 cd FastPUPPI/NtupleProducer/python/
 cmsRun runInputs110X.py 
 ```
 Currently only  `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) are supported.
-The older `10_6_X` (L1T TDR), `10_4_X` (MTD TDR) and `9_3_X`samples are no longer supported. 
+ * The old input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, referred to as `110X_v2` can be used from this `12_3_X` branch and gives the same output as from the old `11_1_X` branch.
+ * A new set of input files from processing `11_0_X` HLT TDR samples in this `CMSSW_12_3_X` branch is in preparation, to benefit from the TP improvements
 
-By default the input files contain detailed HGC information, allowing to re-run clustering and to look at individual depths for the towers.
-This however takes up a substantial disk space especially at PU 200. 
-You can change this by dropping `hgcalConcentratorProducer*` and `hgcalTowerMapProducer` in the output commands, or adding a call to `goSlim()` at the bottom of the cfg to do it.
-
-The second step runs the algorithm and creates ntuples which can be used to do analysis.
+The second step runs the algorithms on the input files and creates ntuples which can be used to do analysis.
 All python configuration files for CMSSW are under `NtupleProducer/python`, while standalone python scripts or fwlite macros are under `NtupleProducer/python/scripts`. 
 In order to run the python configuration file on many events locally, a driver script `scripts/prun.sh` can be used to run locally the python configuration files, which takes care of selecting the input files, splitting the task to run on multiple CPUs and merge the result.
 
-1) Ntuple for single particle calibrations (and possibly jet studies):
+1) Ntuple for trigger rate studies:
 
 ```
 cmsRun runRespNTupler.py
 ```
 
-NB: 
-   * For single particle add `goGun()` at the end of the script, remove it for jets.
-
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runRespNTupler.py --110X_v2 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v2  --inline-customize 'goGun()'
-./scripts/prun.sh runRespNTupler.py --110X_v2 TTbar_PU0 TTbar_PU0.110X_v2
+./scripts/prun.sh runPerformanceNTuple.py --110X_v2 TTbar_PU200 TTbar_PU200.110X_v2  --inline-customize 'oldInputs()'
+./scripts/prun.sh runPerformanceNTuple.py --110X_v2 TTbar_PU0 TTbar_PU0.110X_v2  --inline-customize 'oldInputs();goGun()'
+./scripts/prun.sh runPerformanceNTuple.py --110X_v2 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v2  --inline-customize 'oldInputs()goGun()'
+./scripts/prun.sh runPerformanceNTuple.py --110X_v2 MultiPion_PT0to120_gun_PU200 MultiPion_PT0to120_gun_PU200.110X_v2  --inline-customize 'oldInputs();goGun();noPU()'
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
-2) Ntuple for jet HT and MET studies
+NB: 
+   * When processing samples where TPs were produced in `11_1_6`, add `--inline-customize 'oldInputs()'`
+   * For samples without pileup, add  `--inline-customize 'noPU()'` to the prun.sh command line or add `noPU()` at the end of the file
+   * For single particle samples `goGun()` (and if at PU0 also `noPU()`)
 
-```
-cmsRun runPerformanceNTuple.py
-```
-This produces both a response ntuple like the one for the runRespNTupler.py (but by default without the detector-level inputs for response calibration) and a NanoAOD-like file with the jets and MET.
-
-To run the ntuplizer over many files do for instance:
-
-```
-./scripts/prun.sh runPerformanceNTuple.py --110X_v2  TTbar_PU200 TTbar_PU200.110X_v2 --inline-customize 'addCHS();addTKs()';
-```
 
 The third step is to produce the plots from the ntuple. The plotting scripts are in:
 ```FastPUPPI/NtupleProducer/python/scripts```

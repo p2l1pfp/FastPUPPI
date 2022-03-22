@@ -14,14 +14,9 @@ if [[ "$1" == "--110X_v2" ]]; then
     shift;
     MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/$1
     PREFIX="inputs110X_"
-elif [[ "$1" == "--110X_v1" ]]; then
-    shift;
-    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/150720.done/$1
-    PREFIX="inputs110X_"
 else 
     echo "You mush specify the version of the input samples to run on "
-    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6 (PLEASE USE THIS) "
-    echo "   --110X_v1 : 110X HLT MC inputs remade in 11_1_0_patch2 (old, better NOT to use)"
+    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6. Add --inline-customize 'oldInputs()'"
 fi;
  
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then
