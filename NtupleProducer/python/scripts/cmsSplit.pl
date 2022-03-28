@@ -136,6 +136,9 @@ my $filename = shift(@ARGV);
 my $basename = $filename; $basename =~ s/\.py$//;
 if ($label) { $label = "_$label"; }
 my $runme    = "python -i $filename " . join(' ', map("'$_'", @ARGV)) . " 2> /dev/null";
+if ($ENV{'CMSSW_VERSION'} =~ /1[2-9]_\d+_.*/) {
+    $runme =~ s/^python /python3 /;
+}
 if ($customize) {
     if (!(-f $customize)) {  print " *** File $customize not found *** \n"; exit(1); }
     $runme = "cat $customize - | $runme";
