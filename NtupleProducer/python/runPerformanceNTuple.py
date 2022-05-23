@@ -570,6 +570,19 @@ def saveCands():
                                                charge = cms.string("charge")
                                            ),
                                        )
-    monitorPerf("L1PF", "l1pfCandidates:PF", saveCands=True)
-    monitorPerf("L1Puppi", "l1pfCandidates:Puppi", saveCands=True)
+    monitorPerf("L1PF", "l1ctLayer1:PF", saveCands=True)
+    monitorPerf("L1Puppi", "l1ctLayer1:Puppi", saveCands=True)
     process.p += process.l1pfcandTable
+
+def saveGenCands():
+    process.gencandTable = cms.EDProducer("L1PFCandTableProducer",
+                                           commonSel = cms.string("pt > 0.0"),
+                                           cands = cms.PSet(
+                                               Gen = cms.InputTag("genParticlesForMETAllVisible")
+                                           ),
+                                           moreVariables = cms.PSet(
+                                               pdgId = cms.string("pdgId"),
+                                               charge = cms.string("charge")
+                                           ),
+                                      )
+    process.p += process.gencandTable
