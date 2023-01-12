@@ -15,7 +15,7 @@ def quantiles(yswz, zeroSuppress=True):
     if len(ys) < 3: return (0,0,0)
     ys.sort()
     ny = len(ys)
-    median = ys[ny/2]
+    median = ys[ny//2]
    #if ny > 400e9:
    #    u95 = ys[min(int(ceil(ny*0.975)),ny-1) ]
    #    l95 = ys[int(floor(ny*0.025))]

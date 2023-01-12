@@ -20,8 +20,8 @@ elif [[ "$1" == "--110X_v3" ]]; then
     PREFIX="inputs110X_"
 else 
     echo "You mush specify the version of the input samples to run on "
-    echo "   --110X_v3 : 110X HLT MC inputs remade in 12_3_0_pre4 (new TPs)"
-    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6 (old TPs; add --inline-customize 'oldInputs()')"
+    echo "   --110X_v3 : 110X HLT MC inputs remade in 12_3_0_pre4 (add --inline-customize 'oldInputs_12_3_X()'"
+    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6 (add --inline-customize 'oldInputs_11_1_6()')"
 fi;
  
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then

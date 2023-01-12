@@ -16,7 +16,8 @@ process.source = cms.Source("PoolSource",
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
             "drop l1tPFTracks_*_*_*",
-            "drop l1tPFCandidates_*_*_*")
+            "drop l1tPFCandidates_*_*_*",
+            "drop l1tTkPrimaryVertexs_*_*_*")
 )
 
 process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
@@ -37,11 +38,11 @@ process.GlobalTag = GlobalTag(process.GlobalTag, '123X_mcRun4_realistic_v3', '')
 
 
 process.extraPFStuff = cms.Task(
-        process.L1SAMuonsGmt,
-        process.L1GTTInputProducer,
-        process.L1VertexFinderEmulator,
-        process.l1ctLayer1TaskInputsTask,
-        process.l1ctLayer1Task)
+        process.l1tSAMuonsGmt,
+        process.l1tGTTInputProducer,
+        process.l1tVertexFinderEmulator,
+        process.L1TLayer1TaskInputsTask,
+        process.L1TLayer1Task)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -92,7 +93,7 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
                 process.ntuple.copyUInts.append( "%s:%sN%s%s" % (D,X,W,I))
             process.ntuple.copyVecUInts.append( "%s:vecN%s%s" % (D,W,I))
     if makeOutputMultiplicities == "CTL1":
-        D = tag.split(":")[0] # l1pfProducer[Barrel,HGCal,HF] usually
+        D = tag.split(":")[0] # l1ctLayer1[Barrel,HGCal,HF] usually
         P = tag.split(":")[1] # PF or Puppi, usually
         for O in ["", "Charged", "Neutral", "Electron", "Muon", "ChargedHadron", "NeutralHadron", "Photon"]:
             for X in ("tot","max"):
@@ -107,7 +108,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     doRandom = cms.bool(False),
     objects = cms.PSet(
         # -- inputs and PF --
-        RawTK  = cms.VInputTag('pfTracksFromL1Tracks',),
+        RawTK  = cms.VInputTag('l1tPFTracksFromL1Tracks',),
         # outputs
     ),
     copyUInts = cms.VInputTag(),
@@ -115,7 +116,7 @@ process.ntuple = cms.EDAnalyzer("ResponseNTuplizer",
     copyVecUInts = cms.VInputTag(),
 )
 
-process.extraPFStuff.add(process.pfTracksFromL1Tracks)
+process.extraPFStuff.add(process.l1tPFTracksFromL1Tracks)
 
 process.l1pfjetTable = cms.EDProducer("L1PFJetTableProducer",
     gen = cms.InputTag("ak4GenJetsNoNu"),
@@ -138,10 +139,10 @@ process.l1pfmetTable = cms.EDProducer("L1PFMetTableProducer",
 )
 process.l1pfmetCentralTable = process.l1pfmetTable.clone(genMet = "genMetCentralTrue", flavour = "Central")
 
-monitorPerf("L1Calo", "l1ctLayer1:Calo")
-monitorPerf("L1TK",   "l1ctLayer1:TK")
-monitorPerf("L1PF",    "l1ctLayer1:PF")
-monitorPerf("L1Puppi", "l1ctLayer1:Puppi")
+monitorPerf("L1Calo", "l1tLayer1:Calo")
+monitorPerf("L1TK",   "l1tLayer1:TK")
+monitorPerf("L1PF",    "l1tLayer1:PF")
+monitorPerf("L1Puppi", "l1tLayer1:Puppi")
 
 # to check available tags:
 #process.content = cms.EDAnalyzer("EventContentAnalyzer")
@@ -195,96 +196,95 @@ def noResp():
 
 def addMult():
     for D in ['Barrel','HF','HGCal','HGCalNoTK']:
-        monitorPerf("L1%sCalo"%D,  "l1ctLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sEmCalo"%D,"l1ctLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sTK"%D,    "l1ctLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sMu"%D,    "l1ctLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sPF"%D,    "l1ctLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
-        monitorPerf("L1%sPuppi"%D, "l1ctLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+        monitorPerf("L1%sCalo"%D,  "l1tLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sEmCalo"%D,"l1tLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sTK"%D,    "l1tLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sMu"%D,    "l1tLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sPF"%D,    "l1tLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+        monitorPerf("L1%sPuppi"%D, "l1tLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
 
 
 def addCHS():
     process.l1PuppiCharged = cms.EDFilter("L1TPFCandSelector",
-        src = cms.InputTag("l1ctLayer1:Puppi"),
+        src = cms.InputTag("l1tLayer1:Puppi"),
         cut = cms.string("charge != 0"))
     process.l1PFNeutral = cms.EDFilter("L1TPFCandSelector",
-        src = cms.InputTag("l1ctLayer1:PF"),
+        src = cms.InputTag("l1tLayer1:PF"),
         cut = cms.string("charge == 0"))
     process.extraPFStuff.add(process.l1PuppiCharged, process.l1PFNeutral)
     monitorPerf("L1CHS", [ "l1PuppiCharged", "l1PFNeutral" ], makeRespSplit = False)
+
 def addCalib():
-    process.load("L1Trigger.Phase2L1ParticleFlow.pfClustersFromHGC3DClustersEM_cfi")
-    process.pfClustersFromL1EGClustersRaw    = process.pfClustersFromL1EGClusters.clone(corrector = "")
-    process.pfClustersFromHGC3DClustersRaw   = process.pfClustersFromHGC3DClusters.clone(corrector = "")
-    process.pfClustersFromHGC3DClustersEMRaw = process.pfClustersFromHGC3DClustersEM.clone(corrector = "")
+    process.load("L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClustersEM_cfi")
+    process.l1tPFClustersFromL1EGClustersRaw    = process.l1tPFClustersFromL1EGClusters.clone(corrector = "")
+    process.l1tPFClustersFromHGC3DClustersRaw   = process.l1tPFClustersFromHGC3DClusters.clone(corrector = "")
+    process.l1tPFClustersFromHGC3DClustersEMRaw = process.l1tPFClustersFromHGC3DClustersEM.clone(corrector = "")
     process.extraPFStuff.add(
-            process.pfClustersFromL1EGClustersRaw, 
-            process.pfClustersFromHGC3DClustersRaw, 
-            process.pfClustersFromHGC3DClustersEM,
-            process.pfClustersFromHGC3DClustersEMRaw)
-    process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('pfClustersFromL1EGClustersRaw' )
-    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('pfClustersFromCombinedCaloHCal:uncalibrated')
-    process.ntuple.objects.L1RawBarrelCaloEM = cms.VInputTag('pfClustersFromCombinedCaloHCal:emUncalibrated')
-    process.ntuple.objects.L1RawHGCal   = cms.VInputTag('pfClustersFromHGC3DClustersRaw')
-    process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEMRaw')
-    process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:uncalibrated')
-    process.ntuple.objects.L1BarrelEcal = cms.VInputTag('pfClustersFromL1EGClusters' )
-    process.ntuple.objects.L1BarrelCalo = cms.VInputTag('pfClustersFromCombinedCaloHCal:calibrated')
-    process.ntuple.objects.L1HGCal   = cms.VInputTag('pfClustersFromHGC3DClusters')
-    process.ntuple.objects.L1HFCalo  = cms.VInputTag('pfClustersFromCombinedCaloHF:calibrated')
-    process.ntuple.objects.L1HGCalEM = cms.VInputTag('pfClustersFromHGC3DClustersEM', )
+            process.l1tPFClustersFromL1EGClustersRaw, 
+            process.l1tPFClustersFromHGC3DClustersRaw, 
+            process.l1tPFClustersFromHGC3DClustersEM,
+            process.l1tPFClustersFromHGC3DClustersEMRaw)
+    process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tPFClustersFromL1EGClustersRaw' )
+    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
+    process.ntuple.objects.L1RawBarrelCaloEM = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:emUncalibrated')
+    process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClustersRaw')
+    process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEMRaw')
+    process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
+    process.ntuple.objects.L1BarrelEcal = cms.VInputTag('l1tPFClustersFromL1EGClusters' )
+    process.ntuple.objects.L1BarrelCalo = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:calibrated')
+    process.ntuple.objects.L1HGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClusters')
+    process.ntuple.objects.L1HFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:calibrated')
+    process.ntuple.objects.L1HGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEM', )
 
-def addSeededConeJets(what="Puppi",src="l1ctLayer1:Puppi"):
-    process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
-    scModule = process.L1SeedConePFJetProducer.clone(L1PFObjects = src)
-    scEmuModule = process.L1SeedConePFJetEmulatorProducer.clone(L1PFObjects = src)
-    setattr(process, 'sc'+what, scModule)
-    setattr(process, 'scEmu'+what, scEmuModule)
-    process.extraPFStuff.add(scModule, scEmuModule)
-    setattr(process.l1pfjetTable.jets, 'sc'+what, cms.InputTag('sc'+what))
-    setattr(process.l1pfjetTable.jets, 'scEmu'+what, cms.InputTag('scEmu'+what))
-def addDeregSeededConeJets():
-    process.load('L1Trigger.Phase2L1ParticleFlow.L1SeedConePFJetProducer_cfi')
-    process.load('L1Trigger.Phase2L1ParticleFlow.DeregionizerProducer_cfi')
-    process.scDeregPuppiJets = process.L1SeedConePFJetEmulatorProducer.clone(L1PFObjects = "DeregionizerProducer:Puppi")
-    process.extraPFStuff.add(process.scDeregPuppiJets, process.DeregionizerProducer)
-    setattr(process.l1pfjetTable.jets, 'scDeregPuppi', cms.InputTag('scDeregPuppiJets'))
+def addSeededConeJets():
+    process.extraPFStuff.add(process.L1TPFJetsTask)
+    process.l1pfjetTable.jets.scPuppiSim = cms.InputTag('l1tSCPFL1Puppi')
+    process.l1pfjetTable.jets.scPuppi = cms.InputTag('l1tSCPFL1PuppiEmulator')
+    process.l1pfjetTable.jets.scPuppiCorr = cms.InputTag('l1tSCPFL1PuppiCorrectedEmulator')
+    process.l1pfmetTable.mets.scPuppiCorrMHT = cms.InputTag("l1tSCPFL1PuppiCorrectedEmulatorMHT")
 
+def addPhase1Jets():
+    process.extraPFStuff.add(process.l1tPhase1JetProducer9x9, process.l1tPhase1JetCalibrator9x9, process.l1tPhase1JetSumsProducer9x9)
+    process.extraPFStuff.add(process.l1tPhase1JetProducer9x9trimmed, process.l1tPhase1JetCalibrator9x9trimmed, process.l1tPhase1JetSumsProducer9x9trimmed)
+    process.l1pfjetTable.jets.phase19x9Puppi = cms.InputTag('l1tPhase1JetProducer9x9', "UncalibratedPhase1L1TJetFromPfCandidates")
+    process.l1pfjetTable.jets.phase19x9PuppiCorr = cms.InputTag('l1tPhase1JetCalibrator9x9', "Phase1L1TJetFromPfCandidates")
+    process.l1pfjetTable.jets.phase19x9trimmedPuppi = cms.InputTag('l1tPhase1JetProducer9x9trimmed', "UncalibratedPhase1L1TJetFromPfCandidates")
+    process.l1pfjetTable.jets.phase19x9trimmedPuppiCorr = cms.InputTag('l1tPhase1JetCalibrator9x9trimmed', "Phase1L1TJetFromPfCandidates")
+    process.l1pfmetTable.mets.scPuppiCorrMHT = cms.InputTag("l1tSCPFL1PuppiCorrectedEmulatorMHT")
 
+def addCaloJets():
+    process.extraPFStuff.add(process.l1tTowerCalibration, process.l1tCaloJet)
+    process.l1pfjetTable.jets.RefCaloJets = cms.InputTag("l1tCaloJet","L1CaloJetCollectionBXV")
 
-def addRefs(calo=True,tk=True):
-    process.load('L1Trigger.L1CaloTrigger.Phase1L1TJets_cff')
-    process.Phase1L1TJetProducer.inputCollectionTag = cms.InputTag("l1ctLayer1", "Puppi") # make sure the process name is not pre-encoded
-    process.extraPFStuff.add(process.Phase1L1TJetProducer,process.Phase1L1TJetCalibrator)
-    process.l1pfjetTable.jets.RefPhase1PuppiJets = cms.InputTag("Phase1L1TJetCalibrator", "Phase1L1TJetFromPfCandidates")
-    if calo:
-        process.l1pfjetTable.jets.RefCaloJets = cms.InputTag("L1CaloJetProducer","L1CaloJetCollectionBXV")
-    if tk:
-        process.l1pfjetTable.jets.RefTwoLayerJets = cms.InputTag("TwoLayerJets", "L1TwoLayerJets")
-        process.l1pfjetTable.jets.RefTwoLayerJets_sel = cms.string("pt > 5")
-        process.l1pfmetTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
-        process.l1pfmetCentralTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEtMiss","trkMET")
+def addTkJets():
+    process.extraPFStuff.add(process.l1tTrackSelectionProducer, process.l1tTrackJetsEmulation, process.l1tTrackerEmuEtMiss, process.l1tTrackerEmuHTMiss)
+    process.l1pfjetTable.jets.RefTrackJets = cms.InputTag("l1tTrackJetsEmulation")
+    process.l1pfjetTable.jets.RefTrackJets_sel = cms.string("pt > 5")
+    process.l1pfmetTable.mets.RefL1TrackerEtMiss = cms.InputTag("L1TrackerEmuEtMiss","L1TrackerEmuEtMiss")
+    process.l1pfmetTable.mets.RefL1TrackerHTMiss = cms.InputTag("L1TrackerEmuHTMiss","L1TrackerEmuHTMiss")
+
+def addAllJets():
+    addSeededConeJets()
+    addPhase1Jets()
+    addCaloJets()
+    #addTkJets()
 
 def addTkPtCut(ptCut):
-    process.l1ctLayer1BarrelTkPt3 = process.l1ctLayer1Barrel.clone(trkPtCut = ptCut)
-    process.l1ctLayer1HGCalTkPt3 = process.l1ctLayer1HGCal.clone(trkPtCut = ptCut)
-    process.l1ctLayer1TkPt3 = cms.EDProducer("L1TPFCandMultiMerger",
+    process.l1tLayer1BarrelTkPt3 = process.l1tLayer1Barrel.clone(trkPtCut = ptCut)
+    process.l1tLayer1HGCalTkPt3 = process.l1tLayer1HGCal.clone(trkPtCut = ptCut)
+    process.l1tLayer1TkPt3 = cms.EDProducer("L1TPFCandMultiMerger",
         pfProducers = cms.VInputTag(
-            cms.InputTag("l1ctLayer1BarrelTkPt3"), 
-            cms.InputTag("l1ctLayer1HGCalTkPt3"),
-            cms.InputTag("l1ctLayer1HGCalNoTK"),
-            cms.InputTag("l1ctLayer1HF")
+            cms.InputTag("l1tLayer1BarrelTkPt3"), 
+            cms.InputTag("l1tLayer1HGCalTkPt3"),
+            cms.InputTag("l1tLayer1HGCalNoTK"),
+            cms.InputTag("l1tLayer1HF")
             ),
         labelsToMerge = cms.vstring("TK", "PF", "Puppi"),
         regionalLabelsToMerge = cms.vstring(),
     )
-    process.extraPFStuff.add(process.l1ctLayer1BarrelTkPt3, process.l1ctLayer1HGCalTkPt3, process.l1ctLayer1TkPt3)
-    monitorPerf("L1PFTkPt3", "l1ctLayer1TkPt3:PF")
-    monitorPerf("L1PuppiTkPt3", "l1ctLayer1TkPt3:Puppi")
-    #if hasattr(process, "l1tkv5Stubs"):
-    #    process.l1tkv5StubsTkPt3 = cms.EDFilter("L1TPFCandSelector", src = cms.InputTag("l1ctLayer1:TKVtx"), cut = cms.string("pfTrack.nStubs >= 5 && pt > 3"))
-    #    process.extraPFStuff.add(process.l1tkv5StubsTkPt3)
-    #    monitorPerf("L1TKV5TkPt3", "l1tkv5StubsTkPt3", makeRespSplit = False)
+    process.extraPFStuff.add(process.l1tLayer1BarrelTkPt3, process.l1tLayer1HGCalTkPt3, process.l1tLayer1TkPt3)
+    monitorPerf("L1PFTkPt3", "l1tLayer1TkPt3:PF")
+    monitorPerf("L1PuppiTkPt3", "l1tLayer1TkPt3:Puppi")
 
 def addGenLep(pdgs=[11,13,22]):
     genLepTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
@@ -320,7 +320,7 @@ def addGenLep(pdgs=[11,13,22]):
 
 def addStaMu():
     process.staMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        src = cms.InputTag('simGmtStage2Digis'),
+                        src = cms.InputTag('l1tSAMuonsGmt','promptSAMuons'),
                         cut = cms.string(""),
                         name = cms.string("StaMu"),
                         doc = cms.string("reco leptons"),
@@ -339,7 +339,7 @@ def addStaMu():
 def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
     for w in opts:
         pfLepTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        src = cms.InputTag("l1ctLayer1%s:%s"%(postfix,w)),
+                        src = cms.InputTag("l1tLayer1%s:%s"%(postfix,w)),
                         doc = cms.string("reco leptons"),
                         singleton = cms.bool(False), # the number of entries is variable
                         extension = cms.bool(False), # this is the main table
@@ -387,7 +387,7 @@ def addTkEG(postfix=""):
     for w in "EB","EE":
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
                         name = cms.string("TkEm"+w+postfix),
-                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEm%s" % (postfix, w)),
+                        src = cms.InputTag("l1tLayer1EG%s:L1TkEm%s" % (postfix, w)),
                         cut = cms.string(""),
                         doc = cms.string(""),
                         singleton = cms.bool(False), # the number of entries is variable
@@ -404,7 +404,7 @@ def addTkEG(postfix=""):
                     )
         tkEleTable = tkEmTable.clone(
                         name = cms.string("TkEle"+w+postfix),
-                        src = cms.InputTag("l1ctLayer1EG%s:L1TkEle%s" % (postfix, w)),
+                        src = cms.InputTag("l1tLayer1EG%s:L1TkEle%s" % (postfix, w)),
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
@@ -413,6 +413,12 @@ def addTkEG(postfix=""):
         setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
         setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
+
+def addAllLeps():
+    addGenLep()
+    addStaMu()
+    addPFLep([13])
+    addTkEG()
 
 def goGun(calib=1):
     process.ntuple.isParticleGun = True
@@ -424,11 +430,30 @@ def goMT(nthreads=2):
     process.options.numberOfStreams = cms.untracked.uint32(0)
 def noPU():
     for X in "", "EM", "Raw", "EMRaw":
-        pfc = getattr(process, 'pfClustersFromHGC3DClusters'+X, None)
+        pfc = getattr(process, 'l1tPFClustersFromHGC3DClusters'+X, None)
         if not pfc: continue
         pfc.emVsPUID.wp = "-1.0"
-def oldInputs():
-    process.pfClustersFromCombinedCaloHCal.phase2barrelCaloTowers = [cms.InputTag("L1EGammaClusterEmuProducer",)]
+
+def oldInputs_11_1_6():
+    process.l1tTowerCalibration.l1CaloTowers = cms.InputTag("L1EGammaClusterEmuProducer","")
+    process.l1tTowerCalibration.L1HgcalTowersInputTag = cms.InputTag("hgcalTowerProducer", "HGCalTowerProcessor")
+    process.l1tPFClustersFromL1EGClusters.src = cms.InputTag("L1EGammaClusterEmuProducer",)
+    process.l1tPFClustersFromCombinedCaloHCal.phase2barrelCaloTowers = [cms.InputTag("L1EGammaClusterEmuProducer",)]
+    process.l1tPFClustersFromHGC3DClusters.src  = cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering")
+    process.l1tPFClustersFromCombinedCaloHF.hcalCandidates = [ cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering")]
+    process.l1tPFTracksFromL1Tracks.L1TrackTag = cms.InputTag("TTTracksFromTrackletEmulation","Level1TTTracks")
+    process.l1tGTTInputProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTrackletEmulation","Level1TTTracks")
+
+def oldInputs_12_3_X():
+    process.l1tTowerCalibration.l1CaloTowers = cms.InputTag("L1EGammaClusterEmuProducer","L1CaloTowerCollection")
+    process.l1tTowerCalibration.L1HgcalTowersInputTag = cms.InputTag("hgcalTowerProducer", "HGCalTowerProcessor")
+    process.l1tPFClustersFromL1EGClusters.src = cms.InputTag("L1EGammaClusterEmuProducer",)
+    process.l1tPFClustersFromCombinedCaloHCal.phase2barrelCaloTowers = [cms.InputTag("L1EGammaClusterEmuProducer","L1CaloTowerCollection")]
+    process.l1tPFClustersFromHGC3DClusters.src  = cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering")
+    process.l1tPFClustersFromCombinedCaloHF.hcalCandidates = [ cms.InputTag("hgcalBackEndLayer2Producer","HGCalBackendLayer2Processor3DClustering")]
+    process.l1tPFTracksFromL1Tracks.L1TrackTag = cms.InputTag("TTTracksFromTrackletEmulation","Level1TTTracks")
+    process.l1tGTTInputProducer.l1TracksInputTag = cms.InputTag("TTTracksFromTrackletEmulation","Level1TTTracks")
+
 
 
 def addEDMOutput():
@@ -439,125 +464,25 @@ def addEDMOutput():
     process.end = cms.EndPath(process.out)
     process.maxEvents.input = 10
 
-def addCrops():
-    process.l1ctLayer1HGCalIdealCrop = process.l1ctLayer1HGCal.clone()
-    #process.l1ctLayer1HGCalIdealCrop.regionizerAlgoParameters.useAlsoVtxCoords = False
-    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nTrack = 30
-    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nCalo = 20
-    process.l1ctLayer1HGCalIdealCrop.pfAlgoParameters.nMu = 4
-    process.l1ctLayer1HGCalIdealCrop.puAlgoParameters.nFinalSort = 18
-    process.l1ctLayer1HGCalRealCrop = process.l1ctLayer1HGCalIdealCrop.clone()
-    process.l1ctLayer1HGCalRealCrop.regionizerAlgo = "Multififo"
-    process.l1ctLayer1HGCalRealCrop.regionizerAlgoParameters = cms.PSet(
-                useAlsoVtxCoords = cms.bool(True),
-                nClocks = cms.uint32(54),
-                nTrack = cms.uint32(30),
-                nCalo = cms.uint32(20),
-                nEmCalo = cms.uint32(0),
-                nMu = cms.uint32(4),
-            )
-    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nTrack = 30
-    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nCalo = 20
-    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nMu = 4
-    process.l1ctLayer1HGCalRealCrop.pfAlgoParameters.nSelCalo = 20
-    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nTrack = 30
-    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nIn = 20
-    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nOut = 20
-    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.nFinalSort = 18
-    process.l1ctLayer1HGCalRealCrop.puAlgoParameters.finalSortAlgo = "Hybrid"
-    for X in "IdealCrop", "RealCrop":
-        setattr(process, "l1ctLayer1"+X, process.l1ctLayer1.clone(
-            pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal"+X), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ]))
-        process.extraPFStuff.add( getattr(process, "l1ctLayer1HGCal"+X), getattr(process, "l1ctLayer1"+X) )
-        monitorPerf("L1PF"+X,    "l1ctLayer1"+X+":PF")
-        monitorPerf("L1Puppi"+X, "l1ctLayer1"+X+":Puppi")
-
-def useTkInputEmulator(postfix="",bitwise=True,newTrackWord=True):
-    process.pfTracksFromL1Tracks.redigitizeTrackWord = newTrackWord
-    if postfix:
-        prodhgcal = process.l1ctLayer1HGCal.clone()
-        setattr(process, 'l1ctLayer1HGCal' + postfix, prodhgcal)
-        merger = process.l1ctLayer1.clone(
-            pfProducers = [  cms.InputTag("l1ctLayer1Barrel"), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK"), cms.InputTag("l1ctLayer1HF") ])
-        setattr(process, 'l1ctLayer1' + postfix, merger)
-        monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
-        monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
-        egmerger = process.l1ctLayer1EG.clone()
-        egmerger.tkElectrons[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEle") ]
-        egmerger.tkEms[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1TkEm"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1TkEm")  ]
-        egmerger.tkEgs[0].pfProducers = [ cms.InputTag("l1ctLayer1HGCal" + postfix, "L1Eg"),  cms.InputTag("l1ctLayer1HGCalNoTK", "L1Eg")  ]
-        setattr(process, 'l1ctLayer1EG' + postfix, egmerger)
-        process.extraPFStuff.add(prodhgcal, merger, egmerger)
-    else:
-        prodhgcal = process.l1ctLayer1HGCal
-    prodhgcal.trackInputConversionAlgo = "Emulator"
-    prodhgcal.trackInputConversionParameters = cms.PSet(
-            region = cms.string("endcap"),
-            trackWordEncoding = cms.string("biased" if newTrackWord else "stepping"),
-            bitwiseAccurate = cms.bool(bitwise),
-            ptLUTBits = cms.uint32(11),
-            etaLUTBits = cms.uint32(11),
-            etaPreOffs = cms.int32(0),
-            etaShift = cms.uint32(15-11),
-            etaPostOffs = cms.int32(150),
-            phiBits = cms.uint32(10),
-            z0Bits = cms.uint32(12),
-            dEtaHGCalBits = cms.uint32(10),
-            dEtaHGCalZ0PreShift = cms.uint32(2),
-            dEtaHGCalRInvPreShift = cms.uint32(6),
-            dEtaHGCalLUTBits = cms.uint32(10),
-            dEtaHGCalLUTShift = cms.uint32(2),
-            dEtaHGCalFloatOffs = cms.double(0.0),
-            dPhiHGCalBits = cms.uint32(4),
-            dPhiHGCalZ0PreShift = cms.uint32(4),
-            dPhiHGCalZ0PostShift = cms.uint32(6),
-            dPhiHGCalRInvShift = cms.uint32(4),
-            dPhiHGCalTanlInvShift = cms.uint32(22),
-            dPhiHGCalTanlLUTBits = cms.uint32(10),
-            dPhiHGCalFloatOffs = cms.double(0.0)
-            )
-def useMuInputEmulator(postfix=""):
-    for reg in "Barrel", "HGCal", "HGCalNoTK":
-        if postfix:
-            prod = getattr(process, 'l1ctLayer1'+reg).clone()
-            setattr(process, 'l1ctLayer1' + reg + postfix, prod)
-            process.extraPFStuff.add(prod)
-        else:
-            prod = getattr(process, 'l1ctLayer1'+reg)
-        prod.muonInputConversionAlgo = "Emulator"
-        prod.muonInputConversionParameters = cms.PSet(
-                z0Scale = cms.double(1.8),
-                dxyScale = cms.double(3.0)
-                )
-    if postfix:
-        merger = process.l1ctLayer1.clone(
-            pfProducers = [  cms.InputTag("l1ctLayer1Barrel" + postfix), cms.InputTag("l1ctLayer1HGCal" + postfix), cms.InputTag("l1ctLayer1HGCalNoTK" + postfix), cms.InputTag("l1ctLayer1HF") ])
-        setattr(process, 'l1ctLayer1' + postfix, merger)
-        monitorPerf("L1PF"+ postfix,    "l1ctLayer1"+postfix+":PF")
-        monitorPerf("L1Puppi"+ postfix, "l1ctLayer1"+postfix+":Puppi")
-        process.extraPFStuff.add(merger)
-
 if False:
     #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
-    #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,2,3)] #3,7,8,9) ]
-    process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
-    addOld()
+    process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] 
+    #process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/DYToLL_PU200/inputs110X_%d.root' % i for i in (1,)] #3,7,8,9) ]
     #goMT(4)
-    addStaMu()
-    addGenLep([13])
-    addPFLep([13],["PF","OldPF"])
+    #oldInputs_11_1_6()
+    oldInputs_12_3_X()
+    addAllLeps()
+    addAllJets()
 
-    if True:
+    if False:
         #process.source.eventsToProcess = cms.untracked.VEventRange("1:1376:240626","1:1376:240627","1:1376:240628","1:1376:240642","1:1376:240638")
         process.source.eventsToProcess = cms.untracked.VEventRange("1:1376:240656", "1:1376:240742", "1:1108:193756", "1:1108:193762", "1:1108:193772")
         #process.source.eventsToProcess = cms.untracked.VEventRange()
         #process.maxEvents.input = 10
         addEDMOutput()
         R='HGCal'
-        getattr(process, 'l1ctLayer1'  +R).trkPtCut = 10
-        getattr(process, 'l1pfProducer'+R).trkPtCut = 10
-        getattr(process, 'l1pfProducer'+R).debug = 2
-        getattr(process, 'l1ctLayer1'  +R).pfAlgoParameters.debug = True
+        getattr(process, 'l1tLayer1'+R).trkPtCut = 10
+        getattr(process, 'l1tLayer1'+R).pfAlgoParameters.debug = True
 
 def saveCands():
     process.l1pfcandTable = cms.EDProducer("L1PFCandTableProducer",
@@ -570,8 +495,8 @@ def saveCands():
                                                charge = cms.string("charge")
                                            ),
                                        )
-    monitorPerf("L1PF", "l1ctLayer1:PF", saveCands=True)
-    monitorPerf("L1Puppi", "l1ctLayer1:Puppi", saveCands=True)
+    monitorPerf("L1PF", "l1tLayer1:PF", saveCands=True)
+    monitorPerf("L1Puppi", "l1tLayer1:Puppi", saveCands=True)
     process.p += process.l1pfcandTable
 
 def saveGenCands():

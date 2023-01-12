@@ -31,16 +31,23 @@ process.options = cms.untracked.PSet(
         numberOfStreams = cms.untracked.uint32(4),
 )
 
-process.p = cms.Path(
-    process.TrackTriggerClustersStubs +
-    process.TrackerDTCProducer +
-    process.offlineBeamSpot +
-    process.TTTracksFromTrackletEmulation
-    + process.TrackTriggerAssociatorTracks
-    + process.TTTracksFromExtendedTrackletEmulation
-    + process.TTTrackAssociatorFromPixelDigisExtended
+process.PFInputsTask = cms.Task(
+    process.TTClustersFromPhase2TrackerDigis,
+    process.TTStubsFromPhase2TrackerDigis,
+    process.TrackerDTCProducer,
+    process.offlineBeamSpot,
+    process.l1tTTTracksFromTrackletEmulation,
+    process.l1tTTTracksFromExtendedTrackletEmulation,
+    process.TTTrackAssociatorFromPixelDigis,
+    process.TTTrackAssociatorFromPixelDigisExtended,
+    process.SimL1EmulatorTask
 )
-process.p.associate(process.SimL1EmulatorTask)
+process.p = cms.Path(
+        process.l1tLayer1 +
+        process.l1tLayer2Deregionizer +
+        process.l1tLayer2EG
+)
+process.p.associate(process.PFInputsTask)
 
 process.out = cms.OutputModule("PoolOutputModule",
         fileName = cms.untracked.string("inputs110X.root"),
@@ -50,9 +57,9 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_ak4GenJetsNoNu_*_*",
             "keep *_genMetTrue_*_*",
             # --- Track TPs
-            "keep *_TTTracksFromTrackletEmulation_*_*",
-            "keep *_TrackTriggerAssociatorTracks_*_*",
-            "keep *_TTTracksFromExtendedTrackletEmulation_*_*",
+            "keep *_l1tTTTracksFromTrackletEmulation_*_*",
+            "keep *_l1tTTTracksFromExtendedTrackletEmulation_*_*",
+            "keep *_TTTrackAssociatorFromPixelDigis_*_*",
             "keep *_TTTrackAssociatorFromPixelDigisExtended_*_*",
             # --- Calo TPs
             "keep *_simHcalTriggerPrimitiveDigis_*_*",
@@ -89,50 +96,32 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_CalibratedDigis_*_*",
             "keep *_dtTriggerPhase2PrimitiveDigis_*_*",
             # --- HGCal TPs
-            #"keep *_hgcalVFEProducer_*_*",
-            "keep l1tHGCalTriggerCellBXVector_hgcalConcentratorProducer_*_*",
-            "keep *_hgcalBackEndLayer2Producer_HGCalBackendLayer2Processor3DClustering_*",
-            "keep *_hgcalTowerProducer_*_*",
+            "keep l1tHGCalTriggerCellBXVector_l1tHGCalVFEProducer_*_*",
+            #"keep l1tHGCalTriggerCellBXVector_l1tHGCalConcentratorProducer_*_*",
+            "keep l1tHGCalMulticlusterBXVector_l1tHGCalBackEndLayer2Producer_*_*",
+            "keep l1tHGCalTowerBXVector_l1tHGCalTowerProducer_*_*",
             # --- GCT reconstruction
-            "keep *_L1EGammaClusterEmuProducer_*_*",
-            "keep *_l1EGammaEEProducer_*_*",
-            "keep *_L1TowerCalibration_*_*",
-            "keep *_L1CaloJet_*_*",
-            "keep *_L1CaloJetHTT_*_*",
+            "keep *_l1tEGammaClusterEmuProducer_*_*",
+            "keep *_l1tTowerCalibration_*_*",
+            "keep *_l1tCaloJet_*_*",
+            "keep *_l1tCaloJetHTT_*_*",
             # --- GTT reconstruction
-            "keep *_L1VertexFinder_*_*",
-            #"keep *_L1GTTInputProducer_*_*",
-            #"keep *_L1GTTInputProducerExtended_*_*",
-            "keep *_L1VertexFinderEmulator_*_*",
-            "keep *_L1TkPrimaryVertex_*_*",
-            #"keep *_L1TrackJets_*_*", # can't be saved: The class "l1t::TkJetWord" is compiled and for its data member "tkJetWord_" we do not have a dictionary for the collection "bitset<70>". Because of this, we will not be able to read or write this data member.
-            #"keep *_L1TrackJetsExtended_*_*",
-            #"keep *_L1TrackFastJets_*_*",
-            "keep *_L1TrackerEtMiss_*_*",
-            "keep *_L1TrackerHTMiss_*_*",
-            #"keep *_L1TrackJetsEmulation_*_*",
-            #"keep *_L1TrackJetsExtendedEmulation_*_*",
-            "keep *_L1TrackerEmuEtMiss_*_*",
-            "keep *_L1TrackerEmuHTMiss_*_*",
-            "keep *_L1TrackerEmuHTMissExtended_*_*",
+            "keep *_l1tVertexFinder_*_*",
+            "keep *_l1tVertexFinderEmulator_*_*",
+            "keep *_l1tTrackJets_*_*",
+            "keep *_l1tTrackJetsExtended_*_*",
+            "keep *_l1tTrackFastJets_*_*",
+            "keep *_l1tTrackerEtMiss_*_*",
+            "keep *_l1tTrackerHTMiss_*_*",
+            "keep *_l1tTrackJetsEmulation_*_*",
+            "keep *_l1tTrackJetsExtendedEmulation_*_*",
+            "keep *_l1tTrackerEmuEtMiss_*_*",
+            "keep *_l1tTrackerEmuHTMiss_*_*",
+            "keep *_l1tTrackerEmuHTMissExtended_*_*",
             # --- GMT reconstruction
-            "keep *_L1TkMuons_*_*",
-            "keep *_L1TkMuonsTP_*_*",
-            "keep *_L1TkGlbMuons_*_*",
-            "keep *_L1TkStubsGmt_*_*",
-            "keep *_L1TkMuonsGmt_*_*",
-            "keep *_L1SAMuonsGmt_*_*",
-            # --- TDR (obsolete) Tk-Egamma reconstruction
-            "keep *_L1TkElectronsCrystal_*_*",
-            "keep *_L1TkElectronsLooseCrystal_*_*",
-            "keep *_L1TkElectronsEllipticMatchCrystal_*_*",
-            "keep *_L1TkIsoElectronsCrystal_*_*",
-            "keep *_L1TkPhotonsCrystal_*_*",
-            "keep *_L1TkElectronsHGC_*_*",
-            "keep *_L1TkElectronsEllipticMatchHGC_*_*",
-            "keep *_L1TkElectronsLooseHGC_*_*",
-            "keep *_L1TkIsoElectronsHGC_*_*",
-            "keep *_L1TkPhotonsHGC_*_*",
+            "keep *_l1tTkStubsGmt_*_*",
+            "keep *_l1tTkMuonsGmt_*_*",
+            "keep *_l1tSAMuonsGmt_*_*",
         ),
         compressionAlgorithm = cms.untracked.string('LZMA'),
         compressionLevel = cms.untracked.int32(4),
@@ -147,4 +136,4 @@ process.e = cms.EndPath(process.out)
 process.schedule = cms.Schedule([process.p,process.e])
 
 def goSlim():
-    process.out.outputCommands += [ "drop *_hgcalConcentratorProducer*_*_*", "drop *_hgcalTowerMapProducer_*_*", ]
+    process.out.outputCommands += [ "drop *_l1tHGCalVFEProducer_*_*", ]

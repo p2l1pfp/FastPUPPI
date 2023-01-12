@@ -53,7 +53,7 @@ if __name__ == "__main__":
                 print("Got branch "+whats[-1])
 
     ROOT.gSystem.Load("libL1TriggerPhase2L1ParticleFlow")
-    ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"')
+    ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/interface/corrector.h"')
 
     if options.closurePlots:
         os.system("mkdir -p "+options.closurePlots)

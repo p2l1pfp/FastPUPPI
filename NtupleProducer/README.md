@@ -1,18 +1,19 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_12_3_0_pre4
-cd CMSSW_12_3_0_pre4/src
+cmsrel CMSSW_12_5_2_patch1
+cd CMSSW_12_5_2_patch1/src
 cmsenv
-git cms-checkout-topic -u p2l1pfp:L1PF_12_3_X
+git cms-checkout-topic -u p2l1pfp:L1PF_12_5_X
+git cms-addpkg DataFormats/L1TParticleFlow
+git cms-addpkg DataFormats/L1TCorrelator
+git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
-git cms-addpkg L1Trigger/L1TMuon
-mv L1Trigger/L1TMuon/data L1Trigger/L1TMuon/data.old
-git clone https://github.com/cms-l1t-offline/L1Trigger-L1TMuon.git L1Trigger/L1TMuon/data
+git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 12_3_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 12_5_X
 
 scram b -j8
 ```
@@ -22,9 +23,10 @@ If you start from GEN-SIM-DIGI-RAW, the first step is to produce the inputs file
 cd FastPUPPI/NtupleProducer/python/
 cmsRun runInputs110X.py 
 ```
-Currently only  `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) are supported.
- * The old input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, referred to as `110X_v2` can be used from this `12_3_X` branch and gives the same output as from the old `11_1_X` branch.
- * A new set of input files from processing `11_0_X` HLT TDR samples in this `CMSSW_12_3_X` branch is in preparation, to benefit from the TP improvements
+Currently only  `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) have been tested.
+Existing input files available are:
+ * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`
+ * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`
 
 The second step runs the algorithms on the input files and creates ntuples which can be used to do analysis.
 All python configuration files for CMSSW are under `NtupleProducer/python`, while standalone python scripts or fwlite macros are under `NtupleProducer/python/scripts`. 
@@ -33,7 +35,7 @@ In order to run the python configuration file on many events locally, a driver s
 1) Ntuple for trigger rate studies:
 
 ```
-cmsRun runRespNTupler.py
+cmsRun runPerformanceNTuple.py
 ```
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:

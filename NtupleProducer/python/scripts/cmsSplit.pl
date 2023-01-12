@@ -703,11 +703,11 @@ foreach my $m (sort(keys(%mergeNano))) {
     print OUT <<EOF;
 #!/bin/bash
 if which haddnano.py > /dev/null 2>&1; then
-    MERGE="haddnano.py";
+    MERGE="python3 \$(which haddnano.py)";
 elif which wget > /dev/null 2>&1 && wget https://raw.githubusercontent.com/cms-nanoAOD/nanoAOD-tools/master/scripts/haddnano.py -O \$CMSSW_BASE/bin/\$SCRAM_ARCH/haddnano.py -q; then
     chmod +x \$CMSSW_BASE/bin/\$SCRAM_ARCH/haddnano.py
     echo "Retrieved haddnano.py from cms-nanoAOD github master"
-    MERGE="haddnano.py";
+    MERGE="python3 \$(which haddnano.py)";
 else
     MERGE="hadd -ff";
     echo "WARNING: haddnano.py not available.";

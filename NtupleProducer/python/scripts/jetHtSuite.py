@@ -207,13 +207,22 @@ whats = WHATS + [
         ("TK #Deltaz", "L1TKV5$",    ROOT.kGreen+2, 34, 1.2),
         ("ak4Puppi",   "L1Puppi$",   ROOT.kRed+1, 20, 1.1),
     ]),
-    ('l1pfpu_jetref',[
-        ("Calo",       "L1Calo$",              ROOT.kViolet+1, 21, 1.5),
-        ("RefCalo",    "RefCaloJets$",         ROOT.kViolet+2, 21, 1.5),
-        ("TK #Deltaz", "L1TKV5$",              ROOT.kGreen+1, 34, 1.2),
-        ("RefTK",      "RefTwoLayerJets$",     ROOT.kGreen+3, 34, 1.2),
-        ("ak4Puppi",   "L1Puppi$",             ROOT.kRed+0, 20, 1.1),
-        ("RefPuppi",   "RefPhase1PuppiJets$",  ROOT.kRed+2, 20, 0.9), 
+    ('l1pfpu_scjets',[
+        ("ak4",         "L1Puppi$",        ROOT.kViolet+1, 21, 1.5),
+        ("sc4 Sim",     "scPuppiSim$",     ROOT.kGreen+2, 34, 1.2),
+        ("sc4 SimCorr", "scPuppi$",        ROOT.kRed+0, 20, 1.1),
+        ("sc4",         "scPuppiCorr$",    ROOT.kRed+2, 20, 0.9), 
+    ]),
+    ('l1pfpu_p1jets',[
+        ("ak4",      "L1Puppi$",        ROOT.kViolet+1, 21, 1.5),
+        ("9x9",      "phase19x9PuppiCorrJets$", ROOT.kGreen+2, 34, 1.2),
+        ("9x9trim",  "phase19x9trimmedPuppiCorrJets$",    ROOT.kRed+2, 20, 0.9), 
+    ]),
+    ('l1pfpu_puppiJets',[
+        ("ak4", "L1Puppi$",             ROOT.kViolet+1, 21, 1.5),
+        ("9x9", "phase19x9PuppiCorr$", ROOT.kGreen+1, 34, 1.2),
+        ("9x9trim",  "phase19x9trimmedPuppiCorr$",    ROOT.kGreen+3, 34, 1.1), 
+        ("sc4", "scPuppiCorr$",    ROOT.kRed+2, 20, 0.9), 
     ]),
     ('l1pfpu_jetrefonly',[
         ("Calo",    "RefCaloJets$",         ROOT.kViolet+1, 21, 1.5),
@@ -319,7 +328,7 @@ odir = args[2]
 plotter = plotTemplate(odir, defaultExts = (["png","eps","pdf"] if options.printQualityPlots else ["png"]))
 
 ROOT.gSystem.Load("libL1TriggerPhase2L1ParticleFlow")
-ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"')
+ROOT.gInterpreter.ProcessLine('#include "L1Trigger/Phase2L1ParticleFlow/interface/corrector.h"')
 
 isJetMet = True
 if options.var == "ht":
@@ -591,8 +600,8 @@ for plotkind in options.plots.split(","):
           for name,obj,col,msty,msiz in things:
               obj = obj.rstrip("$")
               if (name == "Gen") or ("GenAcc" in obj): continue
-              if options.var.startswith("met") or obj.startswith("Ref") or ("Corrected" in obj) or not isJetMet:
-                  jecs = None
+              if options.var.startswith("met") or obj.startswith("Ref") or ("Corr" in obj) or not isJetMet:
+                  jecs = ROOT.nullptr
               else:
                   jecdirname = obj+"Jets"+( "_"+options.jecMethod if options.jecMethod else "")
                   jecdir = jecfile.GetDirectory(jecdirname)

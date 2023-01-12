@@ -12,7 +12,7 @@
 #include <TTreeReader.h>
 #include <TTreeReaderArray.h>
 #include <TTreeReaderValue.h>
-#include "L1Trigger/Phase2L1ParticleFlow/src/corrector.h"
+#include "L1Trigger/Phase2L1ParticleFlow/interface/corrector.h"
 #include "DataFormats/Math/interface/deltaR.h"
 
 unsigned int fillTH1FastGenCut(TH1F *ret, const std::vector<float> & corrArr, const std::vector<float> & genArr, float genThr) {
