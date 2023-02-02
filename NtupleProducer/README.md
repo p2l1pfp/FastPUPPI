@@ -25,8 +25,8 @@ cmsRun runInputs110X.py
 ```
 Currently only  `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) have been tested.
 Existing input files available are:
- * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`
- * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`
+ * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`: use with `oldInputs_12_3_X()` in `runPerformanceNTuple.py`
+ * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
 
 The second step runs the algorithms on the input files and creates ntuples which can be used to do analysis.
 All python configuration files for CMSSW are under `NtupleProducer/python`, while standalone python scripts or fwlite macros are under `NtupleProducer/python/scripts`. 
@@ -48,7 +48,7 @@ To run the ntuplizer over many files, from within `NtupleProducer/python` do for
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
 NB: 
-   * When processing samples where TPs were produced in `11_1_6`, add `--inline-customize 'oldInputs()'`
+   * When processing samples where TPs were produced in `11_1_6` or `12_3_X`, add `--inline-customize oldInputs_11_1_6()` or `--inline-customize oldInputs_12_3_X()`
    * For samples without pileup, add  `--inline-customize 'noPU()'` to the prun.sh command line or add `noPU()` at the end of the file
    * For single particle samples `goGun()` (and if at PU0 also `noPU()`)
 
