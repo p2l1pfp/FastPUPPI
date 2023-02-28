@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 from PhysicsTools.NanoAOD.common_cff import Var, ExtVar 
 
-process = cms.Process("RESP", eras.Phase2C9)
+process = cms.Process("RESP", eras.Phase2C17I13M9)
 
 process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
@@ -12,7 +12,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs110X.root'),
+    fileNames = cms.untracked.vstring('file:inputs125X.root'),
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
             "drop l1tPFTracks_*_*_*",
@@ -20,8 +20,8 @@ process.source = cms.Source("PoolSource",
             "drop l1tTkPrimaryVertexs_*_*_*")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2026D49Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D49_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
@@ -34,7 +34,7 @@ from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
 from RecoMET.METProducers.pfMet_cfi import pfMet
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '123X_mcRun4_realistic_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
 
 process.extraPFStuff = cms.Task(

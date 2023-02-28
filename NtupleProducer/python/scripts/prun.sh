@@ -9,19 +9,32 @@ fi
 N=8
 if [[ "$1" == "-j" ]]; then N=$2; shift; shift; fi;
 
+OPTS=""
 
-if [[ "$1" == "--110X_v2" ]]; then
+if [[ "$1" == "--125X_v0" ]]; then
+    shift;
+    MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223/$1
+    PREFIX="inputs125X_"
+elif [[ "$1" == "--110X_v2" ]]; then
     shift;
     MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done/$1
     PREFIX="inputs110X_"
+    OPTS="${OPTS} --replace Phase2C17I13M9=Phase2C9 "
+    OPTS="${OPTS} --replace GeometryExtended2026D88=GeometryExtended2026D49 "
+    OPTS="${OPTS} --replace 125X_mcRun4_realistic_v2=123X_mcRun4_realistic_v3 "
 elif [[ "$1" == "--110X_v3" ]]; then
     shift;
     MAIN=/eos/cms/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322/$1
     PREFIX="inputs110X_"
+    OPTS="${OPTS} --replace Phase2C17I13M9=Phase2C9 "
+    OPTS="${OPTS} --replace GeometryExtended2026D88=GeometryExtended2026D49 "
+    OPTS="${OPTS} --replace 125X_mcRun4_realistic_v2=123X_mcRun4_realistic_v3 "
 else 
     echo "You mush specify the version of the input samples to run on "
-    echo "   --110X_v3 : 110X HLT MC inputs remade in 12_3_0_pre4 (add --inline-customize 'oldInputs_12_3_X()'"
-    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6 (add --inline-customize 'oldInputs_11_1_6()')"
+    echo "   --125X_v0 : 125X Phase2Fall22 MC in 12_5_X"
+    echo "   --110X_v3 : 110X HLT MC inputs remade in 12_3_0_pre4; add --inline-customize 'oldInputs_12_3_X()'"
+    echo "   --110X_v2 : 110X HLT MC inputs remade in 11_1_6;      add --inline-customize 'oldInputs_11_1_6()'"
+    exit 1;
 fi;
  
 if [[ "$L1TPF_LOCAL_INPUT_DIR" != "" ]] && test -d $L1TPF_LOCAL_INPUT_DIR; then
@@ -47,7 +60,7 @@ if [[ "$1" == "--noclean" ]]; then
 fi
 
 PSCRIPT=$CMSSW_BASE/src/FastPUPPI/NtupleProducer/python/scripts/
-$PSCRIPT/cmsSplit.pl --files "$MAIN/${PREFIX}*root" --label ${OUTPUT} ${CODE}.py --bash --n $N --rrb $* && bash ${CODE}_${OUTPUT}_local.sh 
+$PSCRIPT/cmsSplit.pl --files "$MAIN/${PREFIX}*root" --label ${OUTPUT} ${CODE}.py --bash --n $N --rrb $OPTS  $* && bash ${CODE}_${OUTPUT}_local.sh 
 
 if $clean; then
     REPORT=$(grep -o "tee \S\+_${OUTPUT}.report.txt" ${CODE}_${OUTPUT}_local.sh  | awk '{print $2}');

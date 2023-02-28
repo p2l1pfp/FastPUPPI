@@ -16,6 +16,7 @@ my $maxsyncjobs = 99;
 my $subprocesses = 0;
 my $firstlumiblock = 1;
 my $condormem = 2000;
+my %replaces;
 my @job2run;
 my @job2evts;
 
@@ -59,7 +60,8 @@ GetOptions(
     'first-lumi-block|flb=i'=>\$firstlumiblock,
     'eosoutdir=s'=>\$eosoutdir,
     'outdir=s'=>\$outdir,
-    'condor-memory=s'=>\$condormem
+    'condor-memory=s'=>\$condormem,
+    'replace=s'=>\%replaces
 );
 
 sub usage() {
@@ -120,6 +122,7 @@ options:
   --monitor-script: to be used with "--bash", changes the command used to monitor logfiles (default is "wc -l")
   --report-script:  to be used with "--bash", changes the command used to make a final report of logfiles (default is "grep 'Events total'")
   --customize: append specified python fragment to the cfg
+  --replace A=B: replace A with B (can be specified multiple times)
   --subprocess N: assume the subprocess of order N is the one doing the real output. Only N=0 (no subprocess) or N=1 are supported now.
   --fnal: use fnal xrootd redirector
   --AAA:  use cern global xrootd redirector
@@ -655,6 +658,12 @@ foreach my $j (1 .. $jobs) {
     if ($args) {
         $text = fixArgs($text);
         print "and it did change this lines about cmd line args:\n\t" . join("\t",grep(/sys|arg/, split(/^/m,,$text))) ."\n" if $verbose > 1;
+    }
+    if (%replaces) {
+        foreach my $s(keys(%replaces)) {
+            my $r = $replaces{$s};
+            $text =~ s{$s}{$r}g;
+        }
     }
 
     next if $pretend;
