@@ -1,0 +1,201 @@
+import FWCore.ParameterSet.Config as cms
+from Configuration.StandardSequences.Eras import eras
+
+process = cms.Process("IN", eras.Phase2C17I13M9)
+process.load('Configuration.StandardSequences.Services_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
+process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
+process.load('Configuration.StandardSequences.MagneticField_cff')
+process.load('SimGeneral.MixingModule.mixNoPU_cfi')
+process.load('Configuration.StandardSequences.EndOfProcess_cff')
+process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
+from Configuration.AlCa.GlobalTag import GlobalTag
+process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
+
+process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
+process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
+process.load('Configuration.StandardSequences.SimL1Emulator_cff')
+process.load('L1Trigger.TrackTrigger.TrackTrigger_cff')
+process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff") 
+process.load("L1Trigger.TrackerDTC.ProducerES_cff") 
+process.load("L1Trigger.TrackerDTC.ProducerED_cff") 
+process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
+
+process.source = cms.Source("PoolSource",
+    fileNames = cms.untracked.vstring(
+         #'root://cms-xrd-global.cern.ch//store/mc/Phase2HLTTDRSummer20ReRECOMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/FEVT/PU200_111X_mcRun4_realistic_T15_v1-v2/280000/003ACFBC-23B2-EA45-9A12-BECFF07760FC.root',
+         'file:/afs/cern.ch/work/d/ddiaz/L1SampleGen/L1_sampleGen/12_5_x/GEN-SIMDIGIRAW.root',
+    )
+)
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
+process.options = cms.untracked.PSet( 
+        wantSummary = cms.untracked.bool(True),
+        #numberOfThreads = cms.untracked.uint32(4),
+        #numberOfStreams = cms.untracked.uint32(4),
+)
+
+process.load('L1Trigger.Phase2L1GMT.gmt_cfi')
+
+process.PFInputsTask = cms.Task(
+    process.TTClustersFromPhase2TrackerDigis,
+    process.TTStubsFromPhase2TrackerDigis,
+    process.TrackerDTCProducer,
+    process.offlineBeamSpot,
+    process.l1tTTTracksFromTrackletEmulation,
+    process.l1tTTTracksFromExtendedTrackletEmulation,
+    process.TTTrackAssociatorFromPixelDigis,
+    process.TTTrackAssociatorFromPixelDigisExtended,
+    process.SimL1EmulatorTask
+)
+
+process.p = cms.Path(
+    process.TrackTriggerClustersStubs +
+    process.offlineBeamSpot +
+    process.l1tTTTracksFromExtendedTrackletEmulation +
+    #process.TTTracksFromExtendedTrackletEmulation +
+    ###process.standaloneMuons + #do we need these??
+    process.SimL1Emulator
+)
+process.p.associate(process.PFInputsTask)
+# next two lines not needed anynmore
+# updated code does this, just take the proper collections
+# for example l1ctLayer1 --> l1tLayer1Extended
+##process.l1tTTTracksFromTrackletEmulation.Hnpar = 5
+##process.l1tPFTracksFromL1Tracks.nParam = 5
+
+###process.L1TkPrimaryVertex.nVtx = cms.int32(5)
+###process.Vertex.nVtx = cms.int32(5)
+
+process.ntuple0 = cms.EDAnalyzer("L1PFCompare",
+    emcalo = cms.InputTag(""),
+    egcalo = cms.InputTag(""),
+    calo = cms.InputTag(""),
+    pf = cms.InputTag("l1tLayer1:PF"),       #"l1ctLayer1:PF"),      #update this
+    pup = cms.InputTag("l1tLayer1:Puppi"),      #"l1ctLayer1:Puppi"),  #update this
+    vtx = cms.InputTag("l1tVertexProducer", "l1vertices"), #"l1t:Vertex"), #check this
+    generator = cms.InputTag('genParticles'),
+    l1jet = cms.InputTag(""),
+    l1bName = cms.InputTag(""),
+    recojet = cms.InputTag(""),
+    recobName = cms.string(""),
+    minPt = cms.double(2.),
+    maxEta = cms.double(3.),
+    maxN = cms.uint32(9999),
+    genIDs = cms.vint32(1000006,-1000006,5,-5,-4,4),
+    addGenIDs = cms.vint32(),
+    genStatuses = cms.vint32(22,22,23,23,23,23),
+)
+process.p += process.ntuple0
+
+process.schedule = cms.Schedule([process.p])
+
+process.TFileService = cms.Service("TFileService", fileName = cms.string("pfTuple.root"))
+###process.PFInputsTask = cms.Task(
+###    process.L1TLayer1TaskInputsTask,
+###   #process.TTClustersFromPhase2TrackerDigis,
+###   #process.TTStubsFromPhase2TrackerDigis,
+###   #process.TrackerDTCProducer,
+###   #process.offlineBeamSpot,
+###   #process.l1tTTTracksFromTrackletEmulation,
+###   #process.l1tTTTracksFromExtendedTrackletEmulation,
+###   #process.TTTrackAssociatorFromPixelDigis,
+###   #process.TTTrackAssociatorFromPixelDigisExtended,
+###   #process.SimL1EmulatorTask
+###   #process.l1tTkStubsGmt,
+###   process.l1tTkMuonsGmt,
+###   process.l1tSAMuonsGmt
+###)
+###process.p = cms.Path(
+###        process.l1tLayer1 +
+###        process.l1tLayer2Deregionizer +
+###        process.l1tLayer2EG
+###)
+###process.p.associate(process.PFInputsTask)
+
+###process.out = cms.OutputModule("PoolOutputModule",
+###        fileName = cms.untracked.string("inputs125X.root"),
+###        outputCommands = cms.untracked.vstring("drop *",
+###            # --- GEN
+###            "keep *_genParticles_*_*",
+###            "keep *_ak4GenJetsNoNu_*_*",
+###            "keep *_genMetTrue_*_*",
+###            # --- Track TPs
+###            "keep *_l1tTTTracksFromTrackletEmulation_*_*",
+###            "keep *_l1tTTTracksFromExtendedTrackletEmulation_*_*",
+###            "keep *_TTTrackAssociatorFromPixelDigis_*_*",
+###            "keep *_TTTrackAssociatorFromPixelDigisExtended_*_*",
+###            # --- Calo TPs
+###            "keep *_simHcalTriggerPrimitiveDigis_*_*",
+###            "keep *_simCaloStage2Layer1Digis_*_*",
+###            "keep *_simCaloStage2Digis_*_*",
+###            # --- Muon TPs
+###            "keep *_simMuonRPCDigis_*_*",
+###            "keep *_simMuonGEMPadDigis_*_*",
+###            "keep *_simMuonGEMPadDigiClusters_*_*",
+###            "keep *_simDtTriggerPrimitiveDigis_*_*",
+###            "keep *_simCscTriggerPrimitiveDigis_*_*",
+###            "keep *_simTwinMuxDigis_*_*",
+###            "keep *_simBmtfDigis_*_*",
+###            "keep *_simKBmtfStubs_*_*",
+###            "keep *_simKBmtfDigis_*_*",
+###            "keep *_simEmtfDigis_*_*",
+###            "keep *_simOmtfDigis_*_*",
+###            "keep *_simGmtCaloSumDigis_*_*",
+###            "keep *_simGmtStage2Digis_*_*",
+###            "keep *_simEmtfShowers_*_*",
+###            "keep *_simGmtShowerDigis_*_*",
+###            "keep *_simCscTriggerPrimitiveDigisRun3_*_*",
+###            "keep *_simMuonME0PadDigis_*_*",
+###            "keep *_me0TriggerDigis_*_*",
+###            "keep *_simMuonME0PseudoReDigisCoarse_*_*",
+###            "keep *_me0RecHitsCoarse_*_*",
+###            "keep *_me0TriggerPseudoDigis_*_*",
+###            "keep *_me0RecHits_*_*",
+###            "keep *_me0Segments_*_*",
+###            "keep *_me0TriggerConvertedPseudoDigis_*_*",
+###            "keep *_simCscTriggerPrimitiveDigisPhase2_*_*",
+###            "keep *_simGtExtFakeStage2Digis_*_*",
+###            "keep *_simGtStage2Digis_*_*",
+###            "keep *_CalibratedDigis_*_*",
+###            "keep *_dtTriggerPhase2PrimitiveDigis_*_*",
+###            # --- HGCal TPs
+###            "keep l1tHGCalTriggerCellBXVector_l1tHGCalVFEProducer_*_*",
+###            #"keep l1tHGCalTriggerCellBXVector_l1tHGCalConcentratorProducer_*_*",
+###            "keep l1tHGCalMulticlusterBXVector_l1tHGCalBackEndLayer2Producer_*_*",
+###            "keep l1tHGCalTowerBXVector_l1tHGCalTowerProducer_*_*",
+###            # --- GCT reconstruction
+###            "keep *_l1tEGammaClusterEmuProducer_*_*",
+###            "keep *_l1tTowerCalibration_*_*",
+###            "keep *_l1tCaloJet_*_*",
+###            "keep *_l1tCaloJetHTT_*_*",
+###            # --- GTT reconstruction
+###            "keep *_l1tVertexFinder_*_*",
+###            "keep *_l1tVertexFinderEmulator_*_*",
+###            "keep *_l1tTrackJets_*_*",
+###            "keep *_l1tTrackJetsExtended_*_*",
+###            "keep *_l1tTrackFastJets_*_*",
+###            "keep *_l1tTrackerEtMiss_*_*",
+###            "keep *_l1tTrackerHTMiss_*_*",
+###            "keep *_l1tTrackJetsEmulation_*_*",
+###            "keep *_l1tTrackJetsExtendedEmulation_*_*",
+###            "keep *_l1tTrackerEmuEtMiss_*_*",
+###            "keep *_l1tTrackerEmuHTMiss_*_*",
+###            "keep *_l1tTrackerEmuHTMissExtended_*_*",
+###            # --- GMT reconstruction
+###            "keep *_l1tTkStubsGmt_*_*",
+###            "keep *_l1tTkMuonsGmt_*_*",
+###            "keep *_l1tSAMuonsGmt_*_*",
+###        ),
+###        compressionAlgorithm = cms.untracked.string('LZMA'),
+###        compressionLevel = cms.untracked.int32(4),
+###        dropMetaData = cms.untracked.string('ALL'),
+###        fastCloning = cms.untracked.bool(False),
+###        overrideInputFileSplitLevels = cms.untracked.bool(True),
+###        eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
+###        SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring("p")),
+###)
+###process.e = cms.EndPath(process.out)
+###
+###process.schedule = cms.Schedule([process.p,process.e])
+###
+###process.out.outputCommands += [ "drop *_l1tHGCalVFEProducer_*_*", ]
