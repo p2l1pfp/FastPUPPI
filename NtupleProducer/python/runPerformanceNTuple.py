@@ -128,6 +128,7 @@ process.l1pfjetTable = cms.EDProducer("L1PFJetTableProducer",
         Gen_sel = cms.string("pt > 15"),
     ),
     moreVariables = cms.PSet(
+        nDau = cms.string("numberOfDaughters()"),
     ),
 )
 
@@ -268,6 +269,27 @@ def addAllJets():
     addPhase1Jets()
     addCaloJets()
     #addTkJets()
+
+def addJetConstituents(N):
+    for i in range(N): # save a max of N daughters (unfortunately 2D arrays are not yet supported in the NanoAOD output module)
+        for var in "pt", "eta", "phi", "mass", "pdgId":
+            setattr(process.l1pfjetTable.moreVariables, "dau%d_%s" % (i,var), cms.string("? numberOfDaughters() > %d ? daughter(%d).%s : -1"  % (i,i,var)))
+        setattr(process.l1pfjetTable.moreVariables, "dau%d_%s" % (i,"vz"), cms.string("? numberOfDaughters() > %d ? daughter(%d).%s : -1"  % (i,i,"vertex.Z")))
+
+def addGenJetFlavourTable():
+    process.load("PhysicsTools.JetMCAlgos.AK4PFJetsMCFlavourInfos_cfi")
+    process.load("PhysicsTools.JetMCAlgos.HadronAndPartonSelector_cfi")
+    process.genFlavourInfo = process.ak4JetFlavourInfos.clone(jets = "ak4GenJetsNoNu")
+    process.genJetFlavourTable = cms.EDProducer("GenJetFlavourTableProducer",
+        name = cms.string("GenJets"),
+        src = process.l1pfjetTable.jets.Gen,
+        cut = cms.string(f'{process.l1pfjetTable.commonSel.value()} && {process.l1pfjetTable.jets.Gen_sel.value()}'),
+        deltaR = cms.double(0.1),
+        jetFlavourInfos = cms.InputTag("genFlavourInfo"),
+    )
+    process.p += process.selectedHadronsAndPartons
+    process.p += process.genFlavourInfo
+    process.p += process.genJetFlavourTable
 
 def addTkPtCut(ptCut):
     process.l1tLayer1BarrelTkPt3 = process.l1tLayer1Barrel.clone(trkPtCut = ptCut)
