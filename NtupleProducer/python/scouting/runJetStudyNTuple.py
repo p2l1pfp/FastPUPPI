@@ -38,14 +38,18 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
 process.extraPFStuff = cms.Task(
+        process.l1tTkMuonsGmt,
         process.genParticlesForMETAllVisible,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
         process.l1tVertexFinderEmulator,
         process.L1TLayer1TaskInputsTask,
         process.L1TLayer1Task,
-        process.L1TPFJetsEmulationTask
+        process.L1TPFJetsEmulationTask,
+        process.L1TPFJetsExtendedTask,
+        process.L1TBJetsTask
 )
+
 
 process.jetTable = cms.EDProducer("L1PFJetTableProducer",
     gen = cms.InputTag("ak4GenJetsNoNu"),
@@ -54,11 +58,42 @@ process.jetTable = cms.EDProducer("L1PFJetTableProducer",
     minRecoPtOverGenPt = cms.double(0.1),
     jets = cms.PSet(
         Gen = cms.InputTag("ak4GenJetsNoNu"),
-        L1Puppi = cms.InputTag("l1tSCPFL1PuppiCorrectedEmulator"),
     ),
     moreVariables = cms.PSet(
     ),
 )
+process.puppiJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+        name = cms.string("L1PuppiJets"),
+        cut  = cms.string(""),
+        src = cms.InputTag("l1tSCPFL1PuppiCorrectedEmulator"),
+        doc = cms.string("Puppi Jets reconstructed by L1T"),
+        singleton = cms.bool(False), # the number of entries is variable
+        extension = cms.bool(False), # this is the main table
+        variables = cms.PSet(
+            pt  = Var("pt",  float),
+            phi = Var("phi", float),
+            eta  = Var("eta", float),
+            mass  = Var("mass", float),
+        )
+)
+process.puppiExtJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+        name = cms.string("L1PuppiExtJets"),
+        cut  = cms.string(""),
+        src = cms.InputTag("l1tSCPFL1PuppiExtendedCorrectedEmulator"),
+        doc = cms.string("Puppi Jets reconstructed by L1T (extended tracking)"),
+        singleton = cms.bool(False), # the number of entries is variable
+        extension = cms.bool(False), # this is the main table
+        variables = cms.PSet(
+            pt  = Var("pt",  float),
+            phi = Var("phi", float),
+            eta  = Var("eta", float),
+            mass  = Var("mass", float),
+        ),
+        externalVariables = cms.PSet(
+            btagScore = ExtVar(cms.InputTag("l1tBJetProducerPuppiCorrectedEmulator", "L1PFBJets"), float, doc="b-tag score (L1 model)"),
+        )
+)
+
 process.genParticleTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
         name = cms.string("GenParticles"),
         cut  = cms.string("abs(eta) < 5"),
@@ -118,14 +153,94 @@ process.l1VertexTable = cms.EDProducer("VertexWordFlatTableProducer",
             z     = Var("z0",  float,precision=16),
         )
 )
+process.tkMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+    src = cms.InputTag("l1tTkMuonsGmt"),
+    cut = cms.string(""),
+    name = cms.string("TkMu"),
+    doc = cms.string("TkMuons from GMT"),
+    singleton = cms.bool(False), # the number of entries is variable
+    extension = cms.bool(False), # this is the main table
+    variables = cms.PSet(
+        pt   = Var("phPt",  float),
+        eta  = Var("phEta", float),
+        phi  = Var("phPhi", float),
+        mass = Var("0.10566", float),
+        vz   = Var("phZ0",  float, doc="Z coordinate of the reconstructed production vertex"),
+        d0   = Var("phD0",  float, doc="transverse impact parameter (always zero currently)"),
+        charge = Var("phCharge", int, doc="charge"),
+        quality = Var("hwQual", int, doc="quality (TBD)"),
+        hwPt   = Var("hwPt", int),
+        hwEta  = Var("hwEta", int),
+        hwPhi  = Var("hwPhi", int),
+        hwZ0  = Var("hwZ0", int),
+        hwD0  = Var("hwD0", int),
+        hwCharge  = Var("hwCharge", int),
+        hwIsoSum  = Var("hwIsoSum", int),
+        hwIsoSumAp  = Var("hwIsoSumAp", int),
+        hwQual  = Var("hwQual", int),
+    )
+)
+
+process.genMu = cms.EDFilter("GenParticleSelector",
+    src = cms.InputTag("genParticles"),
+    cut = cms.string("abs(pdgId) = 13 && status == 1 && pt > 0.5 && abs(eta) < 2.7"),
+)
+
+process.genMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+    src = cms.InputTag("genMu"),
+    cut = cms.string(""),
+    name = cms.string("GenMu"),
+    doc = cms.string("gen muons"),
+    singleton = cms.bool(False), # the number of entries is variable
+    extension = cms.bool(False), # this is the main table
+    variables = cms.PSet(
+        pt  = Var("pt",  float),
+        phi = Var("phi", float),
+        eta  = Var("eta", float),
+        mass  = Var("mass", float),
+        vz   = Var("vz",  float, doc="Production point along the beam axis"),
+        d0   = Var("vertex.Rho",  float, doc="transverse distance of production point from the beam axis"),
+        charge  = Var("charge", int, doc="charge"),
+        isPrompt  = Var("statusFlags().isPrompt()", int, doc="Prompt muon"),
+        isFromTau  = Var("statusFlags().isDirectPromptTauDecayProduct()", int, doc="Muon from prompt tau decay"),
+    )
+)
+process.tkMuMCMatch = cms.EDProducer("MCMatcher",       # cut on deltaR, deltaPt/Pt; pick best by deltaR
+    src         = process.tkMuTable.src,                         # final reco collection
+    matched     = cms.InputTag("genMu"),     # final mc-truth particle collection
+    mcPdgId     = cms.vint32(13),               # one or more PDG ID (13 = mu); absolute values (see below)
+    checkCharge = cms.bool(False),              # True = require RECO and MC objects to have the same charge
+    mcStatus    = cms.vint32(1),                # PYTHIA status code (1 = stable, 2 = shower, 3 = hard scattering)
+    maxDeltaR   = cms.double(0.1),              # Minimum deltaR for the match
+    maxDPtRel   = cms.double(0.5),              # Minimum deltaPt/Pt for the match
+    resolveAmbiguities    = cms.bool(True),     # Forbid two RECO objects to match to the same GEN object
+    resolveByMatchQuality = cms.bool(True),    # False = just match input in order; True = pick lowest deltaR pair first
+)
+
+process.tkMuMCTable = cms.EDProducer("CandMCMatchTableProducer",
+    src     = process.tkMuTable.src,
+    mcMap   = cms.InputTag("tkMuMCMatch"),
+    objName = process.tkMuTable.name,
+    objType = cms.string("Other"),
+    branchName = cms.string("GenMu"),
+    docString = cms.string("MC matching"),
+)
+process.extraPFStuff.add(
+        process.genMu,
+        process.tkMuMCMatch,
+)
 
 
 process.p = cms.Path(
+    process.l1tBJetProducerPuppi +
     process.jetTable +
+    process.puppiJetsTable +
+    process.puppiExtJetsTable +
     process.genParticleTable +
     process.genVertexTable +
     process.l1VertexTable +
-    process.puppiParticleTable 
+    process.puppiParticleTable +
+    process.tkMuTable  + process.genMuTable + process.tkMuMCTable
 )
 process.p.associate(process.extraPFStuff)
 
@@ -191,5 +306,5 @@ def isSignal():
     )    
     process.p.replace(process.genParticleTable, process.genParticleTable + process.genHardParticleTable)
     process.extraPFStuff.add(process.genHard)
-#process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322/TTbar_PU200/inputs110X_%d.root' % i for i in (1,)] 
-#oldInputs_12_3_X()
+process.source.fileNames  = [ '/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223/Disorder_Cascade_Phi3_M20R_PU200/inputs125X_Disorder_Cascade_Phi3_M20R_PU200_job1.root'] 
+isSignal()

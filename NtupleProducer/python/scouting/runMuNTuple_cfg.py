@@ -29,6 +29,7 @@ from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
 process.extraPFStuff = cms.Task(
+        process.l1tTkMuonsGmt,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
         process.l1tVertexFinderEmulator,
