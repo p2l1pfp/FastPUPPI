@@ -27,8 +27,8 @@ cmsRun runInputs110X.py
 Currently only  `12_5_X` from the Phase2Fall22 campaign (Phase2C17I13M9, Geometry D88) and `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) have been tested.
 Existing input files available are:
  * `125X_v0`:  input files from processing `12_5_X` Phase2Fall22 TDR samples in `CMSSW_12_5_3`, from `/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223`
- * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322``: use with `oldInputs_12_3_X()` in `runPerformanceNTuple.py`
- * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
+ * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`: use with `oldInputs_12_3_X()` in `runPerformanceNTuple.py`
+ * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
 
 The second step runs the algorithms on the input files and creates ntuples which can be used to do analysis.
 All python configuration files for CMSSW are under `NtupleProducer/python`, while standalone python scripts or fwlite macros are under `NtupleProducer/python/scripts`. 
@@ -42,10 +42,9 @@ cmsRun runPerformanceNTuple.py
 
 To run the ntuplizer over many files, from within `NtupleProducer/python` do for instance:
 ```
-./scripts/prun.sh runPerformanceNTuple.py --110X_v2 TTbar_PU200 TTbar_PU200.110X_v2  --inline-customize 'oldInputs()'
-./scripts/prun.sh runPerformanceNTuple.py --110X_v2 TTbar_PU0 TTbar_PU0.110X_v2  --inline-customize 'oldInputs();goGun()'
-./scripts/prun.sh runPerformanceNTuple.py --110X_v2 MultiPion_PT0to200_PU0 MultiPion_PT0to200_PU0.110X_v2  --inline-customize 'oldInputs()goGun()'
-./scripts/prun.sh runPerformanceNTuple.py --110X_v2 MultiPion_PT0to120_gun_PU200 MultiPion_PT0to120_gun_PU200.110X_v2  --inline-customize 'oldInputs();goGun();noPU()'
+./scripts/prun.sh runPerformanceNTuple.py --125X_v0 TTbar_PU200 TTbar_PU200.125X_v0  --inline-customize 'oldInputs()'
+./scripts/prun.sh runPerformanceNTuple.py --125X_v0 DoubleElectron_FlatPt-1To100_PU200 DoubleElectron_FlatPt-1To100_PU200.125X_v0  --inline-customize 'goGun();'
+./scripts/prun.sh runPerformanceNTuple.py --125X_v0 SinglePion_Pt-0To200-gun_PU0 SinglePion_Pt-0To200-gun_PU0.125X_v0  --inline-customize 'goGun();noPU()'
 ```
 Look into the prun.sh script to check the paths to the input files and the corresponding options.
 
