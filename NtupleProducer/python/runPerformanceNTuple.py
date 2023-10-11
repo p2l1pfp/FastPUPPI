@@ -45,7 +45,8 @@ process.extraPFStuff = cms.Task(
         process.l1tTrackSelectionProducer,
         process.l1tVertexFinderEmulator,
         process.L1TLayer1TaskInputsTask,
-        process.L1TLayer1Task)
+        process.L1TLayer1Task,
+        process.L1TLayer2EGTask)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -408,11 +409,12 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
                     phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
                 setattr(process, w+"Ph"+postfix+"Table", phTable)
                 process.extraPFStuff.add(phTable)
-def addTkEG(postfix=""):
-    for w in "EB","EE":
+
+def addTkEG(doL1=False, doL2=True, postfix=""):        
+    def getTkEgTables(slice, postfix, tkem_inputtag, tkele_inputtag):
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        name = cms.string("TkEm"+w+postfix),
-                        src = cms.InputTag("l1tLayer1EG%s:L1TkEm%s" % (postfix, w)),
+                        name = cms.string("TkEm"+slice+postfix),
+                        src = cms.InputTag(tkem_inputtag),
                         cut = cms.string(""),
                         doc = cms.string(""),
                         singleton = cms.bool(False), # the number of entries is variable
@@ -422,22 +424,39 @@ def addTkEG(postfix=""):
                             phi = Var("phi", float,precision=8),
                             eta  = Var("eta", float,precision=8),
                             charge  = Var("charge", int, doc="charge"),
-                            emid    = Var("EGRef.hwQual", int, doc="id"),
+                            hwQual    = Var("hwQual", int, doc="id"),
                             tkIso   = Var("trkIsol", float, precision=8),
-                            tkIsoV  = Var("trkIsolPV", float, precision=8),
+                            tkIsoPV  = Var("trkIsolPV", float, precision=8),
+                            pfIso   = Var("pfIsol", float, precision=8),
+                            pfIsoPV  = Var("pfIsolPV", float, precision=8),
+                            puppiIso   = Var("puppiIsol", float, precision=8),
+                            puppiIsoPV  = Var("puppiIsolPV", float, precision=8),
                         )
                     )
         tkEleTable = tkEmTable.clone(
-                        name = cms.string("TkEle"+w+postfix),
-                        src = cms.InputTag("l1tLayer1EG%s:L1TkEle%s" % (postfix, w)),
+                        name = cms.string("TkEle"+slice+postfix),
+                        src = cms.InputTag(tkele_inputtag),
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
-        tkEleTable.variables.caloEta = Var("EGRef.eta", float,precision=8)
-        tkEleTable.variables.caloPhi = Var("EGRef.phi", float,precision=8)
-        setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
-        setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
+        tkEleTable.variables.tkEta = Var("trkPtr.eta", float,precision=8)
+        tkEleTable.variables.tkPhi = Var("trkPtr.phi", float,precision=8)
+        tkEleTable.variables.tkPt = Var("trkPtr.momentum.perp", float,precision=8)
+        return tkEmTable, tkEleTable
+                                   
+    if doL1:    
+        for w in "EB","EE":
+            tkEmTable, tkEleTable = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
+            setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
+            setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
+            process.extraPFStuff.add(tkEmTable,tkEleTable)
+
+    if doL2:    
+        tkEmTable, tkEleTable = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
+        setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
+        setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
+
 
 def addAllLeps():
     addGenLep()
