@@ -327,22 +327,38 @@ def addGenLep(pdgs=[11,13,22]):
                     prompt  = Var("2*statusFlags().isPrompt() + statusFlags().isDirectPromptTauDecayProduct()", int, doc="Particle status."),
                 )
             )
+    genLepTableExt = cms.EDProducer("L1PFGenTableProducer",
+        src = cms.InputTag("genParticles"),)
+
     for pdgId in pdgs:
         if pdgId == 13:
             process.genMuTable = genLepTable.clone(
                         cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
                         name = cms.string("GenMu"))
-            process.extraPFStuff.add(process.genMuTable)
+            process.genMuExtTable = genLepTableExt.clone(
+                        cut = process.genMuTable.cut,
+                        name = process.genMuTable.name
+            )
+            process.extraPFStuff.add(process.genMuTable, process.genMuExtTable)
         elif pdgId == 11:
             process.genElTable = genLepTable.clone(
                         cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
                         name = cms.string("GenEl"))
-            process.extraPFStuff.add(process.genElTable)
+            process.genElExtTable = genLepTableExt.clone(
+                        cut = process.genElTable.cut,
+                        name = process.genElTable.name
+            )
+            process.extraPFStuff.add(process.genElTable, process.genElExtTable)
         elif pdgId == 22:
             process.genPhTable = genLepTable.clone(
-                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 8 && statusFlags().isPrompt()" % pdgId),
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 5 && statusFlags().isPrompt()" % pdgId),
                         name = cms.string("GenPh"))
-            process.extraPFStuff.add(process.genPhTable)
+            process.genPhExtTable = genLepTableExt.clone(
+                        cut = process.genPhTable.cut,
+                        name = process.genPhTable.name
+            )
+            process.extraPFStuff.add(process.genPhTable, process.genPhExtTable)
+
 
 def addStaMu():
     process.staMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
@@ -361,6 +377,47 @@ def addStaMu():
                         )
     )
     process.extraPFStuff.add(process.staMuTable)
+
+
+def addHGCalTPs():
+    process.hgcClusterTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                src = cms.InputTag('l1tHGCalBackEndLayer2Producer:HGCalBackendLayer2Processor3DClustering'),
+                doc = cms.string("HGCal 3D clusters"),
+                cut  = cms.string("pt > 1"),
+                name = cms.string("HGCal3DCl"),
+                singleton = cms.bool(False), # the number of entries is variable
+                extension = cms.bool(False), # this is the main table
+                variables = cms.PSet(
+                    pt  = Var("pt",  float,precision=8),
+                    phi = Var("phi", float,precision=8),
+                    eta  = Var("eta", float,precision=8),
+                    nTcs = Var("constituents.size",  int,precision=8),
+                    ptEm = Var("iPt('EM')",  float,precision=8),
+                    hwQual = Var("hwQual",  int,precision=8),
+                    showerlength = Var("showerLength", int),
+                    coreshowerlength = Var("coreShowerLength", int),
+                    firstlayer = Var("firstLayer", int),
+                    maxlayer = Var("maxLayer", int),
+                    seetot = Var("sigmaEtaEtaTot", float),
+                    seemax = Var("sigmaEtaEtaMax", float),
+                    spptot = Var("sigmaPhiPhiTot", float),
+                    sppmax = Var("sigmaPhiPhiMax", float),
+                    szz = Var("sigmaZZ", float),
+                    srrtot = Var("sigmaRRTot", float),
+                    srrmax = Var("sigmaRRMax", float),
+                    srrmean = Var("sigmaRRMean", float),
+                    emaxe = Var("eMax/energy", float),
+                    hoe = Var("hOverE", float),
+                    meanz = Var("abs(zBarycenter)", float),
+                    layer10 = Var("layer10percent", float),
+                    layer50 = Var("layer50percent", float),
+                    layer90 = Var("layer90percent", float),
+                    ntc67 = Var("triggerCells67percent", float),
+                    ntc90 = Var("triggerCells90percent", float),
+                    )
+            )
+    process.extraPFStuff.add(process.hgcClusterTable)
+
 
 def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
     for w in opts:
