@@ -22,7 +22,13 @@ process.load("L1Trigger.TrackerDTC.ProducerED_cff")
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_125X_mcRun4_realistic_v2_ext1-v1/30000/1013a985-0115-4020-a601-93f09566471c.root')
+    fileNames = cms.untracked.vstring('/store/mc/Phase2Fall22DRMiniAOD/TT_TuneCP5_14TeV-powheg-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_125X_mcRun4_realistic_v2_ext1-v1/30000/1013a985-0115-4020-a601-93f09566471c.root'),
+    inputCommands = cms.untracked.vstring(
+        'keep *',
+        'drop l1tPFJets_*_*_*',
+        'drop l1tPFTaus_*_*_*',
+        'drop l1tTrackerMuons_*_*_*'
+    ),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200))
 process.options = cms.untracked.PSet( 
