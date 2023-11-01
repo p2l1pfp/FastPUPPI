@@ -36,13 +36,17 @@ from RecoMET.METProducers.pfMet_cfi import pfMet
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
+# NOTE: we need this to avoid saving the stubs
+process.l1tTrackSelectionProducer.processSimulatedTracks = False
 
 process.extraPFStuff = cms.Task(
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
+        process.l1tTrackSelectionProducer,
         process.l1tVertexFinderEmulator,
         process.L1TLayer1TaskInputsTask,
-        process.L1TLayer1Task)
+        process.L1TLayer1Task,
+        process.L1TLayer2EGTask)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -128,6 +132,7 @@ process.l1pfjetTable = cms.EDProducer("L1PFJetTableProducer",
         Gen_sel = cms.string("pt > 15"),
     ),
     moreVariables = cms.PSet(
+        nDau = cms.string("numberOfDaughters()"),
     ),
 )
 
@@ -269,6 +274,27 @@ def addAllJets():
     addCaloJets()
     #addTkJets()
 
+def addJetConstituents(N):
+    for i in range(N): # save a max of N daughters (unfortunately 2D arrays are not yet supported in the NanoAOD output module)
+        for var in "pt", "eta", "phi", "mass", "pdgId":
+            setattr(process.l1pfjetTable.moreVariables, "dau%d_%s" % (i,var), cms.string("? numberOfDaughters() > %d ? daughter(%d).%s : -1"  % (i,i,var)))
+        setattr(process.l1pfjetTable.moreVariables, "dau%d_%s" % (i,"vz"), cms.string("? numberOfDaughters() > %d ? daughter(%d).%s : -1"  % (i,i,"vertex.Z")))
+
+def addGenJetFlavourTable():
+    process.load("PhysicsTools.JetMCAlgos.AK4PFJetsMCFlavourInfos_cfi")
+    process.load("PhysicsTools.JetMCAlgos.HadronAndPartonSelector_cfi")
+    process.genFlavourInfo = process.ak4JetFlavourInfos.clone(jets = "ak4GenJetsNoNu")
+    process.genJetFlavourTable = cms.EDProducer("GenJetFlavourTableProducer",
+        name = cms.string("GenJets"),
+        src = process.l1pfjetTable.jets.Gen,
+        cut = cms.string(f'{process.l1pfjetTable.commonSel.value()} && {process.l1pfjetTable.jets.Gen_sel.value()}'),
+        deltaR = cms.double(0.1),
+        jetFlavourInfos = cms.InputTag("genFlavourInfo"),
+    )
+    process.p += process.selectedHadronsAndPartons
+    process.p += process.genFlavourInfo
+    process.p += process.genJetFlavourTable
+
 def addTkPtCut(ptCut):
     process.l1tLayer1BarrelTkPt3 = process.l1tLayer1Barrel.clone(trkPtCut = ptCut)
     process.l1tLayer1HGCalTkPt3 = process.l1tLayer1HGCal.clone(trkPtCut = ptCut)
@@ -301,22 +327,38 @@ def addGenLep(pdgs=[11,13,22]):
                     prompt  = Var("2*statusFlags().isPrompt() + statusFlags().isDirectPromptTauDecayProduct()", int, doc="Particle status."),
                 )
             )
+    genLepTableExt = cms.EDProducer("L1PFGenTableProducer",
+        src = cms.InputTag("genParticles"),)
+
     for pdgId in pdgs:
         if pdgId == 13:
             process.genMuTable = genLepTable.clone(
                         cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
                         name = cms.string("GenMu"))
-            process.extraPFStuff.add(process.genMuTable)
+            process.genMuExtTable = genLepTableExt.clone(
+                        cut = process.genMuTable.cut,
+                        name = process.genMuTable.name
+            )
+            process.extraPFStuff.add(process.genMuTable, process.genMuExtTable)
         elif pdgId == 11:
             process.genElTable = genLepTable.clone(
                         cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
                         name = cms.string("GenEl"))
-            process.extraPFStuff.add(process.genElTable)
+            process.genElExtTable = genLepTableExt.clone(
+                        cut = process.genElTable.cut,
+                        name = process.genElTable.name
+            )
+            process.extraPFStuff.add(process.genElTable, process.genElExtTable)
         elif pdgId == 22:
             process.genPhTable = genLepTable.clone(
-                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 8 && statusFlags().isPrompt()" % pdgId),
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 5 && statusFlags().isPrompt()" % pdgId),
                         name = cms.string("GenPh"))
-            process.extraPFStuff.add(process.genPhTable)
+            process.genPhExtTable = genLepTableExt.clone(
+                        cut = process.genPhTable.cut,
+                        name = process.genPhTable.name
+            )
+            process.extraPFStuff.add(process.genPhTable, process.genPhExtTable)
+
 
 def addStaMu():
     process.staMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
@@ -335,6 +377,47 @@ def addStaMu():
                         )
     )
     process.extraPFStuff.add(process.staMuTable)
+
+
+def addHGCalTPs():
+    process.hgcClusterTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                src = cms.InputTag('l1tHGCalBackEndLayer2Producer:HGCalBackendLayer2Processor3DClustering'),
+                doc = cms.string("HGCal 3D clusters"),
+                cut  = cms.string("pt > 1"),
+                name = cms.string("HGCal3DCl"),
+                singleton = cms.bool(False), # the number of entries is variable
+                extension = cms.bool(False), # this is the main table
+                variables = cms.PSet(
+                    pt  = Var("pt",  float,precision=8),
+                    phi = Var("phi", float,precision=8),
+                    eta  = Var("eta", float,precision=8),
+                    nTcs = Var("constituents.size",  int,precision=8),
+                    ptEm = Var("iPt('EM')",  float,precision=8),
+                    hwQual = Var("hwQual",  int,precision=8),
+                    showerlength = Var("showerLength", int),
+                    coreshowerlength = Var("coreShowerLength", int),
+                    firstlayer = Var("firstLayer", int),
+                    maxlayer = Var("maxLayer", int),
+                    seetot = Var("sigmaEtaEtaTot", float),
+                    seemax = Var("sigmaEtaEtaMax", float),
+                    spptot = Var("sigmaPhiPhiTot", float),
+                    sppmax = Var("sigmaPhiPhiMax", float),
+                    szz = Var("sigmaZZ", float),
+                    srrtot = Var("sigmaRRTot", float),
+                    srrmax = Var("sigmaRRMax", float),
+                    srrmean = Var("sigmaRRMean", float),
+                    emaxe = Var("eMax/energy", float),
+                    hoe = Var("hOverE", float),
+                    meanz = Var("abs(zBarycenter)", float),
+                    layer10 = Var("layer10percent", float),
+                    layer50 = Var("layer50percent", float),
+                    layer90 = Var("layer90percent", float),
+                    ntc67 = Var("triggerCells67percent", float),
+                    ntc90 = Var("triggerCells90percent", float),
+                    )
+            )
+    process.extraPFStuff.add(process.hgcClusterTable)
+
 
 def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
     for w in opts:
@@ -383,11 +466,12 @@ def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
                     phTable.variables.puppiW = Var("puppiWeight", float, precision=8)
                 setattr(process, w+"Ph"+postfix+"Table", phTable)
                 process.extraPFStuff.add(phTable)
-def addTkEG(postfix=""):
-    for w in "EB","EE":
+
+def addTkEG(doL1=False, doL2=True, postfix=""):        
+    def getTkEgTables(slice, postfix, tkem_inputtag, tkele_inputtag):
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-                        name = cms.string("TkEm"+w+postfix),
-                        src = cms.InputTag("l1tLayer1EG%s:L1TkEm%s" % (postfix, w)),
+                        name = cms.string("TkEm"+slice+postfix),
+                        src = cms.InputTag(tkem_inputtag),
                         cut = cms.string(""),
                         doc = cms.string(""),
                         singleton = cms.bool(False), # the number of entries is variable
@@ -397,22 +481,39 @@ def addTkEG(postfix=""):
                             phi = Var("phi", float,precision=8),
                             eta  = Var("eta", float,precision=8),
                             charge  = Var("charge", int, doc="charge"),
-                            emid    = Var("EGRef.hwQual", int, doc="id"),
+                            hwQual    = Var("hwQual", int, doc="id"),
                             tkIso   = Var("trkIsol", float, precision=8),
-                            tkIsoV  = Var("trkIsolPV", float, precision=8),
+                            tkIsoPV  = Var("trkIsolPV", float, precision=8),
+                            pfIso   = Var("pfIsol", float, precision=8),
+                            pfIsoPV  = Var("pfIsolPV", float, precision=8),
+                            puppiIso   = Var("puppiIsol", float, precision=8),
+                            puppiIsoPV  = Var("puppiIsolPV", float, precision=8),
                         )
                     )
         tkEleTable = tkEmTable.clone(
-                        name = cms.string("TkEle"+w+postfix),
-                        src = cms.InputTag("l1tLayer1EG%s:L1TkEle%s" % (postfix, w)),
+                        name = cms.string("TkEle"+slice+postfix),
+                        src = cms.InputTag(tkele_inputtag),
                     )
         tkEleTable.variables.charge = Var("charge", int, doc="charge")
         tkEleTable.variables.vz     = Var("trkzVtx",  float,precision=8)
-        tkEleTable.variables.caloEta = Var("EGRef.eta", float,precision=8)
-        tkEleTable.variables.caloPhi = Var("EGRef.phi", float,precision=8)
-        setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
-        setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
+        tkEleTable.variables.tkEta = Var("trkPtr.eta", float,precision=8)
+        tkEleTable.variables.tkPhi = Var("trkPtr.phi", float,precision=8)
+        tkEleTable.variables.tkPt = Var("trkPtr.momentum.perp", float,precision=8)
+        return tkEmTable, tkEleTable
+                                   
+    if doL1:    
+        for w in "EB","EE":
+            tkEmTable, tkEleTable = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
+            setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
+            setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
+            process.extraPFStuff.add(tkEmTable,tkEleTable)
+
+    if doL2:    
+        tkEmTable, tkEleTable = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
+        setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
+        setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
+
 
 def addAllLeps():
     addGenLep()
