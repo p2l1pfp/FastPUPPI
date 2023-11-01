@@ -174,6 +174,8 @@ class EPVisitor:
         #print "Visiting type ",type(visitee),": ",visitee
         if type(visitee) == cms.OutputModule:
             cmsSplit_output_file.write("OUT\\t\%s\\t\%s\\t\%s\\n" % (visitee.label_(), visitee.fileName.value(), visitee.type_()));
+        if ("Dump" in visitee.label_()) and (type(visitee) == cms.EDAnalyzer) and hasattr(visitee, "outName"):
+            cmsSplit_output_file.write("OUT\\t\%s\\t\%s\\t\%s\\n" % (visitee.label_(), visitee.outName.value(), "Dump"));
     def leave(self,visitee): 
         pass
 
@@ -296,8 +298,10 @@ print "List of files: \n\t" . join("\n\t", @files, '') . "\n" if $verbose > 1;
 # pool output module
 my @outputModules = ();
 my @nanoModules = ();
+my @dumpModules = ();
 my %mergeList = ();
 my %mergeNano = ();
+my %mergeDump = ();
 foreach (@pythonFileInfo) {
     chomp;
     #print STDERR "[[$_]]\n";
@@ -310,6 +314,13 @@ foreach (@pythonFileInfo) {
         print "Found enabled $otype (NANO) output module $module producing $file\n" if $verbose > 0;
         unless ($nomerge) {
             $mergeNano{$module} = {'outfile'=>$ofile, 'infiles'=>[]};
+        }
+    } elsif ($otype eq "Dump") {
+        $ofile =~ s/\.dump$/$label.".dump"/e;
+        push @dumpModules, [$module,$file];
+        print "Found enabled $otype output module $module producing $file\n" if $verbose > 0;
+        unless ($nomerge) {
+            $mergeDump{$module} = {'outfile'=>$ofile, 'infiles'=>[]};
         }
     } else {
         push @outputModules, [$module,$file];
@@ -625,6 +636,17 @@ foreach my $j (1 .. $jobs) {
             push @cleanup, $f;
         }
     }
+    foreach (@dumpModules) {
+        my ($n,$f) = @$_;
+        $f =~ s/\.dump$/$label ."_job$j.dump"/e;
+        if ($jobs == 1) { $f =~ s/_job1//; }
+        if (defined($outdir)) { $f = $outdir . "/" . basename($f); }
+        $postamble .= "$THEPROCESS.$n.outName = '$f'\n";
+        unless($nomerge or ($jobs == 1)) {
+            push @{$mergeDump{$n}->{'infiles'}}, $f;
+            push @cleanup, $f;
+        }
+    }
     if ($tfsFile) {
         my $f = $tfsFile; 
         $f =~ s/\.root$/$label ."_job$j.root"/e;
@@ -700,7 +722,7 @@ EOF
     close OUT;
 }
 
-## make merge jobs
+## make merge jobs (Nano)
 foreach my $m (sort(keys(%mergeNano))) {
     my $pyfile = $basename . $label . "_merge_$m.sh";
     print "Will create merge job $m, source $pyfile\n" if $verbose;
@@ -725,6 +747,23 @@ fi
 EOF
     close OUT;
 }
+
+## make merge jobs (Dump)
+foreach my $m (sort(keys(%mergeDump))) {
+    my $pyfile = $basename . $label . "_merge_$m.sh";
+    print "Will create merge job $m, source $pyfile\n" if $verbose;
+    print "Merge output file ",$mergeDump{$m}->{'outfile'}," from:\n\t",join("\n\t",@{$mergeDump{$m}->{'infiles'}},''),"\n" if $verbose > 1;
+    next if $pretend;
+    open OUT, "> $pyfile" or die "Can't write to $pyfile\n";  push @cleanup, $pyfile;
+    my $out = $mergeDump{$m}->{'outfile'};
+    my $in  = join(" ",@{$mergeDump{$m}->{'infiles'}});
+    print OUT <<EOF;
+#!/bin/bash
+cat $in > $out
+EOF
+    close OUT;
+}
+
 
 
 
@@ -821,6 +860,11 @@ EOF
             print OUT "cmsRun $mfile >  $mlog 2>&1;\n"; push @cleanup, $mlog;
         }
         foreach my $m (sort(keys(%mergeNano))) {
+            my $mfile = $basename . $label . "_merge_$m.sh";
+            my $mlog  = $basename . $label . "_merge_$m.log";
+            print OUT "bash $mfile >  $mlog 2>&1;\n"; push @cleanup, $mlog;
+        }
+        foreach my $m (sort(keys(%mergeDump))) {
             my $mfile = $basename . $label . "_merge_$m.sh";
             my $mlog  = $basename . $label . "_merge_$m.log";
             print OUT "bash $mfile >  $mlog 2>&1;\n"; push @cleanup, $mlog;
