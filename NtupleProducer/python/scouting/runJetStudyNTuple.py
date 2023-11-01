@@ -37,11 +37,14 @@ from RecoMET.METProducers.pfMet_cfi import pfMet
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
+process.l1tTrackSelectionProducer.processSimulatedTracks = False # these would need stubs, and are not used anyway
+
 process.extraPFStuff = cms.Task(
         process.l1tTkMuonsGmt,
         process.genParticlesForMETAllVisible,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
+        process.l1tTrackSelectionProducer,
         process.l1tVertexFinderEmulator,
         process.L1TLayer1TaskInputsTask,
         process.L1TLayer1Task,

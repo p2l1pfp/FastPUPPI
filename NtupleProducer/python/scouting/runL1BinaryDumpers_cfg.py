@@ -29,11 +29,13 @@ process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
 
+process.l1tTrackSelectionProducer.processSimulatedTracks = False # these would need stubs, and are not used anyway
 
 process.deps = cms.Task(
     process.l1tTkMuonsGmt,
     process.l1tSAMuonsGmt,
     process.l1tGTTInputProducer,
+    process.l1tTrackSelectionProducer,
     process.l1tVertexFinderEmulator,
     process.L1TLayer1TaskInputsTask,
     process.L1TLayer1Task,
@@ -167,7 +169,7 @@ process.puppiTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
 
 process.genW = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
-        cut = cms.string("abs(pdgId) = 24 && numberOfDaughters = 3 && abs(daughter(0).pdgId) = 211 && abs(daughter(1).pdgId) = 211"),
+        cut = cms.string("abs(pdgId) = 24 && numberOfDaughters = 3 && abs(daughter(0).pdgId) = 211 && abs(daughter(1).pdgId) = 211 && abs(daughter(2).pdgId) = 211"),
 )
 process.genPiFromW = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
