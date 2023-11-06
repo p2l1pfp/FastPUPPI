@@ -416,7 +416,17 @@ def addHGCalTPs():
                     ntc90 = Var("triggerCells90percent", float),
                     )
             )
-    process.extraPFStuff.add(process.hgcClusterTable)
+    from L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClusters_cfi import l1tPFClustersFromHGC3DClusters
+    from L1Trigger.L1THGCal.egammaIdentification import egamma_identification_histomax
+    process.hgcClusterExtTable = cms.EDProducer("L1HGC3DclTableProducer",
+                src = cms.InputTag('l1tHGCalBackEndLayer2Producer:HGCalBackendLayer2Processor3DClustering'),
+                cut  = cms.string("pt > 1"),
+                name = cms.string("HGCal3DCl"),
+                emVsPionID=l1tPFClustersFromHGC3DClusters.emVsPionID,
+                emVsPUID=l1tPFClustersFromHGC3DClusters.emVsPUID,
+                EGIdentification = egamma_identification_histomax.clone(),
+            )
+    process.extraPFStuff.add(process.hgcClusterTable, process.hgcClusterExtTable)
 
 
 def addPFLep(pdgs=[11,13,22],opts=["PF","Puppi"], postfix=""):
@@ -513,6 +523,34 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
         setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
         setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
+
+
+def addDecodedTk(regs=['HGCal']):        
+    for reg in regs:
+        decTkTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                        name = cms.string("DecTk"+reg),
+                        src = cms.InputTag("l1tLayer1"+reg, 'DecodedTK'),
+                        cut = cms.string(""),
+                        doc = cms.string(""),
+                        singleton = cms.bool(False), # the number of entries is variable
+                        extension = cms.bool(False), # this is the main table
+                        variables = cms.PSet(
+                            pt  = Var("pt",  float,precision=8),
+                            phi = Var("phi", float,precision=8),
+                            eta  = Var("eta", float,precision=8),
+                            caloPhi = Var("caloPhi", float,precision=8),
+                            caloEta  = Var("caloEta", float,precision=8),
+                            vz = Var("vz", float,precision=8),
+                            chi2RPhi = Var("trackWord.getChi2RPhi", float,precision=8),
+                            chi2RZ = Var('trackWord.getChi2RZ', float, precision=8),
+                            chi2Bend = Var('trackWord.getBendChi2', float, precision=8),
+                            hitPattern = Var('trackWord.getHitPattern', int),
+                            nStubs = Var('trackWord.getNStubs', int),
+                            mvaQual = Var('trackWord.getMVAQuality', int),
+                        )
+                    )
+        setattr(process, f"decTk{reg}Table", decTkTable)
+        process.extraPFStuff.add(decTkTable)
 
 
 def addAllLeps():
