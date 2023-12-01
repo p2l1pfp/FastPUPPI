@@ -20,6 +20,7 @@ process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff")
 process.load("L1Trigger.TrackTrigger.ProducerSetup_cff") 
 process.load("L1Trigger.TrackerDTC.ProducerED_cff") 
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
+process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring('file:/data/cerminar/Phase2Spring23DIGIRECOMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/c699a773-9875-40c9-83b7-5a3c27f90bfd.root'),
@@ -39,6 +40,7 @@ process.options = cms.untracked.PSet(
 
 process.PFInputsTask = cms.Task(
     process.L1TLayer1TaskInputsTask,
+    process.L1THGCalTriggerPrimitivesTask,
    #process.TTClustersFromPhase2TrackerDigis,
    #process.TTStubsFromPhase2TrackerDigis,
    #process.TrackerDTCProducer,
