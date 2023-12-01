@@ -15,4 +15,6 @@
 <use name="L1Trigger/Phase2L1ParticleFlow"/>
 <use name="MagneticField/Engine"/>
 <use name="MagneticField/Records"/>
+<use name="PhysicsTools/NanoAOD"/>
+<!-- <use name="Utilities/General"/> -->
 <flags EDM_PLUGIN="1"/>
