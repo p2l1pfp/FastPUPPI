@@ -23,12 +23,18 @@ process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/data/cerminar/Phase2Spring23DIGIRECOMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/c699a773-9875-40c9-83b7-5a3c27f90bfd.root'),
+    fileNames = cms.untracked.vstring(
+        # 'file:/data/cerminar/Phase2Spring23DIGIRECOMiniAOD/DoubleElectron_FlatPt-1To100-gun/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/c699a773-9875-40c9-83b7-5a3c27f90bfd.root',
+        '/store/mc/Phase2Spring23DIGIRECOMiniAOD/DYToLL_M-10To50_TuneCP5_14TeV-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/30000/0289a719-64c3-4b16-871f-da7db9a8ac88.root',        '/store/mc/Phase2Spring23DIGIRECOMiniAOD/MinBias_TuneCP5_14TeV-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/30002/3b44d52d-1807-4a4f-9b9b-19466303a741.root',
+),
+
     inputCommands = cms.untracked.vstring(
         'keep *',
         'drop l1tPFJets_*_*_*',
         'drop l1tPFTaus_*_*_*',
-        'drop l1tTrackerMuons_*_*_*'
+        'drop l1tTrackerMuons_*_*_*',
+        'drop *_hlt*_*_HLT',
+        'drop triggerTriggerFilterObjectWithRefs_*_*_HLT'
     ),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200))
