@@ -1,10 +1,9 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_12_5_2_patch1
-cd CMSSW_12_5_2_patch1/src
+cmsrel CMSSW_14_0_0_pre1
+cd CMSSW_14_0_0_pre1/src
 cmsenv
-git cms-checkout-topic -u p2l1pfp:L1PF_12_5_X
 git cms-addpkg DataFormats/L1TParticleFlow
 git cms-addpkg DataFormats/L1TCorrelator
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
@@ -13,7 +12,7 @@ git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 12_5_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 14_0_X
 
 scram b -j8
 ```
@@ -21,11 +20,17 @@ scram b -j8
 If you start from GEN-SIM-DIGI-RAW, the first step is to produce the inputs files containing the basic TPs:
 ```
 cd FastPUPPI/NtupleProducer/python/
+cmsRun runInputs131X.py OR
 cmsRun runInputs125X.py OR
 cmsRun runInputs110X.py 
 ```
-Currently only  `12_5_X` from the Phase2Fall22 campaign (Phase2C17I13M9, Geometry D88) and `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11) have been tested.
+The supported input campaings are:
+ * `13_1_X` from the Phase2Spring23 campaign (Phase2C17I13M9, Geometry D95) 
+ * `12_5_X` from the Phase2Fall22 campaign (Phase2C17I13M9, Geometry D88) 
+ * `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11).
+
 Existing input files available are:
+ * `131X_v2`: input files from processing `13_1_X` Phase2Spring23 samples in `CMSSW_14_0_X`, from `/store/cmst3/group/l1tr/cerminar/14_0_X/fpinputs_131X/v2`
  * `125X_v0`:  input files from processing `12_5_X` Phase2Fall22 TDR samples in `CMSSW_12_5_3`, from `/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223`
  * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`: use with `oldInputs_12_3_X()` in `runPerformanceNTuple.py`
  * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
