@@ -1,15 +1,23 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_14_0_0_pre1
-cd CMSSW_14_0_0_pre1/src
+cmsrel CMSSW_14_0_0_pre3
+cd CMSSW_14_0_0_pre3/src
 cmsenv
+git cms-init
 git cms-addpkg DataFormats/L1TParticleFlow
 git cms-addpkg DataFormats/L1TCorrelator
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
+git cms-checkout-topic -u cms-l1t-offline:phase2-l1t-1400pre3_v4
+
+# externals
+git clone https://github.com/jonamotta/L1Trigger-L1CaloTrigger.git L1Trigger/L1CaloTrigger/data/
+git clone https://github.com/omiguelc/L1Trigger-L1TMuonEndCapPhase2.git  -b AddNNProtobufs L1Trigger/L1TMuonEndCapPhase2/data
+git clone git@github.com:BenjaminRS/L1Trigger-VertexFinder.git L1Trigger/VertexFinder/data/
+
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 14_0_X
