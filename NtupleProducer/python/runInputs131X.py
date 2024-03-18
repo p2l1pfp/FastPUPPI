@@ -10,7 +10,7 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '131X_mcRun4_realistic_v5', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '131X_mcRun4_realistic_v9', '')
 
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
@@ -57,8 +57,6 @@ process.PFInputsTask = cms.Task(
    #process.TTTrackAssociatorFromPixelDigisExtended,
    #process.SimL1EmulatorTask
    #process.l1tTkStubsGmt,
-   process.l1tTkMuonsGmt,
-   process.l1tSAMuonsGmt
 )
 process.p = cms.Path(
         process.l1tLayer1 +
@@ -66,6 +64,7 @@ process.p = cms.Path(
         process.l1tLayer2EG
 )
 process.p.associate(process.PFInputsTask)
+process.p.associate(process.SimL1EmulatorTask)
 
 process.out = cms.OutputModule("PoolOutputModule",
         fileName = cms.untracked.string("inputs131X.root"),
@@ -80,6 +79,7 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_TTTrackAssociatorFromPixelDigis_*_*",
             "keep *_TTTrackAssociatorFromPixelDigisExtended_*_*",
             # --- Calo TPs
+            "keep *_simEcalEBTriggerPrimitiveDigis_*_*",
             "keep *_simHcalTriggerPrimitiveDigis_*_*",
             "keep *_simCaloStage2Layer1Digis_*_*",
             "keep *_simCaloStage2Digis_*_*",
@@ -123,6 +123,8 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_l1tTowerCalibration_*_*",
             "keep *_l1tCaloJet_*_*",
             "keep *_l1tCaloJetHTT_*_*",
+            # "keep *_l1tPhase2L1CaloEGammaEmulator_*_*",
+            # "keep *_l1tPhase2CaloPFClusterEmulator_*_*",
             # --- GTT reconstruction
             "keep *_l1tVertexFinder_*_*",
             "keep *_l1tVertexFinderEmulator_*_*",
@@ -137,8 +139,9 @@ process.out = cms.OutputModule("PoolOutputModule",
             "keep *_l1tTrackerEmuHTMiss_*_*",
             "keep *_l1tTrackerEmuHTMissExtended_*_*",
             # --- GMT reconstruction
-            "keep *_l1tTkStubsGmt_*_*",
-            "keep *_l1tTkMuonsGmt_*_*",
+            "keep *_l1tStubsGmt_*_*",
+            "keep *_l1tKMTFMuonsGmt_*_*",
+            "keep *_l1tFwdMuonsGmt_*_*",
             "keep *_l1tSAMuonsGmt_*_*",
         ),
         compressionAlgorithm = cms.untracked.string('LZMA'),

@@ -1,15 +1,17 @@
 Basic Instructions
 
 ```
-cmsrel CMSSW_14_0_0_pre1
-cd CMSSW_14_0_0_pre1/src
+cmsrel CMSSW_14_0_0_pre3
+cd CMSSW_14_0_0_pre3/src
 cmsenv
+git cms-init
 git cms-addpkg DataFormats/L1TParticleFlow
 git cms-addpkg DataFormats/L1TCorrelator
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
+git cms-checkout-topic -u cms-l1t-offline:phase2-l1t-1400pre3_v5
 
 # scripts
 git clone git@github.com:p2l1pfp/FastPUPPI.git -b 14_0_X
@@ -30,6 +32,7 @@ The supported input campaings are:
  * `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11).
 
 Existing input files available are:
+ * `131X_v3`: input files from processing `13_1_X` Phase2Spring23 samples in `CMSSW_14_0_0_pre3` + `cms-l1t-offline:phase2-l1t-1400pre3_v4`, from `/store/cmst3/group/l1tr/cerminar/14_0_X/fpinputs_131X/v3`
  * `131X_v2`: input files from processing `13_1_X` Phase2Spring23 samples in `CMSSW_14_0_X`, from `/store/cmst3/group/l1tr/cerminar/14_0_X/fpinputs_131X/v2`
  * `125X_v0`:  input files from processing `12_5_X` Phase2Fall22 TDR samples in `CMSSW_12_5_3`, from `/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223`
  * `110X_v3`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_12_3_X`, from `/store/cmst3/group/l1tr/gpetrucc/12_3_X/NewInputs110X/220322`: use with `oldInputs_12_3_X()` in `runPerformanceNTuple.py`
