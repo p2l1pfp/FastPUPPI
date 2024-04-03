@@ -577,7 +577,7 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
         process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 
-def addDecodedTk(regs=['HGCal']):        
+def addDecodedTk(regs=['HGCal','Barrel']):        
     for reg in regs:
         decTkTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
                         name = cms.string("DecTk"+reg),
@@ -605,11 +605,55 @@ def addDecodedTk(regs=['HGCal']):
         process.extraPFStuff.add(decTkTable)
 
 
+
+def addEGCrystalClusters() -> None:
+    def getCrystalClustersTable(nameSrcDict : dict[str, str]) -> cms.EDProducer:
+        CrystalClustersTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                                        name = cms.string(nameSrcDict["name"]),
+                                        src=cms.InputTag(nameSrcDict["src"]),
+                                        cut = cms.string(""),
+                                        doc = cms.string(""),
+                                        singleton = cms.bool(False), # the number of entries is variable
+                                        extension = cms.bool(False), # this is the main table
+                                        variables = cms.PSet(
+                                            isolation  = Var("isolation", float,precision=8),
+                                            pt  = Var("pt",  float,precision=8),
+                                            eta  = Var("eta", float,precision=8),
+                                            phi = Var("phi", float,precision=8),
+                                            calibratedPt = Var("calibratedPt", float,precision=8),
+                                            hovere = Var("hovere", float,precision=8),
+                                            puCorrPt = Var("puCorrPt", float,precision=8),
+                                            bremStrength = Var("bremStrength", float,precision=8),
+                                            e2x2 = Var("e2x2", float,precision=8),
+                                            e2x5 = Var("e2x5", float,precision=8),
+                                            e3x5 = Var("e3x5", float,precision=8),
+                                            e5x5 = Var("e5x5", float,precision=8),
+                                            standaloneWP = Var("standaloneWP", int,precision=8),
+                                            electronWP98 = Var("electronWP98", int,precision=8),
+                                            photonWP80 = Var("photonWP80", int,precision=8),
+                                            electronWP90 = Var("electronWP90", int,precision=8),
+                                            looseL1TkMatchWP = Var("looseL1TkMatchWP", int,precision=8),
+                                            stage2effMatch= Var("stage2effMatch", int,precision=8),
+                                        )
+            )
+        return CrystalClustersTable
+    
+    nameSrcDictList=[
+        {"name":"CaloEGammaCrystalClustersRCT", "src":"l1tPhase2L1CaloEGammaEmulator:RCTClusters"},
+        {"name":"CaloEGammaCrystalClustersGCT", "src":"l1tPhase2L1CaloEGammaEmulator:GCTClusters"},
+    ]
+    for nameSrcDict in nameSrcDictList:
+        flatTable = getCrystalClustersTable(nameSrcDict)
+        setattr(process, f"{nameSrcDict['name']}Table", flatTable)
+        process.extraPFStuff.add(flatTable)
+
+
 def addAllLeps():
     addGenLep()
     addStaMu()
     addPFLep([13])
     addTkEG()
+    addEGCrystalClusters()
 
 def goGun(calib=1):
     process.ntuple.isParticleGun = True

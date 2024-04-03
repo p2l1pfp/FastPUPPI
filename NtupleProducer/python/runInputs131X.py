@@ -16,9 +16,9 @@ process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackTrigger.TrackTrigger_cff')
-process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff") 
-process.load("L1Trigger.TrackTrigger.ProducerSetup_cff") 
-process.load("L1Trigger.TrackerDTC.ProducerED_cff") 
+process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff")
+process.load("L1Trigger.TrackTrigger.ProducerSetup_cff")
+process.load("L1Trigger.TrackerDTC.ProducerED_cff")
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
 
@@ -38,7 +38,7 @@ process.source = cms.Source("PoolSource",
     ),
 )
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(200))
-process.options = cms.untracked.PSet( 
+process.options = cms.untracked.PSet(
         wantSummary = cms.untracked.bool(True),
         #numberOfThreads = cms.untracked.uint32(4),
         #numberOfStreams = cms.untracked.uint32(4),
