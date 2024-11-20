@@ -251,7 +251,7 @@ def addCalib():
 
 def addNNPuppiTaus():
     process.extraPFStuff.add(process.l1tNNTauProducerPuppi)
-    process.l1pfjetTable.jets.l1tau = cms.InputTag('l1tNNTauProducerPuppi', "L1PFTausNN")
+    process.l1pfjetTable.jets.nnPuppiTau = cms.InputTag('l1tNNTauProducerPuppi', "L1PFTausNN")
 
 def addSeededConeJets():
     process.extraPFStuff.add(process.L1TPFJetsTask)
