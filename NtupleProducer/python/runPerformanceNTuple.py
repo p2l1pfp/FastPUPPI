@@ -675,6 +675,36 @@ def addEGCrystalClusters() -> None:
         setattr(process, f"{nameSrcDict['name']}Table", flatTable)
         process.extraPFStuff.add(flatTable)
 
+def addDecodedCalo(types=['Had', 'Em'], regs=['HGCal','Barrel']):
+    for tp in types:
+        for reg in regs:
+            decCaloTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
+                            name = cms.string(f"Dec{tp}Calo{reg}"),
+                            src = cms.InputTag("l1tLayer1"+reg, f'Decoded{tp}Clusters'),
+                            cut = cms.string(""),
+                            doc = cms.string(""),
+                            singleton = cms.bool(False), # the number of entries is variable
+                            extension = cms.bool(False), # this is the main table
+                            variables = cms.PSet(
+                                pt  = Var("pt",  float,precision=8),
+                                phi = Var("phi", float,precision=8),
+                                eta  = Var("eta", float,precision=8),
+                                hwQual = LazyVar("hwQual", int, doc="id"),
+                                hwEta = LazyVar("hwEta", int, doc="hwEta"),
+                                hwPhi = LazyVar("hwPhi", int, doc="hwPhi"),
+                            )
+                        )            
+
+            decCaloTableExt = cms.EDProducer("L1PFDecodedCaloTableProducer",
+                                             src = cms.InputTag("l1tLayer1"+reg, f'Decoded{tp}Clusters'),
+                                             name = cms.string(""),
+                                             cut = cms.string(""),)
+
+            setattr(process, f"dec{tp}Calo{reg}Table", decCaloTable)
+            setattr(process, f"dec{tp}Calo{reg}ExtTable", decCaloTableExt)
+            decCaloTableExt.name = decCaloTable.name
+            process.extraPFStuff.add(decCaloTable, decCaloTableExt)
+  
 
 def addAllLeps():
     addGenLep()
