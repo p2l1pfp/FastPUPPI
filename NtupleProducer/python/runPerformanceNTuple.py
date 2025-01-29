@@ -12,16 +12,16 @@ process.load('Configuration.StandardSequences.Services_cff')
 process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 process.load("FWCore.MessageLogger.MessageLogger_cfi")
 process.options   = cms.untracked.PSet( wantSummary = cms.untracked.bool(True), allowUnscheduled = cms.untracked.bool(False) )
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs125X.root'),
-    inputCommands = cms.untracked.vstring("keep *", 
-            "drop l1tPFClusters_*_*_*",
-            "drop l1tPFTracks_*_*_*",
-            "drop l1tPFCandidates_*_*_*",
-            "drop l1tTkPrimaryVertexs_*_*_*")
+    fileNames = cms.untracked.vstring('/store/mc/Phase2Spring23DIGIRECOMiniAOD/DYToLL_M-10To50_TuneCP5_14TeV-pythia8/GEN-SIM-DIGI-RAW-MINIAOD/PU200_Trk1GeV_131X_mcRun4_realistic_v5-v1/30000/0289a719-64c3-4b16-871f-da7db9a8ac88.root'),
+    inputCommands = cms.untracked.vstring("keep *")
+#            "drop l1tPFClusters_*_*_*",
+#            "drop l1tPFTracks_*_*_*",
+#            "drop l1tPFCandidates_*_*_*",
+#            "drop l1tTkPrimaryVertexs_*_*_*")
 )
 
 process.load('Configuration.Geometry.GeometryExtended2026D110Reco_cff')
@@ -289,6 +289,31 @@ def addAllJets():
     addPhase1Jets()
     addCaloJets()
     #addTkJets()
+
+
+def addL1Tracks():
+    process.l1trackTable = cms.EDProducer("L1TrackTableProducer",
+                                          tracks = cms.InputTag("l1tTTTracksFromTrackletEmulation", "Level1TTTracks"),
+                                          trackingParticleMap = cms.InputTag("TTTrackAssociatorFromPixelDigis", "Level1TTTracks"),
+                                          selection = cms.string("momentum().perp()>0"),
+                                          name= cms.string("L1Tk"),
+                                          variables = cms.PSet(
+                                             chi2 = cms.string("chi2"),
+                                             chi2Red = cms.string("chi2Red"),
+                                             #chi2Bend = cms.string("chi2Bend"),
+                                             #chi2BendRed = cms.string("chi2BendRed"),
+                                             chi2XYRed = cms.string("chi2XYRed"),
+                                             chi2ZRed = cms.string("chi2ZRed"),
+                                             d0 = cms.string("d0"),
+                                             nFitPars = cms.string("nFitPars"),
+                                             stubPtConsistency = cms.string("stubPtConsistency"),
+                                             z0 = cms.string("z0"),
+                                             nStub = cms.string("getStubRefs.size"),
+                                             hitPattern = cms.string("hitPattern"),
+                                             trkMVA1 = cms.string("trkMVA1")
+
+                                           ),
+                                       )
 
 def addJetConstituents(N):
     for i in range(N): # save a max of N daughters (unfortunately 2D arrays are not yet supported in the NanoAOD output module)
