@@ -583,12 +583,14 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
                         src = cms.InputTag(tkele_inputtag),
                     )
         tkEleTable.variables.charge = LazyVar("charge", int, doc="charge")
+        tkEleTable.variables.idScore = LazyVar("idScore", float,precision=8)
         tkEleTable.variables.vz     = LazyVar("trkzVtx",  float,precision=8)
         tkEleTable.variables.tkEta = LazyVar("trkPtr.eta", float,precision=8)
         tkEleTable.variables.tkPhi = LazyVar("trkPtr.phi", float,precision=8)
         tkEleTable.variables.tkPt = LazyVar("trkPtr.momentum.perp", float,precision=8)
         tkEleTable.variables.caloEta = LazyVar("egCaloPtr.eta", float,precision=8)
         tkEleTable.variables.caloPhi = LazyVar("egCaloPtr.phi", float,precision=8)
+
         return tkEmTable, tkEleTable
                                    
     if doL1:    
