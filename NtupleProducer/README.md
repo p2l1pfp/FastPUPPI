@@ -20,6 +20,8 @@ git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
+git cms-addpkg DataFormats/L1TCalorimeterPhase2
+git cms-addpkg L1Trigger/L1CaloTrigger
 git cms-checkout-topic -u p2l1pfp:L1PF_14_2_X
 
 # scripts
