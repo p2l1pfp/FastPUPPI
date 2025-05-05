@@ -46,11 +46,19 @@ process.l1tTrackSelectionProducer.processSimulatedTracks = False
 from L1Trigger.L1CaloTrigger.l1tPhase2L1CaloEGammaEmulator_cfi import l1tPhase2L1CaloEGammaEmulator
 process.l1tPhase2L1CaloEGammaEmulator = l1tPhase2L1CaloEGammaEmulator.clone()
 
+from L1Trigger.L1CaloTrigger.l1tPhase2CaloPFClusterEmulator_cfi import l1tPhase2CaloPFClusterEmulator
+process.l1tPhase2CaloPFClusterEmulator = l1tPhase2CaloPFClusterEmulator.clone()
+
+from L1Trigger.L1CaloTrigger.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator_cfi import l1tPhase2GCTBarrelToCorrelatorLayer1Emulator
+process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator = l1tPhase2GCTBarrelToCorrelatorLayer1Emulator.clone()
+
 from L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff import l1tNNTauProducerPuppi
 process.l1tNNTauProducerPuppi = l1tNNTauProducerPuppi.clone()
 
 process.extraPFStuff = cms.Task(
         process.l1tPhase2L1CaloEGammaEmulator,
+        process.l1tPhase2CaloPFClusterEmulator,
+        process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
         process.l1tTrackSelectionProducer,
@@ -231,27 +239,27 @@ def addCHS():
     process.extraPFStuff.add(process.l1PuppiCharged, process.l1PFNeutral)
     monitorPerf("L1CHS", [ "l1PuppiCharged", "l1PFNeutral" ], makeRespSplit = False)
 
-def addCalib():
-    process.load("L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClustersEM_cfi")
-    process.l1tPFClustersFromL1EGClustersRaw    = process.l1tPFClustersFromL1EGClusters.clone(corrector = "")
-    process.l1tPFClustersFromHGC3DClustersRaw   = process.l1tPFClustersFromHGC3DClusters.clone(corrector = "")
-    process.l1tPFClustersFromHGC3DClustersEMRaw = process.l1tPFClustersFromHGC3DClustersEM.clone(corrector = "")
-    process.extraPFStuff.add(
-            process.l1tPFClustersFromL1EGClustersRaw, 
-            process.l1tPFClustersFromHGC3DClustersRaw, 
-            process.l1tPFClustersFromHGC3DClustersEM,
-            process.l1tPFClustersFromHGC3DClustersEMRaw)
-    process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tPFClustersFromL1EGClustersRaw' )
-    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
-    process.ntuple.objects.L1RawBarrelCaloEM = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:emUncalibrated')
-    process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClustersRaw')
-    process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEMRaw')
-    process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
-    process.ntuple.objects.L1BarrelEcal = cms.VInputTag('l1tPFClustersFromL1EGClusters' )
-    process.ntuple.objects.L1BarrelCalo = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:calibrated')
-    process.ntuple.objects.L1HGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClusters')
-    process.ntuple.objects.L1HFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:calibrated')
-    process.ntuple.objects.L1HGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEM', )
+# def addCalib():
+#     process.load("L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClustersEM_cfi")
+#     process.l1tPFClustersFromL1EGClustersRaw    = process.l1tPFClustersFromL1EGClusters.clone(corrector = "")
+#     process.l1tPFClustersFromHGC3DClustersRaw   = process.l1tPFClustersFromHGC3DClusters.clone(corrector = "")
+#     process.l1tPFClustersFromHGC3DClustersEMRaw = process.l1tPFClustersFromHGC3DClustersEM.clone(corrector = "")
+#     process.extraPFStuff.add(
+#             process.l1tPFClustersFromL1EGClustersRaw, 
+#             process.l1tPFClustersFromHGC3DClustersRaw, 
+#             process.l1tPFClustersFromHGC3DClustersEM,
+#             process.l1tPFClustersFromHGC3DClustersEMRaw)
+#     process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tPFClustersFromL1EGClustersRaw' )
+#     process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
+#     process.ntuple.objects.L1RawBarrelCaloEM = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:emUncalibrated')
+#     process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClustersRaw')
+#     process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEMRaw')
+#     process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
+#     process.ntuple.objects.L1BarrelEcal = cms.VInputTag('l1tPFClustersFromL1EGClusters' )
+#     process.ntuple.objects.L1BarrelCalo = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:calibrated')
+#     process.ntuple.objects.L1HGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClusters')
+#     process.ntuple.objects.L1HFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:calibrated')
+#     process.ntuple.objects.L1HGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEM', )
 
 def addNNPuppiTaus():
     process.extraPFStuff.add(process.l1tNNTauProducerPuppi)
@@ -677,7 +685,7 @@ def addEGCrystalClusters() -> None:
         setattr(process, f"{nameSrcDict['name']}Table", flatTable)
         process.extraPFStuff.add(flatTable)
 
-def addDecodedCalo(types=['Had', 'Em'], regs=['HGCal','Barrel']):
+def addDecodedCalo(types=['Had', 'Em'], regs=['HGCal','Barrel','HGCalNoTK']):
     for tp in types:
         for reg in regs:
             decCaloTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
