@@ -24,8 +24,8 @@ process.source = cms.Source("PoolSource",
             "drop l1tTkPrimaryVertexs_*_*_*")
 )
 
-process.load('Configuration.Geometry.GeometryExtended2026D110Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D110_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
