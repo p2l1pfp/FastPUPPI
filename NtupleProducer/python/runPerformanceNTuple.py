@@ -16,6 +16,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/cmst3/group/l1tr/cerminar/14_0_X/fpinputs_131X/v3/TTbar_PU200/inputs131X_1.root'),
     fileNames = cms.untracked.vstring('file:inputs125X.root'),
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
@@ -74,15 +75,16 @@ process.extraPFStuff = cms.Task(
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
 process.genMetCentralTrue = process.genMetTrue.clone(src = cms.InputTag("centralGen"))
+process.genMetBarrelTrue = process.genMetTrue.clone(src = cms.InputTag("barrelGen"))
 process.extraPFStuff.add(
     process.genParticlesForMETAllVisible,
     process.centralGen,
     process.barrelGen,
-    process.genMetCentralTrue
+    process.genMetCentralTrue,
+    process.genMetBarrelTrue
 )
 
-def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True,
-                makeInputMultiplicities=False, makeOutputMultiplicities=False, saveCands=False):
+def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, makeMET=True, makeCentralMET=True, makeBarrelMET=True, makeInputMultiplicities=False, makeOutputMultiplicities=False, saveCands=False):
     def _add(name, what):
         setattr(process, name, what)
         process.extraPFStuff.add(what)
@@ -112,6 +114,10 @@ def monitorPerf(label, tag, makeResp=True, makeRespSplit=True, makeJets=True, ma
             _add('central'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 2.4")))
             _add('met'+label+'Central', pfMet.clone(src = 'central'+label, calculateSignificance = False))
             setattr(process.l1pfmetCentralTable.mets, label, cms.InputTag('met'+label+'Central'))
+        if makeBarrelMET:
+            _add('barrel'+label, cms.EDFilter("CandPtrSelector", src = cms.InputTag(tag), cut = cms.string("abs(eta) < 1.5")))
+            _add('met'+label+'Barrel', pfMet.clone(src = 'barrel'+label, calculateSignificance = False))
+            setattr(process.l1pfmetBarrelTable.mets, label, cms.InputTag('met'+label+'Barrel')) 
     if makeInputMultiplicities == "CTL1":
         D = tag.split(":")[0] # l1ctLayer1[Barrel,HGCal,HF] usually
         I = tag.split(":")[1] # Calo, EmCalo, TK, or Mu, usually
@@ -166,6 +172,7 @@ process.l1pfmetTable = cms.EDProducer("L1PFMetTableProducer",
     ),
 )
 process.l1pfmetCentralTable = process.l1pfmetTable.clone(genMet = "genMetCentralTrue", flavour = "Central")
+process.l1pfmetBarrelTable = process.l1pfmetTable.clone(genMet = "genMetBarrelTrue", flavour = "Barrel")
 
 monitorPerf("L1Calo", "l1tLayer1:Calo")
 monitorPerf("L1TK",   "l1tLayer1:TK")
@@ -177,7 +184,7 @@ monitorPerf("L1Puppi", "l1tLayer1:Puppi")
 process.p = cms.Path(
         process.ntuple + #process.content +
         process.l1pfjetTable + 
-        process.l1pfmetTable + process.l1pfmetCentralTable
+        process.l1pfmetTable + process.l1pfmetCentralTable + process.l1pfmetBarrelTable
         )
 process.p.associate(process.extraPFStuff)
 process.TFileService = cms.Service("TFileService", fileName = cms.string("perfTuple.root"))
@@ -219,18 +226,19 @@ def respOnly():
     process.p.remove(process.l1pfjetTable)
     process.p.remove(process.l1pfmetTable)
     process.p.remove(process.l1pfmetCentralTable)
+    process.p.remove(process.l1pfmetBarrelTable)
     process.end.remove(process.outnano)
 def noResp():
     process.p.remove(process.ntuple)
 
 def addMult():
     for D in ['Barrel','HF','HGCal','HGCalNoTK']:
-        monitorPerf("L1%sCalo"%D,  "l1tLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sEmCalo"%D,"l1tLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sTK"%D,    "l1tLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sMu"%D,    "l1tLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeInputMultiplicities="CTL1")
-        monitorPerf("L1%sPF"%D,    "l1tLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
-        monitorPerf("L1%sPuppi"%D, "l1tLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
+        monitorPerf("L1%sCalo"%D,  "l1tLayer1%s:Calo"%D,   makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sEmCalo"%D,"l1tLayer1%s:EmCalo"%D, makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sTK"%D,    "l1tLayer1%s:TK"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sMu"%D,    "l1tLayer1%s:Mu"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeInputMultiplicities="CTL1")
+        monitorPerf("L1%sPF"%D,    "l1tLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities="CTL1")
+        monitorPerf("L1%sPuppi"%D, "l1tLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeBarrelMET=False, makeOutputMultiplicities="CTL1")
 
 
 def addCHS():
