@@ -55,6 +55,10 @@ process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator = l1tPhase2GCTBarrelToCorre
 from L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff import l1tNNTauProducerPuppi
 process.l1tNNTauProducerPuppi = l1tNNTauProducerPuppi.clone()
 
+from L1Trigger.Phase2L1ParticleFlow.l1tMETPFProducer_cfi import l1tMETPFProducer
+process.l1tMETPFProducer = l1tMETPFProducer.clone()
+
+
 process.extraPFStuff = cms.Task(
         process.l1tPhase2L1CaloEGammaEmulator,
         process.l1tPhase2CaloPFClusterEmulator,
@@ -65,7 +69,8 @@ process.extraPFStuff = cms.Task(
         process.l1tVertexFinderEmulator,
         process.L1TLayer1TaskInputsTask,
         process.L1TLayer1Task,
-        process.L1TLayer2EGTask)
+        process.L1TLayer2EGTask,
+        process.l1tMETPFProducer)
 
 process.centralGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 2.4"))
 process.barrelGen = cms.EDFilter("CandPtrSelector", src = cms.InputTag("genParticlesForMETAllVisible"), cut = cms.string("abs(eta) < 1.5"))
@@ -228,6 +233,8 @@ def addMult():
         monitorPerf("L1%sPF"%D,    "l1tLayer1%s:PF"%D,     makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
         monitorPerf("L1%sPuppi"%D, "l1tLayer1%s:Puppi"%D,  makeResp=False, makeRespSplit=False, makeJets=False, makeMET=False, makeCentralMET=False, makeOutputMultiplicities="CTL1")
 
+def addCTL2Met():
+    process.l1pfmetTable.mets.ctl2MET = cms.InputTag("l1tMETPFProducer","") 
 
 def addCHS():
     process.l1PuppiCharged = cms.EDFilter("L1TPFCandSelector",
