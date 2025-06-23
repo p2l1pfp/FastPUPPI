@@ -44,6 +44,8 @@
 
 #include "L1Trigger/Phase2L1ParticleFlow/interface/L1TPFUtils.h"
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
+#include "DataFormats/L1TParticleFlow/interface/PFCluster.h"
+#include "DataFormats/L1THGCal/interface/HGCalMulticluster.h"
 
 #include <cstdint>
 #include <TTree.h>
@@ -51,8 +53,8 @@
 
 namespace {
     struct SimpleObject {
-        float pt, eta, phi;
-        SimpleObject(float apt, float aneta, float aphi) : pt(apt), eta(aneta), phi(aphi) {}
+        float pt, eta, phi, emf;
+        SimpleObject(float apt, float aneta, float aphi, float aemf) : pt(apt), eta(aneta), phi(aphi), emf(aemf) {}
         bool operator<(const SimpleObject &other) const { return eta < other.eta; }
         bool operator<(const float &other) const { return eta < other; }
     };
@@ -77,7 +79,22 @@ namespace {
                 for (const auto & token : tokens_) {
                     iEvent.getByToken(token, handle);
                     for (const reco::Candidate & c : *handle) {
-                        if (sel_(c)) objects_.emplace_back(c.pt(), c.eta(), c.phi());
+                        if (!sel_(c)){continue;};
+                        const l1t::PFCluster* pfcluster = dynamic_cast<const l1t::PFCluster*>(&c);
+                        float emf=-1.;
+                        if(pfcluster){
+                            auto encoding = pfcluster->encoding();
+                            if(encoding==l1t::PFCluster::HWEncoding::Had || encoding==l1t::PFCluster::HWEncoding::Em){
+                                auto obj = pfcluster->caloDigiObj();
+                                if(auto digi = std::get_if<l1ct::HadCaloObj>(&obj)){
+                                    const l1t::HGCalMulticluster *hgcalcl = dynamic_cast<const l1t::HGCalMulticluster*>(pfcluster->constituentsAndFractions().front().first.get());        
+                                    if(hgcalcl){
+                                        emf = std::min(round(hgcalcl->eot() * 256), float(255.))/256.;
+                                    };
+                                };
+                            };
+                        };
+                        objects_.emplace_back(c.pt(), c.eta(), c.phi(), emf);
                     }
                 }
                 std::sort(objects_.begin(), objects_.end());
@@ -100,7 +117,10 @@ namespace {
                 sum04 = 0;
                 for (auto it = first; it < end; ++it) {
                     float mydr2 = ::deltaR2(eta,phi, it->eta,it->phi);
-                    if (mydr2 < dr2) ptdr2.emplace_back(it->pt, mydr2);
+                    if (mydr2 < dr2){
+                        ptdr2.emplace_back(it->pt, mydr2);
+                        emfdr2.emplace_back(it->emf, mydr2);
+                    };
                     if (mydr2 < 0.16f) sum04 += it->pt;
                 }
             }
@@ -142,9 +162,17 @@ namespace {
                 }
                 return best;
             }
+            float emf_nearest() const {
+                std::pair<float,float> best(0,9999);
+                for (const auto & emf : emfdr2) {
+                    if (emf.second < best.second) best = emf;
+                }
+                return best.first;
+            } 
 
         private:
             std::vector<std::pair<float,float>> ptdr2;
+            std::vector<std::pair<float,float>> emfdr2;
             float sum04;
     };
 
@@ -211,7 +239,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, pt08, ptbest, pthighest, mindr025; int n025, n010; bool isgun, hasextra;
+         float pt, pt02, pt08, ptbest, pthighest, mindr025, emf; int n025, n010; bool isgun, hasextra;
          void makeBranches(const std::string &prefix, TTree *tree, bool gun, bool extra) {
              isgun = gun; hasextra = extra;
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
@@ -219,6 +247,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
                  tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
                  tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
                  tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
+                 tree->Branch((prefix+"_emf").c_str(), &emf, (prefix+"_emf/F").c_str());
                  if (hasextra) {
                      tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
                      tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
@@ -234,6 +263,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
              if (isgun) {
                  pt02 = zip(incone.sum(0.2));
                  ptbest = zip(incone.nearest());
+                 emf = zip(incone.emf_nearest());
                  pthighest = zip(incone.max());
                  if (hasextra) {
                      mindr025 = zip( incone.mindr(0.25));
