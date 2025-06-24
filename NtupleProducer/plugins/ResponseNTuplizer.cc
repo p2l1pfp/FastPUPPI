@@ -87,10 +87,7 @@ namespace {
                             if(encoding==l1t::PFCluster::HWEncoding::Had || encoding==l1t::PFCluster::HWEncoding::Em){
                                 auto obj = pfcluster->caloDigiObj();
                                 if(auto digi = std::get_if<l1ct::HadCaloObj>(&obj)){
-                                    const l1t::HGCalMulticluster *hgcalcl = dynamic_cast<const l1t::HGCalMulticluster*>(pfcluster->constituentsAndFractions().front().first.get());        
-                                    if(hgcalcl){
-                                        emf = std::min(round(hgcalcl->eot() * 256), float(255.))/256.;
-                                    };
+                                    emf = digi->floatEmPt()/digi->floatPt();
                                 };
                             };
                         };
@@ -239,7 +236,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
 
       } mc_;
       struct RecoVars {
-         float pt, pt02, pt08, ptbest, pthighest, mindr025, emf; int n025, n010; bool isgun, hasextra;
+         float pt, pt02, pt08, ptbest, pthighest, mindr025, emfbest; int n025, n010; bool isgun, hasextra;
          void makeBranches(const std::string &prefix, TTree *tree, bool gun, bool extra) {
              isgun = gun; hasextra = extra;
              tree->Branch((prefix+"_pt").c_str(),   &pt,   (prefix+"_pt/F").c_str());
@@ -247,7 +244,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
                  tree->Branch((prefix+"_pt02").c_str(), &pt02, (prefix+"_pt02/F").c_str());
                  tree->Branch((prefix+"_ptbest").c_str(), &ptbest, (prefix+"_ptbest/F").c_str());
                  tree->Branch((prefix+"_pthighest").c_str(), &pthighest, (prefix+"_pthighest/F").c_str());
-                 tree->Branch((prefix+"_emf").c_str(), &emf, (prefix+"_emf/F").c_str());
+                 tree->Branch((prefix+"_emfbest").c_str(), &emfbest, (prefix+"_emfbest/F").c_str());
                  if (hasextra) {
                      tree->Branch((prefix+"_mindr025").c_str(), &mindr025, (prefix+"_mindr025/F").c_str());
                      tree->Branch((prefix+"_n025").c_str(), &n025, (prefix+"_n025/I").c_str());
@@ -263,7 +260,7 @@ class ResponseNTuplizer : public edm::one::EDAnalyzer<edm::one::SharedResources,
              if (isgun) {
                  pt02 = zip(incone.sum(0.2));
                  ptbest = zip(incone.nearest());
-                 emf = zip(incone.emf_nearest());
+                 emfbest = zip(incone.emf_nearest());
                  pthighest = zip(incone.max());
                  if (hasextra) {
                      mindr025 = zip( incone.mindr(0.25));
