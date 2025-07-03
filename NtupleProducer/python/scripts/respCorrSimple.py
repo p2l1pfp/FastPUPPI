@@ -92,6 +92,7 @@ if __name__ == "__main__":
     emfbins = []
     emfs    = []
     if options.rootfile:
+        os.makedirs(os.path.dirname(options.rootfile), exist_ok=True)
         if options.ptbins or options.eta or "," in options.particle: raise RuntimeError
         tfout = ROOT.TFile.Open(options.rootfile, "RECREATE");
     if options.emfSlices:
@@ -110,7 +111,7 @@ if __name__ == "__main__":
             ("mixmix", "(abs(mc_id) == 211 || abs(mc_id) == 22)", 2, 5),
             ("emmix", "(abs(mc_id) == 111 || abs(mc_id) == 22 || abs(mc_id) == 11)", 2, 5),
             ("photon", "abs(mc_id) == 22", 10, 5),
-            ("electron", "abs(mc_id) == 11", 10, 5),
+            ("electron", "abs(mc_id) == 11", 3, 5),
             ("muon", "abs(mc_id) == 13", 10, 5),
             ("tau", "(abs(mc_id) == 15 || abs(mc_id) == 211)", 20, 5),
             ("jet", "abs(mc_id) == 0", 20, 5),
