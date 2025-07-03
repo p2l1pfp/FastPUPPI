@@ -246,27 +246,48 @@ def addCHS():
     process.extraPFStuff.add(process.l1PuppiCharged, process.l1PFNeutral)
     monitorPerf("L1CHS", [ "l1PuppiCharged", "l1PFNeutral" ], makeRespSplit = False)
 
-# def addCalib():
-#     process.load("L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClustersEM_cfi")
-#     process.l1tPFClustersFromL1EGClustersRaw    = process.l1tPFClustersFromL1EGClusters.clone(corrector = "")
-#     process.l1tPFClustersFromHGC3DClustersRaw   = process.l1tPFClustersFromHGC3DClusters.clone(corrector = "")
-#     process.l1tPFClustersFromHGC3DClustersEMRaw = process.l1tPFClustersFromHGC3DClustersEM.clone(corrector = "")
-#     process.extraPFStuff.add(
-#             process.l1tPFClustersFromL1EGClustersRaw, 
-#             process.l1tPFClustersFromHGC3DClustersRaw, 
-#             process.l1tPFClustersFromHGC3DClustersEM,
-#             process.l1tPFClustersFromHGC3DClustersEMRaw)
-#     process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tPFClustersFromL1EGClustersRaw' )
-#     process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
-#     process.ntuple.objects.L1RawBarrelCaloEM = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:emUncalibrated')
-#     process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClustersRaw')
-#     process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEMRaw')
-#     process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
-#     process.ntuple.objects.L1BarrelEcal = cms.VInputTag('l1tPFClustersFromL1EGClusters' )
-#     process.ntuple.objects.L1BarrelCalo = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:calibrated')
-#     process.ntuple.objects.L1HGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClusters')
-#     process.ntuple.objects.L1HFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:calibrated')
-#     process.ntuple.objects.L1HGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEM', )
+def addCalib():
+    process.load("L1Trigger.Phase2L1ParticleFlow.l1tPFClustersFromHGC3DClustersEM_cfi")
+
+
+    process.l1tLayer1BarrelRaw = process.l1tLayer1Barrel.clone(
+        gctEmInputConversionParameters = process.l1tLayer1Barrel.gctEmInputConversionParameters.clone(
+            gctEmCorrector = cms.string("")
+        )
+    )
+
+
+    process.l1tLayer1HGCalRaw = process.l1tLayer1HGCal.clone(
+        hgcalInputConversionParameters = process.l1tLayer1HGCal.hgcalInputConversionParameters.clone(
+            corrector= cms.string("")
+            )
+        )
+    process.l1tLayer1HGCalNoTKRaw = process.l1tLayer1HGCalNoTK.clone(
+        hgcalInputConversionParameters = process.l1tLayer1HGCalNoTK.hgcalInputConversionParameters.clone(
+            corrector= cms.string("")
+            )
+        )
+
+    process.extraPFStuff.add(
+        process.l1tLayer1BarrelRaw,
+        process.l1tLayer1HGCalRaw,
+        process.l1tLayer1HGCalNoTKRaw
+    )
+
+    #uncalibrated
+    process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tLayer1BarrelRaw:DecodedEmClusters')
+    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
+    process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tLayer1HGCalRaw:DecodedHadClusters', 'l1tLayer1HGCalNoTKRaw:DecodedHadClusters')#use only this, try to understand if you have to use emf or emf_tot
+    process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tLayer1HGCalRaw:DecodedEmClusters', 'l1tLayer1HGCalNoTKRaw:DecodedEmClusters')
+    process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
+
+    #calibrated
+    #process.ntuple.objects.L1BarrelEcal = cms.VInputTag('l1tPFClustersFromL1EGClusters' ) #Change IT. calibrated decodedEmClu in barrel not available
+    #process.ntuple.objects.L1BarrelCalo = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:calibrated')
+    #process.ntuple.objects.L1HGCal   = cms.VInputTag('l1tPFClustersFromHGC3DClusters')
+    #process.ntuple.objects.L1HFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:calibrated')
+    #process.ntuple.objects.L1HGCalEM = cms.VInputTag('l1tPFClustersFromHGC3DClustersEM', )
+
 
 def addNNPuppiTaus():
     process.extraPFStuff.add(process.l1tNNTauProducerPuppi)
