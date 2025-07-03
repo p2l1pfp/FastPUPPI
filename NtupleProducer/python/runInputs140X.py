@@ -3,8 +3,8 @@ from Configuration.StandardSequences.Eras import eras
 
 process = cms.Process("IN", eras.Phase2C17I13M9)
 process.load('Configuration.StandardSequences.Services_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D110Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D110_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
@@ -17,8 +17,8 @@ process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('L1Trigger.TrackTrigger.TrackTrigger_cff')
 process.load("L1Trigger.TrackFindingTracklet.L1HybridEmulationTracks_cff")
-process.load("L1Trigger.TrackTrigger.ProducerSetup_cff")
-process.load("L1Trigger.TrackerDTC.ProducerED_cff")
+process.load("L1Trigger.TrackTrigger.Setup_cff")
+process.load("L1Trigger.TrackerDTC.DTC_cff") # DTC_cff
 process.load("RecoVertex.BeamSpotProducer.BeamSpot_cfi")
 process.load('L1Trigger.L1THGCal.hgcalTriggerPrimitives_cff')
 
@@ -52,7 +52,7 @@ process.PFInputsTask = cms.Task(
     process.L1THGCalTriggerPrimitivesTask,
     process.TTClustersFromPhase2TrackerDigis,
     process.TTStubsFromPhase2TrackerDigis,
-    process.TrackerDTCProducer,
+    process.ProducerDTC,
     #process.offlineBeamSpot,
     process.l1tTTTracksFromTrackletEmulation,
     process.l1tTTTracksFromExtendedTrackletEmulation,
