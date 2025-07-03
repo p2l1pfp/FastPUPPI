@@ -10,8 +10,8 @@ On top of this, the package contains several utilities and scripts for quick per
 
 ## CMSSW area setup 
 ```
-cmsrel CMSSW_14_2_0_pre2
-cd CMSSW_14_2_0_pre2/src
+cmsrel CMSSW_15_1_0_pre4
+cd CMSSW_15_1_0_pre4/src
 cmsenv
 git cms-init
 git cms-addpkg DataFormats/L1TParticleFlow
@@ -20,10 +20,10 @@ git cms-addpkg L1Trigger/Phase2L1ParticleFlow
 git cms-addpkg L1Trigger/TrackTrigger
 git cms-addpkg SimTracker/TrackTriggerAssociation
 git cms-addpkg L1Trigger/Phase2L1ParticleFlow
-git cms-checkout-topic -u p2l1pfp:L1PF_14_2_X
+git cms-checkout-topic -u p2l1pfp:L1PF_15_1_X
 
 # scripts
-git clone git@github.com:p2l1pfp/FastPUPPI.git -b 14_2_X
+git clone git@github.com:p2l1pfp/FastPUPPI.git -b 15_1_X
 
 scram b -j8
 ```
