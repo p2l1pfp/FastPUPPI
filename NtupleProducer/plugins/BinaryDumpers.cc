@@ -14,6 +14,7 @@
 #include "DataFormats/L1TMuonPhase2/interface/TrackerMuon.h"
 #include "DataFormats/L1TCorrelator/interface/TkElectron.h"
 #include "DataFormats/L1TCorrelator/interface/TkEm.h"
+#include "DataFormats/L1TParticleFlow/interface/PFTrack.h"
 
 #include <cstdio>
 #include <cstdint>
@@ -170,6 +171,39 @@ private:
   bool interleave_;
 };
 
+class TrackerTrackDumperHelper {
+public:
+  TrackerTrackDumperHelper(const edm::ParameterSet &cfg, edm::ConsumesCollector cc)
+      : src_(cc.consumes<edm::View<l1t::PFTrack>>(cfg.getParameter<edm::InputTag>("src"))) {}
+  void dump(const edm::Event &iEvent, std::fstream &out) {
+    edm::Handle<edm::View<l1t::PFTrack>> src;
+    iEvent.getByToken(src_, src);
+    std::vector<uint64_t> data(1, 0u);  // leave one empty word at the beginning
+    ap_uint<64> word = 0;
+    for (unsigned int i = 0; i < src->size(); ++i) {
+      ap_uint<96> wTrk = (*src)[i].trackWord().getTrackWord();
+      if (i % 2 == 0) {
+        word = wTrk(63, 0);
+        data.push_back(word.to_uint64());
+        word(31, 0) = wTrk(95, 64);
+      } else {
+        word(63, 32) = wTrk(95, 64);
+        data.push_back(word.to_uint64());
+        word = wTrk(63, 0);
+        data.push_back(word.to_uint64());
+        word = 0;
+      }
+    }
+    if (word != 0)
+      data.push_back(word.to_uint64());
+    data[0] = (data.size() - 1);
+    data[0] |= (0b10llu << 62);  // event header
+    out.write(reinterpret_cast<const char *>(&data[0]), data.size() * sizeof(uint64_t));
+  }
+private:
+  edm::EDGetTokenT<edm::View<l1t::PFTrack>> src_;
+};
+
 template <typename Helper>
 class BinaryDumper : public edm::one::EDAnalyzer<> {
 public:
@@ -190,9 +224,11 @@ typedef BinaryDumper<PuppiDumperHelper> L1PuppiBinaryDumper;
 typedef BinaryDumper<JetDumperHelper> L1JetBinaryDumper;
 typedef BinaryDumper<TrackerMuonDumperHelper> L1TrackerMuonBinaryDumper;
 typedef BinaryDumper<CTL2EgammaDumperHelper> L1CTL2EgammaBinaryDumper;
+typedef BinaryDumper<TrackerTrackDumperHelper> L1TrackerTrackBinaryDumper;
 //define this as a plug-in
 #include "FWCore/Framework/interface/MakerMacros.h"
 DEFINE_FWK_MODULE(L1PuppiBinaryDumper);
 DEFINE_FWK_MODULE(L1JetBinaryDumper);
 DEFINE_FWK_MODULE(L1TrackerMuonBinaryDumper);
 DEFINE_FWK_MODULE(L1CTL2EgammaBinaryDumper);
+DEFINE_FWK_MODULE(L1TrackerTrackBinaryDumper);
