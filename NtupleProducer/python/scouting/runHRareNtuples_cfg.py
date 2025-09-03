@@ -5,6 +5,7 @@ import FWCore.ParameterSet.VarParsing as VarParsing
 import os
 import sys
 import glob
+from pathlib import Path
 
 
 options = VarParsing.VarParsing ('analysis')
@@ -16,7 +17,7 @@ options.register ("inPath",
                   "Path to the input files")
 
 options.register ("outPath",
-                  "",
+                  ".",
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
                   "Path of the output file")
@@ -43,10 +44,12 @@ options.register ("binaryDump",
                   "",
                   VarParsing.VarParsing.multiplicity.singleton,
                   VarParsing.VarParsing.varType.string,
-                  "Collections to dump in binary format [puppi+tkmu+eg+pfcand+trk]")
+                  "Collections to dump in binary format [puppi+tkmu+eg+pfcandall+pfcandbarrel+pfcandhgcal+trk]")
 
 options.parseArguments()
 
+out_dir = Path(options.outPath) / options.signal
+out_dir.mkdir(parents=True, exist_ok=True)
 
 process = cms.Process("NTUPLIZE", eras.Phase2C17I13M9)
 process.load('Configuration.StandardSequences.Services_cff')
@@ -73,7 +76,7 @@ process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
-        f'file:{f}' for f in glob.glob(f"{options.inPath}/*_TP_*.root")
+        f'file:{f}' for f in glob.glob(f"{options.inPath}/*.root")
     ),
     duplicateCheckMode = cms.untracked.string("noDuplicateCheck")
 )
@@ -97,7 +100,7 @@ process.deps = cms.Task(
     process.l1tPhase2L1CaloEGammaEmulator,
     process.l1tPhase2CaloPFClusterEmulator,
     process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator,
-    process.l1tTkMuonsGmt, ##
+    process.l1tTkMuonsGmt,
     process.l1tSAMuonsGmt,
     process.l1tGTTInputProducer,
     process.l1tTrackSelectionProducer,
@@ -110,11 +113,6 @@ process.deps = cms.Task(
     # process.L1TBJetsTask,
     process.l1tPFTracksFromL1Tracks
 )
-
-## process.l1tSAMuonsGmt.barrelPrompt = cms.InputTag("l1tKMTFMuonsGmt:prompt")
-## process.l1tSAMuonsGmt.barrelDisp = cms.InputTag("l1tKMTFMuonsGmt:displaced")
-## process.l1tSAMuonsGmt.forwardPrompt = cms.InputTag("l1tFwdMuonsGmt:prompt")
-## process.l1tSAMuonsGmt.forwardDisp = cms.InputTag("l1tFwdMuonsGmt:displaced")
 
 process.l1tLayer2Deregionizer.nPuppiFinalBuffer = 200
 
@@ -136,7 +134,6 @@ process.puppiTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     )
 )
 
-# vector<l1t::PFCandidate>              "l1tLayer1"                 "PF"              "NTUPLIZE"
 process.pfTable = process.puppiTable.clone(
     src = cms.InputTag("l1tLayer1","PF"),
     name = cms.string("L1PF"),
@@ -279,19 +276,31 @@ process.p = cms.Path(
 if "puppi" in options.binaryDump:
     process.puppiDump = cms.EDAnalyzer("L1PuppiBinaryDumper",
                     src = cms.InputTag("l1tLayer2Deregionizer:Puppi"),
-                    outName = cms.string(f"{options.signal}_puppi.dump"))
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_puppi.dump"))
     process.p += process.puppiDump
 
-if "pfcand" in options.binaryDump:
+if "pfcandall" in options.binaryDump:
     process.pfDump = cms.EDAnalyzer("L1PuppiBinaryDumper",
                     src = cms.InputTag("l1tLayer1","PF"),
-                    outName = cms.string(f"{options.signal}_pfcand.dump"))
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_pfcandall.dump"))
     process.p += process.pfDump
+
+if "pfcandbarrel" in options.binaryDump:
+    process.pfBarrelDump = cms.EDAnalyzer("L1PuppiBinaryDumper",
+                    src = cms.InputTag("l1tLayer1Barrel","PF"),
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_pfcandbarrel.dump"))
+    process.p += process.pfBarrelDump
+
+if "pfcandhgcal" in options.binaryDump:
+    process.pfHGCalDump = cms.EDAnalyzer("L1PuppiBinaryDumper",
+                    src = cms.InputTag("l1tLayer1HGCal","PF"),
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_pfcandhgcal.dump"))
+    process.p += process.pfHGCalDump
 
 if "tkmu" in options.binaryDump:
     process.tkMuDump = cms.EDAnalyzer("L1TrackerMuonBinaryDumper",
                     src = cms.InputTag("l1tTkMuonsGmt"),
-                    outName = cms.string(f"{options.signal}_tkMuons.dump"))
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_tkMuons.dump"))
     process.p += process.tkMuDump
 
 if "eg" in options.binaryDump:
@@ -299,13 +308,13 @@ if "eg" in options.binaryDump:
                     srcEle = cms.InputTag("l1tLayer2EG", "L1CtTkElectron"),
                     srcEm = cms.InputTag("l1tLayer2EG", "L1CtTkEm"),
                     interleaveOutputs = cms.bool(False), # False = first 12 photons, then electrons; True = pho1, ele1, pho2, ele2, ...
-                    outName = cms.string(f"{options.signal}_egamma.dump"))
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_egamma.dump"))
     process.p += process.egDump
 
 if "trk" in options.binaryDump:
     process.trkDump = cms.EDAnalyzer("L1TrackerTrackBinaryDumper",
                     src = cms.InputTag("l1tPFTracksFromL1Tracks"),
-                    outName = cms.string(f"{options.signal}_trk.dump"))
+                    outName = cms.string(f"{str(out_dir)}/{options.signal}_trk.dump"))
     process.p += process.trkDump
 
 process.p.associate(process.deps)
@@ -666,7 +675,7 @@ def genXToQQ(PQ1="", PQ2="", PD12="", PD34=""):
 
 
 process.outnano = cms.OutputModule("NanoAODOutputModule",
-    fileName = cms.untracked.string(f"{options.outPath}/l1Nano_{options.signal}.root"),
+    fileName = cms.untracked.string(f"{str(out_dir)}/{options.signal}_L1NANO.root"),
     SelectEvents = cms.untracked.PSet(SelectEvents = cms.vstring('p')),
     outputCommands = cms.untracked.vstring(
         "drop *",
@@ -691,7 +700,7 @@ elif options.signal[1:]=="ToJPsiGammaTo2ElGamma":
     genXToQGamma(PQ="JPsi", PD="El")
 elif options.signal[1:]=="To2PhiTo4K":
     genXToQQ(PQ1="Phi", PQ2="Phi", PD12="K", PD34="K")
-elif options.signal=="SingleNeutrino":
+elif "SingleNeutrino" in options.signal:
     pass
 elif options.signal=="TTBar":
     pass
