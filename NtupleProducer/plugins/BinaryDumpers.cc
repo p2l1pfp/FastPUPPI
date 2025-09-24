@@ -182,6 +182,9 @@ public:
     ap_uint<64> word = 0;
     for (unsigned int i = 0; i < src->size(); ++i) {
       ap_uint<96> wTrk = (*src)[i].trackWord().getTrackWord();
+      // Sacrifice mvaOther field (first 6 bits) to encode sector number
+      unsigned int phiSector = (*src)[i].track()->phiSector();
+      wTrk(5, 0) = ap_uint<6>(phiSector & 0x3f);
       if (i % 2 == 0) {
         word = wTrk(63, 0);
         data.push_back(word.to_uint64());
