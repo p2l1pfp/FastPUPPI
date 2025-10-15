@@ -33,6 +33,7 @@ scram b -j8
 If you start from GEN-SIM-DIGI-RAW, the first step is to produce the "slimmed" inputs files containing the basic TPs to be able to re-run the Correlator emulator:
 ```
 cd FastPUPPI/NtupleProducer/python/
+cmsRun runInputs151X.py OR
 cmsRun runInputs140X.py OR
 cmsRun runInputs131X.py OR
 cmsRun runInputs125X.py OR
@@ -45,6 +46,7 @@ The supported input campaings are:
  * `11_0_X` from the HLT TDR campaign (Phase2C9, Geometry D49, HGCal v11).
 
 Existing input files available are:
+ * `151X`: input files from processing `14_0_X` Phase2Spring24 samples in `CMSSW_15_1_0_pre4` + `p2l1pfp:15_1_X`, from `/eos/cms/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_151X/`
  * `140X_v0`: input files from processing `14_0_X` Phase2Spring24 samples in `CMSSW_14_2_0_pre2` + `p2l1pfp:l1ct-142x-v1.0`, from `/eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_2_X/fpinputs_140X/v0/`
  * `131X_v9a`: input files from processing `13_1_X` Phase2Spring23 samples in `CMSSW_14_0_0_pre3` + `cms-l1t-offline:phase2-l1t-1400pre3_v9`, from `/eos/cms/store/cmst3/group/l1tr/FastPUPPI/14_0_X/fpinputs_131X/v9a/`
  * `131X_v3`: input files from processing `13_1_X` Phase2Spring23 samples in `CMSSW_14_0_0_pre3` + `cms-l1t-offline:phase2-l1t-1400pre3_v4`, from `/store/cmst3/group/l1tr/cerminar/14_0_X/fpinputs_131X/v3`
@@ -54,7 +56,7 @@ Existing input files available are:
  * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
 
 Example configurations to run the input job via crab can be found in the [submission](https://github.com/cerminar/submission/) package via the configuration file:
-https://github.com/cerminar/submission/blob/master/submit_INFP_140X.yaml
+https://github.com/cerminar/submission/blob/master/submit_INFP_151X.yaml
 
 
 ## Ntuple creation
