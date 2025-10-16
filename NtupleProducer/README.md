@@ -55,7 +55,7 @@ Existing input files available are:
  * `110X_v2`:  input files from processing `11_0_X` HLT TDR samples in `CMSSW_11_1_6`, from `/store/cmst3/group/l1tr/gpetrucc/11_1_0/NewInputs110X/110121.done`: use with `oldInputs_11_1_6()` in `runPerformanceNTuple.py`
 
 Example configurations to run the input job via crab can be found in the [submission](https://github.com/cerminar/submission/) package via the configuration file:
-https://github.com/cerminar/submission/blob/master/submit_INFP_151X.yaml
+https://github.com/cerminar/submission/blob/master/submit_INFP_140X.yaml
 
 
 ## Ntuple creation
