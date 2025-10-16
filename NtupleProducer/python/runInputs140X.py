@@ -10,7 +10,7 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '141X_mcRun4_realistic_v3', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '150X_mcRun4_realistic_v1', '')
 
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff')
 process.load('CalibCalorimetry.CaloTPG.CaloTPGTranscoder_cfi')
@@ -43,7 +43,7 @@ process.source = cms.Source("PoolSource",
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(20))
 process.options = cms.untracked.PSet(
         wantSummary = cms.untracked.bool(True),
-        #numberOfThreads = cms.untracked.uint32(4),
+        numberOfThreads = cms.untracked.uint32(4),
         #numberOfStreams = cms.untracked.uint32(4),
 )
 

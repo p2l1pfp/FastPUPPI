@@ -33,7 +33,6 @@ scram b -j8
 If you start from GEN-SIM-DIGI-RAW, the first step is to produce the "slimmed" inputs files containing the basic TPs to be able to re-run the Correlator emulator:
 ```
 cd FastPUPPI/NtupleProducer/python/
-cmsRun runInputs151X.py OR
 cmsRun runInputs140X.py OR
 cmsRun runInputs131X.py OR
 cmsRun runInputs125X.py OR
