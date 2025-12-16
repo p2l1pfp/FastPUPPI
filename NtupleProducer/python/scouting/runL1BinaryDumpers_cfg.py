@@ -368,6 +368,64 @@ process.genJetFlavourTable = cms.EDProducer("GenJetFlavourTableProducer",
 process.p_jets = cms.Path(process.puppiJetsTable + process.puppiJetsIndexTable)
 process.p_jetsMC = cms.Path(process.genJetsTable + process.selectedHadronsAndPartons + process.genFlavourInfo + process.genJetFlavourTable)
 
+process.load("L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff")
+process.l1nnPuppiTauTable = cms.EDProducer( "SimpleTriggerL1PFTauFlatTableProducer",
+    src = cms.InputTag("l1tNNTauProducerPuppi", "L1PFTausNN"),
+    cut = cms.string(""),
+    name = cms.string("L1nnPuppiTau"),
+    doc = cms.string("NN Puppi Taus"),
+    singleton = cms.bool(False),
+    variables = cms.PSet(
+        pt = Var("pt", float, precision=8),
+        eta = Var("eta", float, precision=8),
+        phi = Var("phi", float, precision=8),
+        mass = Var("mass", float, precision=8),
+        charge = Var("charge", int),
+        z0 = Var("z0", float, "vertex z0"),
+        dxy = Var("dxy", float),
+        id = Var("id", int),
+        chargedIso = Var("chargedIso", float),
+        fullIso = Var("fullIso", float),
+        passLooseNN = Var("passLooseNN", int),
+        passLoosePF = Var("passLoosePF", int),
+        passTightPF = Var("passTightPF", int),
+        passTightNN = Var("passTightNN", int),
+        passLooseNNMass = Var("passLooseNNMass", int),
+        passTightNNMass = Var("passTightNNMass", int),
+        passMass = Var("passMass", int),
+    )
+)
+process.p_taus = cms.Path(process.l1tNNTauProducerPuppi + process.l1nnPuppiTauTable)
+process.load("PhysicsTools/JetMCAlgos/TauGenJets_cfi")
+process.load("PhysicsTools/JetMCAlgos/TauGenJetsDecayModeSelectorAllHadrons_cfi")
+process.genVisTaus = cms.EDProducer("GenVisTauProducer",
+    src = cms.InputTag("tauGenJetsSelectorAllHadrons"),
+    srcGenParticles = cms.InputTag("genParticles")
+)
+process.genVisTauTable = cms.EDProducer("SimpleGenParticleFlatTableProducer",
+    src = cms.InputTag("genVisTaus"),
+    cut = cms.string("pt > 5."),
+    name = cms.string("GenVisTaus"),
+    doc = cms.string("gen hadronic and leptonic taus"),
+    variables = cms.PSet(
+        pt = Var("pt", float,precision=8),
+        phi = Var("phi", float,precision=8),
+        eta = Var("eta", float,precision=8),
+        mass = Var("mass", float,precision=8),
+        charge = Var("charge", "int16"),
+        status = Var("status", "uint8", doc="Hadronic tau decay mode. 0=OneProng0PiZero, 1=OneProng1PiZero, 2=OneProng2PiZero, 10=ThreeProng0PiZero, 11=ThreeProng1PiZero, 15=Other"),
+        genPartIdxMother = Var("?numberOfMothers>0?motherRef(0).key():-1", "int16", doc="index of the mother particle"),
+        )
+)
+for i in range(5):  # max N GenVisTau daughters
+    for var in ["pt", "eta", "phi", "mass", "pdgId"]:
+        setattr(process.genVisTauTable.variables,
+                f"dau{i}_{var}",
+                Var(f"? daughterRefVector().size() > {i} ? daughterRefVector().at({i}).{var} : -1",
+                float if var != "pdgId" else "int16")
+                )
+process.p_tauMC = cms.Path(process.tauGenJets + process.tauGenJetsSelectorAllHadrons + process.genVisTaus + process.genVisTauTable)
+
 process.genVertexTable = cms.EDProducer("SimpleXYZPointFlatTableProducer",
     src = cms.InputTag("genParticles:xyz0"),
     #cut = cms.string(""),
