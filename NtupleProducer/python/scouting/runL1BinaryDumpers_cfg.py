@@ -70,8 +70,32 @@ process.egDump = cms.EDAnalyzer("L1CTL2EgammaBinaryDumper",
                 interleaveOutputs = cms.bool(False), # False = first 12 photons, then electrons; True = pho1, ele1, pho2, ele2, ...
                 outName = cms.string("egamma.dump"))
 
+process.l1tLayer1HGCalALl = cms.EDProducer("L1TPFCandMultiMerger",
+    pfProducers = cms.VInputTag(
+        cms.InputTag("l1tLayer1HGCal"),
+        cms.InputTag("l1tLayer1HGCalNoTK"),
+    ),
+)
+process.deps.add(process.l1tLayer1HGCalALl)
+process.puppiExtDump = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer2DeregionizerExtended:Puppi"),
+    outName = cms.string("puppiExtended.dump"),
+)
+
+process.pfDumpBarrel = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer1Barrel:PF"),
+    outName = cms.string("pfCandidates_Barrel.dump")
+)
+process.pfDumpHGCal = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer1HGCalALl:PF"),
+    outName = cms.string("pfCandidates_HGCal.dump")
+)
+
 process.p_dumps = cms.EndPath(
     process.puppiDump +
+    process.puppiExtDump +
+    process.pfDumpBarrel +
+    process.pfDumpHGCal +
     process.jetDump +
     process.tkMuDump +
     process.egDump
