@@ -392,6 +392,27 @@ process.genJetFlavourTable = cms.EDProducer("GenJetFlavourTableProducer",
 process.p_jets = cms.Path(process.puppiJetsTable + process.puppiJetsIndexTable)
 process.p_jetsMC = cms.Path(process.genJetsTable + process.selectedHadronsAndPartons + process.genFlavourInfo + process.genJetFlavourTable)
 
+process.genPartTable = cms.EDProducer("SimpleGenParticleFlatTableProducer",
+    src = cms.InputTag("genParticles"),
+    cut = cms.string("status == 1 && pt > 0.5 && abs(eta) < 5.5"),
+    name = cms.string("GenPart"),
+    doc = cms.string("gen particles (stable, pt > 0.5 GeV, |eta| < 5.5)"),
+    singleton = cms.bool(False), # the number of entries is variable
+    extension = cms.bool(False), # this is the main table
+    variables = cms.PSet(
+        pt  = Var("pt",  float),
+        phi = Var("phi", float),
+        eta  = Var("eta", float),
+        mass  = Var("mass", float),
+        z0   = Var("vz",  float, doc="Production point along the beam axis"),
+        dxy   = Var("vertex.Rho",  float, doc="transverse distance of production point from the beam axis"),
+        charge  = Var("charge", int, doc="electric charge"),
+        pdgId  = Var("pdgId", int, doc="pdgId code"),
+        isPrompt  = Var("statusFlags().isPrompt()", int, doc="Prompt"),
+    )
+)
+process.p_genPart = cms.Path(process.genPartTable)
+
 process.load("L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff")
 process.l1nnPuppiTauTable = cms.EDProducer( "SimpleTriggerL1PFTauFlatTableProducer",
     src = cms.InputTag("l1tNNTauProducerPuppi", "L1PFTausNN"),
