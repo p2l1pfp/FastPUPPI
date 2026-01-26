@@ -74,6 +74,7 @@ process.out = cms.OutputModule("PoolOutputModule",
         outputCommands = cms.untracked.vstring("drop *",
             # --- GEN
             "keep *_genParticles_*_*",
+            "keep *_externalLHEProducer_*_*",
             "keep *_ak4GenJetsNoNu_*_*",
             "keep *_genMetTrue_*_*",
             # --- Track TPs
