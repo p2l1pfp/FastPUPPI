@@ -2,6 +2,9 @@ import FWCore.ParameterSet.Config as cms
 from Configuration.StandardSequences.Eras import eras
 from PhysicsTools.NanoAOD.common_cff import Var, ExtVar 
 
+def LazyVar(expr, valtype, doc=None, precision=-1):
+    return Var(expr, valtype, doc, precision, lazyEval=True)
+
 process = cms.Process("L1Dump", eras.Phase2C17I13M9)
 
 process.load('Configuration.StandardSequences.Services_cff')
@@ -14,11 +17,11 @@ process.maxEvents = cms.untracked.PSet(input = cms.untracked.int32(100))
 process.MessageLogger.cerr.FwkReport.reportEvery = 10
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:/tmp/gpetrucc/005E74D6-B50E-674E-89E6-EAA9A617B476.root')
+    fileNames = cms.untracked.vstring(f'/store/cmst3/group/l1tr/FastPUPPI/15_1_X/fpinputs_140X/v1/TT_TuneCP5_14TeV-powheg-pythia8/TT_PU200_151Xv0/250910_165631/0000/inputs151X_1-{i}.root' for i in range(1,11)),
 )
 
-process.load('Configuration.Geometry.GeometryExtended2026D88Reco_cff')
-process.load('Configuration.Geometry.GeometryExtended2026D88_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110Reco_cff')
+process.load('Configuration.Geometry.GeometryExtendedRun4D110_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
 process.load('Configuration.StandardSequences.SimL1Emulator_cff')
 process.load('SimCalorimetry.HcalTrigPrimProducers.hcaltpdigi_cff') # needed to read HCal TPs
@@ -27,7 +30,7 @@ process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '125X_mcRun4_realistic_v2', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '141X_mcRun4_realistic_v3', '')
 
 process.l1tTrackSelectionProducer.processSimulatedTracks = False # these would need stubs, and are not used anyway
 
@@ -37,6 +40,9 @@ process.deps = cms.Task(
     process.l1tGTTInputProducer,
     process.l1tTrackSelectionProducer,
     process.l1tVertexFinderEmulator,
+    process.l1tPhase2L1CaloEGammaEmulator,
+    process.l1tPhase2CaloPFClusterEmulator,
+    process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator,    
     process.L1TLayer1TaskInputsTask,
     process.L1TLayer1Task,
     process.l1tLayer2EG,
@@ -50,8 +56,8 @@ process.puppiDump = cms.EDAnalyzer("L1PuppiBinaryDumper",
                 outName = cms.string("puppi.dump"))
 
 process.jetDump = cms.EDAnalyzer("L1JetBinaryDumper",
-                src = cms.InputTag("l1tSCPFL1PuppiExtendedCorrectedEmulator"),
-                ptMin = cms.double(15),
+                src = cms.InputTag("l1tSC4PFL1PuppiExtendedCorrectedEmulator"),
+                ptMin = cms.double(0),
                 outName = cms.string("puppiJets.dump"))
 
 process.tkMuDump = cms.EDAnalyzer("L1TrackerMuonBinaryDumper",
@@ -64,8 +70,32 @@ process.egDump = cms.EDAnalyzer("L1CTL2EgammaBinaryDumper",
                 interleaveOutputs = cms.bool(False), # False = first 12 photons, then electrons; True = pho1, ele1, pho2, ele2, ...
                 outName = cms.string("egamma.dump"))
 
+process.l1tLayer1HGCalALl = cms.EDProducer("L1TPFCandMultiMerger",
+    pfProducers = cms.VInputTag(
+        cms.InputTag("l1tLayer1HGCal"),
+        cms.InputTag("l1tLayer1HGCalNoTK"),
+    ),
+)
+process.deps.add(process.l1tLayer1HGCalALl)
+process.puppiExtDump = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer2DeregionizerExtended:Puppi"),
+    outName = cms.string("puppiExtended.dump"),
+)
+
+process.pfDumpBarrel = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer1Barrel:PF"),
+    outName = cms.string("pfCandidates_Barrel.dump")
+)
+process.pfDumpHGCal = process.puppiDump.clone(
+    src = cms.InputTag("l1tLayer1HGCalALl:PF"),
+    outName = cms.string("pfCandidates_HGCal.dump")
+)
+
 process.p_dumps = cms.EndPath(
     process.puppiDump +
+    process.puppiExtDump +
+    process.pfDumpBarrel +
+    process.pfDumpHGCal +
     process.jetDump +
     process.tkMuDump +
     process.egDump
@@ -80,23 +110,23 @@ process.tkMuTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
     singleton = cms.bool(False), # the number of entries is variable
     extension = cms.bool(False), # this is the main table
     variables = cms.PSet(
-        pt   = Var("phPt",  float),
-        eta  = Var("phEta", float),
-        phi  = Var("phPhi", float),
+        pt   = LazyVar("phPt",  float),
+        eta  = LazyVar("phEta", float),
+        phi  = LazyVar("phPhi", float),
         mass = Var("0.10566", float),
-        z0   = Var("phZ0",  float, doc="Z coordinate of the reconstructed production vertex"),
-        dxy   = Var("phD0",  float, doc="transverse impact parameter (always zero currently)"),
-        charge = Var("phCharge", int, doc="charge"),
-        quality = Var("hwQual", int, doc="quality (TBD)"),
-        hwPt   = Var("hwPt", int),
-        hwEta  = Var("hwEta", int),
-        hwPhi  = Var("hwPhi", int),
-        hwZ0  = Var("hwZ0", int),
-        hwD0  = Var("hwD0", int),
-        hwCharge  = Var("hwCharge", int),
-        hwIsoSum  = Var("hwIsoSum", int),
-        hwIsoSumAp  = Var("hwIsoSumAp", int),
-        hwQual  = Var("hwQual", int),
+        z0   = LazyVar("phZ0",  float, doc="Z coordinate of the reconstructed production vertex"),
+        dxy   = LazyVar("phD0",  float, doc="transverse impact parameter (always zero currently)"),
+        charge = LazyVar("phCharge", int, doc="charge"),
+        quality = LazyVar("hwQual", int, doc="quality (TBD)"),
+        hwPt   = LazyVar("hwPt", int),
+        hwEta  = LazyVar("hwEta", int),
+        hwPhi  = LazyVar("hwPhi", int),
+        hwZ0  = LazyVar("hwZ0", int),
+        hwD0  = LazyVar("hwD0", int),
+        hwCharge  = LazyVar("hwCharge", int),
+        hwIsoSum  = LazyVar("hwIsoSum", int),
+        hwIsoSumAp  = LazyVar("hwIsoSumAp", int),
+        hwQual  = LazyVar("hwQual", int),
     )
 )
 
@@ -161,11 +191,28 @@ process.puppiTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
             phi  = Var("phi", float),
             eta  = Var("eta", float),
             mass = Var("mass", float),
-            z0   = Var("vz",  float),
+            z0   = LazyVar("vz",  float),
+            dxy  = LazyVar("dxy",  float),
             charge = Var("charge", int, doc="charge"),
             pdgId  = Var("pdgId", int, doc="PDG id"),
+            puppiWeight = LazyVar("puppiWeight()", float, doc="PUPPI weight")
         )
     )
+process.puppiExtTable = process.puppiTable.clone(
+        src = cms.InputTag("l1tLayer2DeregionizerExtended:Puppi"),
+        name = "PuppiExtended",
+        doc = "L1PuppiExtended candidates",
+)
+process.pfTable = process.puppiTable.clone(
+        src = cms.InputTag("l1tLayer1:PF"),
+        name = "PF",
+        doc = "L1PF candidates",
+) 
+process.pfExtTable = process.puppiTable.clone(
+        src = cms.InputTag("l1tLayer1Extended:PF"),
+        name = "PFExtended",
+        doc = "L1PFExtended candidates",
+)
 
 process.genW = cms.EDFilter("GenParticleSelector",
         src = cms.InputTag("genParticles"),
@@ -230,12 +277,13 @@ process.puppiMCTable = cms.EDProducer("CandMCMatchTableProducer",
     docString = cms.string("MC matching"),
 )
 
-process.p_puppi = cms.Path(process.puppiTable)
+process.p_puppi = cms.Path(process.puppiTable + process.puppiExtTable)
+process.p_pf = cms.Path(process.pfTable + process.pfExtTable)
 process.p_puppiMC = cms.Path(process.genW + process.genPiFromW + process.genWTable + process.genPiTable + process.puppiMCMatch + process.puppiMCTable)
 
 process.puppiJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
-        src = cms.InputTag("l1tSCPFL1PuppiExtendedCorrectedEmulator"),
-        cut  = cms.string("pt > 10"),
+        src = cms.InputTag("l1tSC4PFL1PuppiExtendedCorrectedEmulator"),
+        cut  = cms.string("pt > 0"),
         name = cms.string("PuppiJet"),
         doc = cms.string("Puppi Jets reconstructed by L1T (extended tracking)"),
         singleton = cms.bool(False), # the number of entries is variable
@@ -245,10 +293,76 @@ process.puppiJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
             phi = Var("phi", float),
             eta  = Var("eta", float),
             mass  = Var("mass", float),
+            numberOfDaughters = Var("numberOfDaughters()", int, doc="number of constituents"),
         ),
         externalVariables = cms.PSet(
             btagScore = ExtVar(cms.InputTag("l1tBJetProducerPuppiCorrectedEmulator", "L1PFBJets"), float, doc="b-tag score (L1 model)"),
         )
+)
+process.puppiJetsIndexTable = cms.EDProducer("DaughterIndexTableProducer",
+        jets = cms.InputTag("l1tSC4PFL1PuppiExtendedCorrectedEmulator"),
+        constituents = cms.InputTag("l1tLayer2DeregionizerExtended:Puppi"),
+        tableName = process.puppiExtTable.name,
+        varName = cms.string("sc4JetIdx"),
+        doc = cms.string("Index of the l1tSC4PFL1PuppiExtendedCorrectedEmulator jet containing this L1Puppi candidate (-1 if not found)"),
+)
+
+from RecoJets.JetProducers.ak4PFJets_cfi import ak4PFJets
+process.ak4L1PuppiJets = ak4PFJets.clone(src = "l1tLayer2Deregionizer:Puppi", doAreaFastjet = False)
+process.ak4L1PuppiExtJets = ak4PFJets.clone(src = "l1tLayer2DeregionizerExtended:Puppi", doAreaFastjet = False)
+process.ak4L1PFJets = ak4PFJets.clone(src = "l1tLayer1:PF", doAreaFastjet = False)
+process.ak4L1PFExtJets = ak4PFJets.clone(src = "l1tLayer1Extended:PF", doAreaFastjet = False)
+process.ak4L1PuppiJetsTable = process.puppiJetsTable.clone(
+        src = cms.InputTag("ak4L1PuppiJets"),
+        name = "AK4L1PuppiJet",
+        doc = "Ak4 jets from L1Puppi candidates",
+        externalVariables = cms.PSet(),
+)
+process.ak4L1PuppiExtJetsTable = process.puppiJetsTable.clone(
+        src = cms.InputTag("ak4L1PuppiExtJets"),
+        name = "AK4L1PuppiExtJet",
+        doc = cms.string("Ak4 jets from extended L1Puppi candidates"),
+        externalVariables = cms.PSet(),
+)
+process.ak4L1PFJetsTable = process.puppiJetsTable.clone(
+        src = cms.InputTag("ak4L1PFJets"),
+        name = "AK4L1PFJet",
+        doc = "Ak4 jets from L1PF candidates",
+        externalVariables = cms.PSet(),
+)
+process.ak4L1PFExtJetsTable = process.puppiJetsTable.clone(
+        src = cms.InputTag("ak4L1PFExtJets"),
+        name = "AK4L1PFExtJet",
+        doc = cms.string("Ak4 jets from extended L1PF candidates"),
+        externalVariables = cms.PSet(),
+)
+process.ak4PuppiJetsIndexTable = cms.EDProducer("DaughterIndexTableProducer",
+        jets = cms.InputTag("ak4L1PuppiJets"),
+        constituents = cms.InputTag("l1tLayer2Deregionizer:Puppi"),
+        tableName = process.puppiTable.name,
+        varName = cms.string("ak4JetIdx"),
+        doc = cms.string("Index of the AK4 L1Puppi jet containing this L1Puppi candidate (-1 if not found)"),
+)
+process.ak4PuppiExtJetsIndexTable = process.ak4PuppiJetsIndexTable.clone(
+        jets = cms.InputTag("ak4L1PuppiExtJets"),
+        constituents = cms.InputTag("l1tLayer2DeregionizerExtended:Puppi"),
+        tableName = process.puppiExtTable.name,
+)
+process.ak4PFJetsIndexTable = process.ak4PuppiJetsIndexTable.clone(
+        jets = cms.InputTag("ak4L1PFJets"),
+        constituents = cms.InputTag("l1tLayer1:PF"),
+        tableName = process.pfTable.name,
+)
+process.ak4PFExtJetsIndexTable = process.ak4PuppiJetsIndexTable.clone(
+        jets = cms.InputTag("ak4L1PFExtJets"),
+        constituents = cms.InputTag("l1tLayer1Extended:PF"),
+        tableName = process.pfExtTable.name,
+)
+process.p_jetsExt = cms.Path(
+    process.ak4L1PuppiJets + process.ak4L1PuppiJetsTable + process.ak4PuppiJetsIndexTable +
+    process.ak4L1PuppiExtJets + process.ak4L1PuppiExtJetsTable + process.ak4PuppiExtJetsIndexTable +
+    process.ak4L1PFJets + process.ak4L1PFJetsTable + process.ak4PFJetsIndexTable +
+    process.ak4L1PFExtJets + process.ak4L1PFExtJetsTable + process.ak4PFExtJetsIndexTable
 )
 
 process.genJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
@@ -265,13 +379,101 @@ process.genJetsTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
             mass  = Var("mass", float),
         )
 )
+process.load("PhysicsTools.JetMCAlgos.AK4PFJetsMCFlavourInfos_cfi")
+process.load("PhysicsTools.JetMCAlgos.HadronAndPartonSelector_cfi")
+process.genFlavourInfo = process.ak4JetFlavourInfos.clone(jets = "ak4GenJetsNoNu")
+process.genJetFlavourTable = cms.EDProducer("GenJetFlavourTableProducer",
+    src = process.genJetsTable.src,
+    name = process.genJetsTable.name,
+    cut = process.genJetsTable.cut,
+    deltaR = cms.double(0.1),
+    jetFlavourInfos = cms.InputTag("genFlavourInfo"),
+)
+process.p_jets = cms.Path(process.puppiJetsTable + process.puppiJetsIndexTable)
+process.p_jetsMC = cms.Path(process.genJetsTable + process.selectedHadronsAndPartons + process.genFlavourInfo + process.genJetFlavourTable)
 
-process.p_jets = cms.Path(process.puppiJetsTable)
-process.p_jetsMC = cms.Path(process.genJetsTable)
+process.genPartTable = cms.EDProducer("SimpleGenParticleFlatTableProducer",
+    src = cms.InputTag("genParticles"),
+    cut = cms.string("status == 1 && pt > 0.5 && abs(eta) < 5.5"),
+    name = cms.string("GenPart"),
+    doc = cms.string("gen particles (stable, pt > 0.5 GeV, |eta| < 5.5)"),
+    singleton = cms.bool(False), # the number of entries is variable
+    extension = cms.bool(False), # this is the main table
+    variables = cms.PSet(
+        pt  = Var("pt",  float),
+        phi = Var("phi", float),
+        eta  = Var("eta", float),
+        mass  = Var("mass", float),
+        z0   = Var("vz",  float, doc="Production point along the beam axis"),
+        dxy   = Var("vertex.Rho",  float, doc="transverse distance of production point from the beam axis"),
+        charge  = Var("charge", int, doc="electric charge"),
+        pdgId  = Var("pdgId", int, doc="pdgId code"),
+        isPrompt  = Var("statusFlags().isPrompt()", int, doc="Prompt"),
+    )
+)
+process.p_genPart = cms.Path(process.genPartTable)
+
+process.load("L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff")
+process.l1nnPuppiTauTable = cms.EDProducer( "SimpleTriggerL1PFTauFlatTableProducer",
+    src = cms.InputTag("l1tNNTauProducerPuppi", "L1PFTausNN"),
+    cut = cms.string(""),
+    name = cms.string("L1nnPuppiTau"),
+    doc = cms.string("NN Puppi Taus"),
+    singleton = cms.bool(False),
+    variables = cms.PSet(
+        pt = Var("pt", float, precision=8),
+        eta = Var("eta", float, precision=8),
+        phi = Var("phi", float, precision=8),
+        mass = Var("mass", float, precision=8),
+        charge = Var("charge", int),
+        z0 = Var("z0", float, "vertex z0"),
+        dxy = Var("dxy", float),
+        id = Var("id", int),
+        chargedIso = Var("chargedIso", float),
+        fullIso = Var("fullIso", float),
+        passLooseNN = Var("passLooseNN", int),
+        passLoosePF = Var("passLoosePF", int),
+        passTightPF = Var("passTightPF", int),
+        passTightNN = Var("passTightNN", int),
+        passLooseNNMass = Var("passLooseNNMass", int),
+        passTightNNMass = Var("passTightNNMass", int),
+        passMass = Var("passMass", int),
+    )
+)
+process.p_taus = cms.Path(process.l1tNNTauProducerPuppi + process.l1nnPuppiTauTable)
+process.load("PhysicsTools/JetMCAlgos/TauGenJets_cfi")
+process.load("PhysicsTools/JetMCAlgos/TauGenJetsDecayModeSelectorAllHadrons_cfi")
+process.genVisTaus = cms.EDProducer("GenVisTauProducer",
+    src = cms.InputTag("tauGenJetsSelectorAllHadrons"),
+    srcGenParticles = cms.InputTag("genParticles")
+)
+process.genVisTauTable = cms.EDProducer("SimpleGenParticleFlatTableProducer",
+    src = cms.InputTag("genVisTaus"),
+    cut = cms.string("pt > 5."),
+    name = cms.string("GenVisTaus"),
+    doc = cms.string("gen hadronic and leptonic taus"),
+    variables = cms.PSet(
+        pt = Var("pt", float,precision=8),
+        phi = Var("phi", float,precision=8),
+        eta = Var("eta", float,precision=8),
+        mass = Var("mass", float,precision=8),
+        charge = Var("charge", "int16"),
+        status = Var("status", "uint8", doc="Hadronic tau decay mode. 0=OneProng0PiZero, 1=OneProng1PiZero, 2=OneProng2PiZero, 10=ThreeProng0PiZero, 11=ThreeProng1PiZero, 15=Other"),
+        genPartIdxMother = Var("?numberOfMothers>0?motherRef(0).key():-1", "int16", doc="index of the mother particle"),
+        )
+)
+for i in range(5):  # max N GenVisTau daughters
+    for var in ["pt", "eta", "phi", "mass", "pdgId"]:
+        setattr(process.genVisTauTable.variables,
+                f"dau{i}_{var}",
+                Var(f"? daughterRefVector().size() > {i} ? daughterRefVector().at({i}).{var} : -1",
+                float if var != "pdgId" else "int16")
+                )
+process.p_tauMC = cms.Path(process.tauGenJets + process.tauGenJetsSelectorAllHadrons + process.genVisTaus + process.genVisTauTable)
 
 process.genVertexTable = cms.EDProducer("SimpleXYZPointFlatTableProducer",
     src = cms.InputTag("genParticles:xyz0"),
-    cut = cms.string(""),
+    #cut = cms.string(""),
     name= cms.string("GenVtx"),
     doc = cms.string("Gen vertex"),
     variables = cms.PSet(
@@ -284,7 +486,7 @@ process.genVertexTable = cms.EDProducer("SimpleXYZPointFlatTableProducer",
 process.l1VertexTable = cms.EDProducer("VertexWordFlatTableProducer",
         name = cms.string("L1Vtx"),
         cut  = cms.string(""),
-        src = cms.InputTag("l1tVertexFinderEmulator","l1verticesEmulation"),
+        src = cms.InputTag("l1tVertexFinderEmulator","L1VerticesEmulation"),
         doc = cms.string("Primary vertices reconstructed by L1T"),
         singleton = cms.bool(False), # the number of entries is variable
         extension = cms.bool(False), # this is the main table
@@ -308,15 +510,15 @@ process.phoTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
         eta  = Var("eta", float),
         phi  = Var("phi", float),
         mass = Var("0", float),
-        quality = Var("hwQual", int, doc="quality (TBD)"),
-        trkIsol = Var("trkIsol", float),
-        trkIsolPV = Var("trkIsolPV", float),
-        puppiIsol = Var("puppiIsol", float),
-        puppiIsolPV = Var("puppiIsolPV", float),
-        hwPt   = Var("hwPt", int),
-        hwEta  = Var("hwEta", int),
-        hwPhi  = Var("hwPhi", int),
-        hwQual  = Var("hwQual", int),
+        quality = LazyVar("hwQual", int, doc="quality (TBD)"),
+        trkIsol = LazyVar("trkIsol", float),
+        trkIsolPV = LazyVar("trkIsolPV", float),
+        puppiIsol = LazyVar("puppiIsol", float),
+        puppiIsolPV = LazyVar("puppiIsolPV", float),
+        hwPt   = LazyVar("hwPt", int),
+        hwEta  = LazyVar("hwEta", int),
+        hwPhi  = LazyVar("hwPhi", int),
+        hwQual  = LazyVar("hwQual", int),
     )
 )
 
@@ -326,8 +528,8 @@ process.eleTable = process.phoTable.clone(
     name = "Ele",
     doc = "TkElectrons from CTL2",
     variables = dict(
-        z0   = Var("trkzVtx",  float),
-        idScore = Var("idScore",  float),
+        z0   = LazyVar("trkzVtx",  float),
+        idScore = LazyVar("idScore",  float),
     )
 )
 process.genPho = cms.EDFilter("GenParticleSelector",
@@ -414,7 +616,3 @@ def noPU():
 
 def noNano():
     process.schedule = cms.Schedule(process.p_dumps)
-
-process.source.fileNames = [
-    '/store/cmst3/group/l1tr/gpetrucc/12_5_X/NewInputs125X/150223/TTbar_PU200/inputs125X_1.root',
-]
