@@ -17,6 +17,6 @@
 <use name="MagneticField/Records"/>
 <use name="PhysicsTools/NanoAOD"/>
 <use name="L1Trigger/L1THGCal"/>
-
+<use name="SimDataFormats/Associations"/>
 <!-- <use name="Utilities/General"/> -->
 <flags EDM_PLUGIN="1"/>
