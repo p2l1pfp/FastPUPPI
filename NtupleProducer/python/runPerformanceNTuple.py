@@ -16,7 +16,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs125X.root'),
+    fileNames = cms.untracked.vstring('file:inputs140X.root'),
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
             "drop l1tPFTracks_*_*_*",
@@ -52,6 +52,10 @@ process.l1tPhase2CaloPFClusterEmulator = l1tPhase2CaloPFClusterEmulator.clone()
 from L1Trigger.L1CaloTrigger.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator_cfi import l1tPhase2GCTBarrelToCorrelatorLayer1Emulator
 process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator = l1tPhase2GCTBarrelToCorrelatorLayer1Emulator.clone()
 
+from L1Trigger.L1CaloTrigger.l1tPhase2CaloToCorrelatorTM18_cfi import l1tPhase2CaloToCorrelatorTM18
+process.l1tPhase2CaloToCorrelatorTM18 = l1tPhase2CaloToCorrelatorTM18.clone()
+
+
 from L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff import l1tNNTauProducerPuppi
 process.l1tNNTauProducerPuppi = l1tNNTauProducerPuppi.clone()
 
@@ -63,6 +67,7 @@ process.extraPFStuff = cms.Task(
         process.l1tPhase2L1CaloEGammaEmulator,
         process.l1tPhase2CaloPFClusterEmulator,
         process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator,
+        process.l1tPhase2CaloToCorrelatorTM18,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
         process.l1tTrackSelectionProducer,
@@ -378,6 +383,7 @@ def addGen(pdgs):
                     vz   = Var("vz",  float,precision=8),
                     charge  = Var("charge", int, doc="charge id"),
                     prompt  = Var("2*statusFlags().isPrompt() + statusFlags().isDirectPromptTauDecayProduct()", int, doc="Particle status."),
+                    pdgId  = Var("pdgId", int, doc="PDG id")
                 )
             )
     genLepTableExt = cms.EDProducer("L1PFGenTableProducer",
@@ -420,6 +426,17 @@ def addGen(pdgs):
                         name = process.genPiTable.name
             )
             process.extraPFStuff.add(process.genPiTable, process.genPiExtTable)
+        elif pdgId == 130:
+            process.genK0LTable = genLepTable.clone(
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
+                        name = cms.string("GenK0L"))
+            process.genK0LExtTable = genLepTableExt.clone(
+                        cut = process.genK0LTable.cut,
+                        name = process.genK0LTable.name
+            )
+            process.extraPFStuff.add(process.genK0LTable, process.genK0LExtTable)
+        else:
+            raise ValueError("pdgId %d not supported in addGen" % pdgId)
 
 def addGenPi(pdgs=[211]):
     addGen(pdgs)
@@ -732,7 +749,7 @@ def addDecodedCalo(types=['Had', 'Em'], regs=['HGCal','Barrel','HGCalNoTK']):
                                 hwPhi = LazyVar("hwPhi", int, doc="hwPhi"),
                             )
                         )            
-
+                                                                    
             decCaloTableExt = cms.EDProducer("L1PFDecodedCaloTableProducer",
                                              src = cms.InputTag("l1tLayer1"+reg, f'Decoded{tp}Clusters'),
                                              name = cms.string(""),
@@ -842,3 +859,6 @@ def saveGenCands():
                                            ),
                                       )
     process.p += process.gencandTable
+
+
+# addDecodedCalo()
