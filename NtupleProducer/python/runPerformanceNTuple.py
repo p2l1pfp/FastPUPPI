@@ -647,19 +647,27 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
         tkEleTable.variables.caloEta = LazyVar("egCaloPtr.eta", float,precision=8)
         tkEleTable.variables.caloPhi = LazyVar("egCaloPtr.phi", float,precision=8)
 
-        return tkEmTable, tkEleTable
+        tkEleTableExt = cms.EDProducer("L1PFTkEleTableProducer",
+                                        src = cms.InputTag(tkele_inputtag),
+                                        name = cms.string("TkEle"+slice+postfix),
+                                        cut = cms.string(""),)
+
+        return tkEmTable, tkEleTable, tkEleTableExt
                                    
     if doL1:    
         for w in "EB","EE":
-            tkEmTable, tkEleTable = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
+            tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
             setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
             setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
-            process.extraPFStuff.add(tkEmTable,tkEleTable)
+            setattr(process, "TkEle%s%sExtTable" % (w,postfix), tkEleTableExt)
+
+            process.extraPFStuff.add(tkEmTable,tkEleTable,tkEleTableExt)
 
     if doL2:    
-        tkEmTable, tkEleTable = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
+        tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
         setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
         setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
+        # setattr(process, "TkEleL2%sExtTable" % (postfix), tkEleTableExt)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 
