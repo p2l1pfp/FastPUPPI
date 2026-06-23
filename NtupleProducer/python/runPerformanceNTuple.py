@@ -16,7 +16,7 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1))
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring('file:inputs125X.root'),
+    fileNames = cms.untracked.vstring('file:inputs140X.root'),
     inputCommands = cms.untracked.vstring("keep *", 
             "drop l1tPFClusters_*_*_*",
             "drop l1tPFTracks_*_*_*",
@@ -52,6 +52,10 @@ process.l1tPhase2CaloPFClusterEmulator = l1tPhase2CaloPFClusterEmulator.clone()
 from L1Trigger.L1CaloTrigger.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator_cfi import l1tPhase2GCTBarrelToCorrelatorLayer1Emulator
 process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator = l1tPhase2GCTBarrelToCorrelatorLayer1Emulator.clone()
 
+from L1Trigger.L1CaloTrigger.l1tPhase2CaloToCorrelatorTM18_cfi import l1tPhase2CaloToCorrelatorTM18
+process.l1tPhase2CaloToCorrelatorTM18 = l1tPhase2CaloToCorrelatorTM18.clone()
+
+
 from L1Trigger.Phase2L1ParticleFlow.L1NNTauProducer_cff import l1tNNTauProducerPuppi
 process.l1tNNTauProducerPuppi = l1tNNTauProducerPuppi.clone()
 
@@ -63,6 +67,7 @@ process.extraPFStuff = cms.Task(
         process.l1tPhase2L1CaloEGammaEmulator,
         process.l1tPhase2CaloPFClusterEmulator,
         process.l1tPhase2GCTBarrelToCorrelatorLayer1Emulator,
+        process.l1tPhase2CaloToCorrelatorTM18,
         process.l1tSAMuonsGmt,
         process.l1tGTTInputProducer,
         process.l1tTrackSelectionProducer,
@@ -253,7 +258,10 @@ def addCalib():
     process.l1tLayer1BarrelRaw = process.l1tLayer1Barrel.clone(
         gctEmInputConversionParameters = process.l1tLayer1Barrel.gctEmInputConversionParameters.clone(
             gctEmCorrector = cms.string("")
-        )
+        ),
+        gctHadInputConversionParameters = process.l1tLayer1Barrel.gctHadInputConversionParameters.clone(
+            gctHadCorrector = cms.string("")
+        ),
     )
 
 
@@ -276,7 +284,7 @@ def addCalib():
 
     #uncalibrated
     process.ntuple.objects.L1RawBarrelEcal   = cms.VInputTag('l1tLayer1BarrelRaw:DecodedEmClusters')
-    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('l1tPFClustersFromCombinedCaloHCal:uncalibrated')
+    process.ntuple.objects.L1RawBarrelCalo   = cms.VInputTag('ll1tLayer1BarrelRaw:DecodedHadClusters')
     process.ntuple.objects.L1RawHGCal   = cms.VInputTag('l1tLayer1HGCalRaw:DecodedHadClusters', 'l1tLayer1HGCalNoTKRaw:DecodedHadClusters')#use only this, try to understand if you have to use emf or emf_tot
     process.ntuple.objects.L1RawHGCalEM = cms.VInputTag('l1tLayer1HGCalRaw:DecodedEmClusters', 'l1tLayer1HGCalNoTKRaw:DecodedEmClusters')
     process.ntuple.objects.L1RawHFCalo  = cms.VInputTag('l1tPFClustersFromCombinedCaloHF:uncalibrated')
@@ -388,6 +396,7 @@ def addGen(pdgs):
                     vz   = Var("vz",  float,precision=8),
                     charge  = Var("charge", int, doc="charge id"),
                     prompt  = Var("2*statusFlags().isPrompt() + statusFlags().isDirectPromptTauDecayProduct()", int, doc="Particle status."),
+                    pdgId  = Var("pdgId", int, doc="PDG id")
                 )
             )
     genLepTableExt = cms.EDProducer("L1PFGenTableProducer",
@@ -430,6 +439,17 @@ def addGen(pdgs):
                         name = process.genPiTable.name
             )
             process.extraPFStuff.add(process.genPiTable, process.genPiExtTable)
+        elif pdgId == 130:
+            process.genK0LTable = genLepTable.clone(
+                        cut  = cms.string("abs(pdgId) == %d && status == 1 && pt > 2" % pdgId),
+                        name = cms.string("GenK0L"))
+            process.genK0LExtTable = genLepTableExt.clone(
+                        cut = process.genK0LTable.cut,
+                        name = process.genK0LTable.name
+            )
+            process.extraPFStuff.add(process.genK0LTable, process.genK0LExtTable)
+        else:
+            raise ValueError("pdgId %d not supported in addGen" % pdgId)
 
 def addGenPi(pdgs=[211]):
     addGen(pdgs)
@@ -637,19 +657,27 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
         tkEleTable.variables.caloEta = LazyVar("egCaloPtr.eta", float,precision=8)
         tkEleTable.variables.caloPhi = LazyVar("egCaloPtr.phi", float,precision=8)
 
-        return tkEmTable, tkEleTable
+        tkEleTableExt = cms.EDProducer("L1PFTkEleTableProducer",
+                                        src = cms.InputTag(tkele_inputtag),
+                                        name = cms.string("TkEle"+slice+postfix),
+                                        cut = cms.string(""),)
+
+        return tkEmTable, tkEleTable, tkEleTableExt
                                    
     if doL1:    
         for w in "EB","EE":
-            tkEmTable, tkEleTable = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
+            tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
             setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
             setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
-            process.extraPFStuff.add(tkEmTable,tkEleTable)
+            setattr(process, "TkEle%s%sExtTable" % (w,postfix), tkEleTableExt)
+
+            process.extraPFStuff.add(tkEmTable,tkEleTable,tkEleTableExt)
 
     if doL2:    
-        tkEmTable, tkEleTable = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
+        tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
         setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
         setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
+        # setattr(process, "TkEleL2%sExtTable" % (postfix), tkEleTableExt)
         process.extraPFStuff.add(tkEmTable,tkEleTable)
 
 
@@ -742,7 +770,7 @@ def addDecodedCalo(types=['Had', 'Em'], regs=['HGCal','Barrel','HGCalNoTK']):
                                 hwPhi = LazyVar("hwPhi", int, doc="hwPhi"),
                             )
                         )            
-
+                                                                    
             decCaloTableExt = cms.EDProducer("L1PFDecodedCaloTableProducer",
                                              src = cms.InputTag("l1tLayer1"+reg, f'Decoded{tp}Clusters'),
                                              name = cms.string(""),
@@ -852,3 +880,6 @@ def saveGenCands():
                                            ),
                                       )
     process.p += process.gencandTable
+
+
+# addDecodedCalo()
