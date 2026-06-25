@@ -18,7 +18,6 @@
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "CommonTools/Utils/interface/StringObjectFunction.h"
 
-
 #include <algorithm>
 
 class L1PFDecodedCaloTableProducer : public edm::global::EDProducer<>  {
@@ -67,13 +66,17 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
 
     std::vector<float> vals_empt, vals_srrTot, vals_hwSrrTot, vals_meanz, 
         vals_hwMeanZ, vals_hoe, vals_piIdProb, vals_PuIdProb, vals_EmIdProb, 
-        vals_caloIso, vals_showerShape; 
-     std::vector<float> vals_showerlength,
+        vals_caloIso, vals_caloShowerShape, vals_hwEmID, vals_showerShape, 
+        vals_hwShowerShape, vals_hwRelIso, vals_relIso;
+
+    std::vector<float> vals_showerlength,
         vals_coreshowerlength, vals_emf, vals_hw_emf, vals_abseta, 
         vals_hw_abseta, 
         vals_hw_meanz, 
         vals_sigmaetaeta, vals_hw_sigmaetaeta, 
         vals_sigmaphiphi, vals_hw_sigmaphiphi, vals_sigmazz, vals_hw_sigmazz;
+
+    std::vector<float> vals_caloPt, vals_caloEta, vals_caloPhi;
 
     vals_empt.resize(ncands);
     vals_srrTot.resize(ncands);
@@ -85,7 +88,12 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
     vals_PuIdProb.resize(ncands);
     vals_EmIdProb.resize(ncands);
     vals_caloIso.resize(ncands);
+    vals_caloShowerShape.resize(ncands);
+    vals_hwEmID.resize(ncands);
     vals_showerShape.resize(ncands);
+    vals_hwShowerShape.resize(ncands);
+    vals_hwRelIso.resize(ncands);
+    vals_relIso.resize(ncands);
     vals_showerlength.resize(ncands);
     vals_coreshowerlength.resize(ncands);
     vals_emf.resize(ncands);
@@ -99,7 +107,9 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
     vals_hw_sigmaphiphi.resize(ncands);
     vals_sigmazz.resize(ncands);
     vals_hw_sigmazz.resize(ncands);
-
+    vals_caloPt.resize(ncands);
+    vals_caloEta.resize(ncands);
+    vals_caloPhi.resize(ncands);
 
     for (unsigned int i = 0; i < ncands; ++i) {
         const auto cand = selected[i];
@@ -115,10 +125,23 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
             vals_PuIdProb[i] = digi->floatPuProb();
             vals_EmIdProb[i] = digi->floatEmProb();
 
+            vals_hwEmID[i] = digi->hwEmID;
+            vals_showerShape[i] = digi->floatShowerShape();
+            vals_hwShowerShape[i] = digi->hwShowerShape;
+            vals_hwRelIso[i] = digi->hwRelIso;
+            vals_relIso[i] = digi->floatRelIso();
+
+
             const l1tp2::CaloCrystalCluster *crycl = dynamic_cast<const l1tp2::CaloCrystalCluster *>(cand->constituentsAndFractions().front().first.get());
             if(crycl) {
                 vals_caloIso[i] = crycl->isolation();
-                vals_showerShape[i] = crycl->e2x5() / crycl->e5x5();
+                vals_caloShowerShape[i] = crycl->e2x5() / crycl->e5x5();
+                vals_caloPt[i] = crycl->pt();
+                vals_caloEta[i] = crycl->eta();
+                vals_caloPhi[i] = crycl->phi();
+                
+
+
             }
         } else if(auto digi = std::get_if<l1ct::HadCaloObj>(&obj)){
             vals_empt[i] = digi->floatEmPt();
@@ -162,6 +185,13 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
                 vals_hw_sigmaphiphi[i] = w_sigmaphiphi.to_float();
                 vals_sigmazz[i] = w_sigmazz * SIGMAZZ_LSB;
                 vals_hw_sigmazz[i] = w_sigmazz.to_float();
+                vals_caloPt[i] = hgcalcl->pt();
+                vals_caloEta[i] = hgcalcl->eta();
+                vals_caloPhi[i] = hgcalcl->phi();
+            } else {
+                vals_caloPt[i] =cand->constituentsAndFractions().front().first.get()->pt();
+                vals_caloEta[i] =cand->constituentsAndFractions().front().first.get()->eta();
+                vals_caloPhi[i] =cand->constituentsAndFractions().front().first.get()->phi();
             }
         }
     }
@@ -176,23 +206,31 @@ L1PFDecodedCaloTableProducer::produce(edm::StreamID id, edm::Event& iEvent, cons
     out->addColumn<float>("piIdProb", vals_piIdProb, "");
     out->addColumn<float>("PuIdProb", vals_PuIdProb, "");
     out->addColumn<float>("EmIdProb", vals_EmIdProb, "");
-    out->addColumn<float>("caloIso", vals_caloIso, "");
+    out->addColumn<float>("srcRelIso", vals_caloIso, "");
+    out->addColumn<float>("srcShowerShape", vals_caloShowerShape, "");
+
+    out->addColumn<float>("hwEmID", vals_hwEmID, "");
     out->addColumn<float>("showerShape", vals_showerShape, "");
+    out->addColumn<float>("hwShowerShape", vals_hwShowerShape, "");
+    out->addColumn<float>("hwRelIso", vals_hwRelIso, "");
+    out->addColumn<float>("relIso", vals_relIso, "");
 
-    out->addColumn<float>("showerlength", vals_showerlength, "");
-    out->addColumn<float>("coreshowerlength", vals_coreshowerlength, "");
-    out->addColumn<float>("emf", vals_emf, "");
-    out->addColumn<float>("hwEmf", vals_hw_emf, "");
-    out->addColumn<float>("abseta", vals_abseta, "");
-    out->addColumn<float>("hwAbseta", vals_hw_abseta, "");
-    out->addColumn<float>("hwFPMeanz", vals_hw_meanz, "");    
-    out->addColumn<float>("sigmaetaeta", vals_sigmaetaeta, "");
-    out->addColumn<float>("hwSigmaetaeta", vals_hw_sigmaetaeta, "");
-    out->addColumn<float>("sigmaphiphi", vals_sigmaphiphi, "");
-    out->addColumn<float>("hwSigmaphiphi", vals_hw_sigmaphiphi, "");
-    out->addColumn<float>("sigmazz", vals_sigmazz, "");
-    out->addColumn<float>("hwSigmazz", vals_hw_sigmazz, "");
-
+    out->addColumn<float>("srcShowerlength", vals_showerlength, "");
+    out->addColumn<float>("srcCoreshowerlength", vals_coreshowerlength, "");
+    out->addColumn<float>("srcEmf", vals_emf, "");
+    out->addColumn<float>("srcHwEmf", vals_hw_emf, "");
+    out->addColumn<float>("srcAbseta", vals_abseta, "");
+    out->addColumn<float>("srcHwAbseta", vals_hw_abseta, "");
+    out->addColumn<float>("srcHwMeanz", vals_hw_meanz, "");    
+    out->addColumn<float>("srcSigmaetaeta", vals_sigmaetaeta, "");
+    out->addColumn<float>("srcHwSigmaetaeta", vals_hw_sigmaetaeta, "");
+    out->addColumn<float>("srcSigmaphiphi", vals_sigmaphiphi, "");
+    out->addColumn<float>("srcHwSigmaphiphi", vals_hw_sigmaphiphi, "");
+    out->addColumn<float>("srcSigmazz", vals_sigmazz, "");
+    out->addColumn<float>("srcHwSigmazz", vals_hw_sigmazz, "");
+    out->addColumn<float>("srcPt", vals_caloPt, "");
+    out->addColumn<float>("srcEta", vals_caloEta, "");
+    out->addColumn<float>("srcPhi", vals_caloPhi, "");
     // save to the event branches
     iEvent.put(std::move(out));
 
