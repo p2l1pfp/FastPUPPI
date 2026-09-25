@@ -705,8 +705,15 @@ def addDecodedTk(regs=['HGCal','Barrel']):
                             mvaQual = LazyVar('trackWord.getMVAQuality', int),
                         )
                     )
+        decTkTableExt = cms.EDProducer("L1PFDecodedTkTableProducer",
+                                       src = cms.InputTag("l1tLayer1"+reg, 'DecodedTK'),
+                                       name = cms.string(""),
+                                       cut = cms.string(""),)
+
         setattr(process, f"decTk{reg}Table", decTkTable)
-        process.extraPFStuff.add(decTkTable)
+        setattr(process, f"decTk{reg}ExtTable", decTkTableExt)
+        decTkTableExt.name = decTkTable.name
+        process.extraPFStuff.add(decTkTable, decTkTableExt)
 
 
 
