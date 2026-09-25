@@ -623,7 +623,7 @@ def addStaEG(postfix=""):
 
 
 def addTkEG(doL1=False, doL2=True, postfix=""):        
-    def getTkEgTables(slice, postfix, tkem_inputtag, tkele_inputtag):
+    def getTkEgTables(slice, postfix, tkem_inputtag, tkele_inputtag, decregions):
         tkEmTable = cms.EDProducer("SimpleCandidateFlatTableProducer",
                         name = cms.string("TkEm"+slice+postfix),
                         src = cms.InputTag(tkem_inputtag),
@@ -660,13 +660,15 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
         tkEleTableExt = cms.EDProducer("L1PFTkEleTableProducer",
                                         src = cms.InputTag(tkele_inputtag),
                                         name = cms.string("TkEle"+slice+postfix),
-                                        cut = cms.string(""),)
+                                        cut = cms.string(""),
+                                        decTkRegions = cms.VInputTag(*[f"l1tLayer1{r}:DecodedTK" for r in decregions]),
+                                        decCaloRegions = cms.VInputTag(*[f"l1tLayer1{r}:DecodedEmClusters" for r in decregions]),)
 
         return tkEmTable, tkEleTable, tkEleTableExt
                                    
     if doL1:    
-        for w in "EB","EE":
-            tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}')
+        for w, decregions in {"EB": ["Barrel"], "EE": ["HGCal"]}.items():
+            tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables(w, postfix, f"l1tLayer1EG{postfix}:L1TkEm{w}", f'l1tLayer1EG{postfix}:L1TkEle{w}', decregions)
             setattr(process, "TkEm%s%sTable" % (w,postfix), tkEmTable)
             setattr(process, "TkEle%s%sTable" % (w,postfix), tkEleTable)
             setattr(process, "TkEle%s%sExtTable" % (w,postfix), tkEleTableExt)
@@ -674,11 +676,11 @@ def addTkEG(doL1=False, doL2=True, postfix=""):
             process.extraPFStuff.add(tkEmTable,tkEleTable,tkEleTableExt)
 
     if doL2:    
-        tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron')
+        tkEmTable, tkEleTable, tkEleTableExt = getTkEgTables('L2', postfix, f"l1tLayer2EG:L1CtTkEm", f'l1tLayer2EG:L1CtTkElectron', ["HGCal","Barrel"])
         setattr(process, "TkEmL2%sTable" % (postfix), tkEmTable)
         setattr(process, "TkEleL2%sTable" % (postfix), tkEleTable)
-        # setattr(process, "TkEleL2%sExtTable" % (postfix), tkEleTableExt)
-        process.extraPFStuff.add(tkEmTable,tkEleTable)
+        setattr(process, "TkEleL2%sExtTable" % (postfix), tkEleTableExt)
+        process.extraPFStuff.add(tkEmTable,tkEleTable,tkEleTableExt)
 
 
 def addDecodedTk(regs=['HGCal','Barrel']):        
